@@ -606,13 +606,17 @@ static const value_string userdata_cpu_subfunc_names[] = {
     { S7COMM_UD_SUBF_CPU_READSZL,           "Read SZL" },
     { S7COMM_UD_SUBF_CPU_MSGS,              "Message service" },                /* Header constant is also different here */
     { S7COMM_UD_SUBF_CPU_TRANSSTOP,         "Transition to STOP" },             /* PLC changed state to STOP */
-    { S7COMM_UD_SUBF_CPU_ALARM8_IND,        "ALARM_8 indication" },             /* PLC is indicating a ALARM message, using ALARM_8 SFBs */
+    { S7COMM_UD_SUBF_CPU_ALARM8_IND,        "ALARM_8 indication" },             /* PLC is indicating an ALARM message, using ALARM_8 SFBs */
     { S7COMM_UD_SUBF_CPU_NOTIFY_IND,        "NOTIFY indication" },              /* PLC is indicating a NOTIFY message, using NOTIFY SFBs */
-    { S7COMM_UD_SUBF_CPU_ALARMS_IND,        "ALARM_S indication" },             /* PLC is indicating a ALARM message, using ALARM_S SFCs */
-    { S7COMM_UD_SUBF_CPU_ALARMSQ_IND,       "ALARM_SQ indication" },            /* PLC is indicating a ALARM message, using ALARM_SQ SFCs */
+    { S7COMM_UD_SUBF_CPU_ALARM8LOCK,        "ALARM_8 lock" },                   /* Lock an ALARM message from HMI/SCADA */
+    { S7COMM_UD_SUBF_CPU_ALARM8FREE,        "ALARM_8 free" },                   /* Free (unlock) an ALARM message from HMI/SCADA */
+    { S7COMM_UD_SUBF_CPU_ALARMS_IND,        "ALARM_S indication" },             /* PLC is indicating an ALARM message, using ALARM_S SFCs */
+    { S7COMM_UD_SUBF_CPU_ALARMSQ_IND,       "ALARM_SQ indication" },            /* PLC is indicating an ALARM message, using ALARM_SQ SFCs */
     { S7COMM_UD_SUBF_CPU_ALARMQUERY,        "ALARM query" },                    /* HMI/SCADA query of ALARMs */
     { S7COMM_UD_SUBF_CPU_ALARMACK,          "ALARM ack" },                      /* Alarm was acknowledged in HMI/SCADA */
     { S7COMM_UD_SUBF_CPU_ALARMACK_IND,      "ALARM ack indication" },           /* Alarm acknowledge indication from CPU to HMI */
+    { S7COMM_UD_SUBF_CPU_ALARM8LOCK_IND,    "ALARM lock indication" },          /* Alarm lock indication from CPU to HMI */
+    { S7COMM_UD_SUBF_CPU_ALARM8FREE_IND,    "ALARM free indication" },          /* Alarm free (unlock) indication from CPU to HMI */
     { 0,                                    NULL }
 };
 
@@ -2349,9 +2353,15 @@ s7comm_decode_ud_cpu_alarm_query(tvbuff_t *tvb,
             proto_tree_add_text(msg_item_tree, tvb, offset, 2, "Unknown 5: 0x%04x", tvb_get_ntohs(tvb, offset));
             offset += 2;
             alarmtype = tvb_get_guint8(tvb, offset);
+            /* alarmtype = 1 wird übertragen wenn eine Meldesperre einer Einzelmeldung vom HMI aufgehoben wird
+               alarmtype = 3 wird übertragen, wenn eine Meldesperre einer Alarmgruppe vom HMI aufgehoben wird */
             proto_tree_add_text(msg_item_tree, tvb, offset, 1, "Type (ALARM_8=2/ALARM_S=4): %d", alarmtype);
-            if (alarmtype == 2) {
+            if (alarmtype == 1) {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Type=ALARM_8-lock/free-1");
+            } else if (alarmtype == 2) {
                 col_append_fstr(pinfo->cinfo, COL_INFO, " Type=ALARM_8");
+            } else if (alarmtype == 3) {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Type=ALARM_8-lock/free-3");
             } else if (alarmtype == 4) {
                 col_append_fstr(pinfo->cinfo, COL_INFO, " Type=ALARM_S");
             } else {
@@ -2388,6 +2398,7 @@ s7comm_decode_ud_cpu_alarm_query(tvbuff_t *tvb,
                     offset += 2;
                     /* Ab hier zählt die oben angegebene Datensatzlänge */
                     alarmtype = tvb_get_guint8(tvb, offset);
+                    proto_tree_add_text(msg_block_item_tree, tvb, offset, 1, "Type (ALARM_8=2/ALARM_S=4): %d", alarmtype);
                     if (alarmtype == 2) {
                         proto_item_append_text(msg_block_item_tree, " (Type=ALARM_8)");
                     } else if (alarmtype == 4) {
@@ -2440,6 +2451,58 @@ s7comm_decode_ud_cpu_alarm_query(tvbuff_t *tvb,
     }
     proto_item_set_len(msg_item_tree, offset - start_offset);
 
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * PDU Type: User Data -> Function group 4 -> alarm lock/free
+ *
+ *******************************************************************************************************/
+static guint32
+s7comm_decode_ud_cpu_alarm_lockfree(tvbuff_t *tvb,
+                                    packet_info *pinfo,
+                                    proto_tree *data_tree,
+                                    guint8 type,                /* Type of data (request/response) */
+                                    guint8 subfunc,             /* Subfunction */
+                                    guint16 dlength,            /* length of data part given in header */
+                                    guint32 offset)             /* Offset on data part +4 */
+{
+    guint16 function;
+    guint32 start_offset;
+    guint32 ev_id;
+    proto_item *msg_item = NULL;
+    proto_tree *msg_item_tree = NULL;
+    guint8 spec;
+
+    start_offset = offset;
+
+    msg_item = proto_tree_add_item(data_tree, hf_s7comm_cpu_alarm_message_item, tvb, offset, 0, ENC_NA);
+    msg_item_tree = proto_item_add_subtree(msg_item, ett_s7comm_cpu_alarm_message);
+
+    /* 2 Bytes Funktion, bzw. unbekannt */
+    /* 0601 = Einzelne Meldung freigeben/sperren
+       0602 = Warnung Gruppe freigeben/sperren
+       0603 = Alarm gruppe freigeben/sperren
+       */
+    function = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_function1, tvb, offset, 2, ENC_BIG_ENDIAN);
+    offset += 2;
+
+    spec = tvb_get_guint8(tvb, offset);
+    if (spec == 0x12) {
+        proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+        proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec_length, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+        proto_tree_add_item(msg_item_tree, hf_s7comm_item_syntax_id, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+        proto_tree_add_text(msg_item_tree, tvb, offset, 1, "Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+        offset += 1;
+        ev_id = tvb_get_ntohl(tvb, offset);
+        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
+        proto_item_append_text(msg_item_tree, ": EventID=0x%08x", ev_id);
+        offset += 4;
+    }
     return offset;
 }
 /*******************************************************************************************************
@@ -3017,6 +3080,9 @@ s7comm_decode_ud(tvbuff_t *tvb,
                         offset = s7comm_decode_ud_cpu_alarm_acknowledge(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
                     } else if (subfunc == S7COMM_UD_SUBF_CPU_ALARMQUERY) {
                         offset = s7comm_decode_ud_cpu_alarm_query(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
+                    } else if (subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK || subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK_IND ||
+                               subfunc == S7COMM_UD_SUBF_CPU_ALARM8FREE || subfunc == S7COMM_UD_SUBF_CPU_ALARM8FREE_IND) {
+                        offset = s7comm_decode_ud_cpu_alarm_lockfree(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
                     } else {
                         /* print other currently unknown data as raw bytes */
                         proto_tree_add_item(data_tree, hf_s7comm_userdata_data, tvb, offset, dlength - 4, ENC_NA);

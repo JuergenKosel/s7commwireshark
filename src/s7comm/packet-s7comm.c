@@ -577,10 +577,12 @@ static const value_string userdata_prog_subfunc_names[] = {
  */
 #define S7COMM_UD_SUBF_CYCLIC_MEM           0x01
 #define S7COMM_UD_SUBF_CYCLIC_UNSUBSCRIBE   0x04
+#define S7COMM_UD_SUBF_CYCLIC_MEMDB         0x05
 
 static const value_string userdata_cyclic_subfunc_names[] = {
     { S7COMM_UD_SUBF_CYCLIC_MEM,            "Memory" },                         /* read data from memory (DB/M/etc.) */
     { S7COMM_UD_SUBF_CYCLIC_UNSUBSCRIBE,    "Unsubscribe" },                    /* Unsubcribe (disable) cyclic data */
+    { S7COMM_UD_SUBF_CYCLIC_MEMDB,          "MemoryDB" },                       /* read data from only DB */
     { 0,                                    NULL }
 };
 
@@ -2786,6 +2788,7 @@ s7comm_decode_ud_cyclic_subfunc(tvbuff_t *tvb,
     switch (subfunc)
     {
         case S7COMM_UD_SUBF_CYCLIC_MEM:
+        case S7COMM_UD_SUBF_CYCLIC_MEMDB:
             item_count = tvb_get_guint8(tvb, offset + 1);     /* first byte reserved??? */
             proto_tree_add_uint(data_tree, hf_s7comm_param_itemcount, tvb, offset, 2, item_count);
             offset += 2;

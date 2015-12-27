@@ -313,8 +313,11 @@ static const value_string item_transportsizenames[] = {
  */
 #define S7COMM_SYNTAXID_S7ANY               0x10        /* Address data S7-Any pointer-like DB1.DBX10.2 */
 #define S7COMM_SYNTAXID_PBC_ID              0x13        /* R_ID for PBC */
-#define S7COMM_SYNTAXID_ALARM_MESSAGE       0x16        /* Alarm Message */
-#define S7COMM_SYNTAXID_ALARM_ACKMESSAGE    0x19        /* Alarm Acknowledge Message */
+#define S7COMM_SYNTAXID_ALARM_LOCKFREESET   0x15        /* Alarm lock/free dataset */
+#define S7COMM_SYNTAXID_ALARM_INDSET        0x16        /* Alarm indication dataset */
+#define S7COMM_SYNTAXID_ALARM_ACKSET        0x19        /* Alarm acknowledge message dataset */
+#define S7COMM_SYNTAXID_ALARM_QUERYREQSET   0x1a        /* Alarm query request dataset */
+#define S7COMM_SYNTAXID_NOTIFY_INDSET       0x1c        /* Notify indication dataset */
 #define S7COMM_SYNTAXID_DRIVEESANY          0xa2        /* seen on Drive ES Starter with routing over S7 */
 #define S7COMM_SYNTAXID_1200SYM             0xb2        /* Symbolic address mode of S7-1200 */
 #define S7COMM_SYNTAXID_DBREAD              0xb0        /* Kind of DB block read, seen only at an S7-400 */
@@ -323,8 +326,11 @@ static const value_string item_transportsizenames[] = {
 static const value_string item_syntaxid_names[] = {
     { S7COMM_SYNTAXID_S7ANY,                "S7ANY" },
     { S7COMM_SYNTAXID_PBC_ID,               "PBC-R_ID" },
-    { S7COMM_SYNTAXID_ALARM_MESSAGE,        "ALARM_MSG" },
-    { S7COMM_SYNTAXID_ALARM_ACKMESSAGE,     "ALARM_ACK_MSG" },
+    { S7COMM_SYNTAXID_ALARM_LOCKFREESET,    "ALARM_LOCKFREE" },
+    { S7COMM_SYNTAXID_ALARM_INDSET,         "ALARM_IND" },
+    { S7COMM_SYNTAXID_ALARM_ACKSET,         "ALARM_ACK" },
+    { S7COMM_SYNTAXID_ALARM_QUERYREQSET,    "ALARM_QUERYREQ" },
+    { S7COMM_SYNTAXID_NOTIFY_INDSET,        "NOTIFY_IND" },
     { S7COMM_SYNTAXID_DRIVEESANY,           "DRIVEESANY" },
     { S7COMM_SYNTAXID_1200SYM,              "1200SYM" },
     { S7COMM_SYNTAXID_DBREAD,               "DBREAD" },
@@ -611,14 +617,15 @@ static const value_string userdata_cpu_subfunc_names[] = {
     { S7COMM_UD_SUBF_CPU_ALARM8_IND,        "ALARM_8 indication" },             /* PLC is indicating an ALARM message, using ALARM_8 SFBs */
     { S7COMM_UD_SUBF_CPU_NOTIFY_IND,        "NOTIFY indication" },              /* PLC is indicating a NOTIFY message, using NOTIFY SFBs */
     { S7COMM_UD_SUBF_CPU_ALARM8LOCK,        "ALARM_8 lock" },                   /* Lock an ALARM message from HMI/SCADA */
-    { S7COMM_UD_SUBF_CPU_ALARM8FREE,        "ALARM_8 free" },                   /* Free (unlock) an ALARM message from HMI/SCADA */
-    { S7COMM_UD_SUBF_CPU_ALARMS_IND,        "ALARM_S indication" },             /* PLC is indicating an ALARM message, using ALARM_S SFCs */
-    { S7COMM_UD_SUBF_CPU_ALARMSQ_IND,       "ALARM_SQ indication" },            /* PLC is indicating an ALARM message, using ALARM_SQ SFCs */
+    { S7COMM_UD_SUBF_CPU_ALARM8UNLOCK,      "ALARM_8 unlock" },                 /* Unlock an ALARM message from HMI/SCADA */
+    { S7COMM_UD_SUBF_CPU_ALARMS_IND,        "ALARM_S indication" },             /* PLC is indicating an ALARM message, using ALARM_S/ALARM_D SFCs */
+    { S7COMM_UD_SUBF_CPU_ALARMSQ_IND,       "ALARM_SQ indication" },            /* PLC is indicating an ALARM message, using ALARM_SQ/ALARM_DQ SFCs */
     { S7COMM_UD_SUBF_CPU_ALARMQUERY,        "ALARM query" },                    /* HMI/SCADA query of ALARMs */
     { S7COMM_UD_SUBF_CPU_ALARMACK,          "ALARM ack" },                      /* Alarm was acknowledged in HMI/SCADA */
     { S7COMM_UD_SUBF_CPU_ALARMACK_IND,      "ALARM ack indication" },           /* Alarm acknowledge indication from CPU to HMI */
     { S7COMM_UD_SUBF_CPU_ALARM8LOCK_IND,    "ALARM lock indication" },          /* Alarm lock indication from CPU to HMI */
-    { S7COMM_UD_SUBF_CPU_ALARM8FREE_IND,    "ALARM free indication" },          /* Alarm free (unlock) indication from CPU to HMI */
+    { S7COMM_UD_SUBF_CPU_ALARM8UNLOCK_IND,  "ALARM unlock indication" },        /* Alarm unlock indication from CPU to HMI */
+    { S7COMM_UD_SUBF_CPU_NOTIFY8_IND,       "NOTIFY_8 indication" },
     { 0,                                    NULL }
 };
 
@@ -1065,87 +1072,97 @@ static gint hf_s7comm_pbc_r_id = -1;                        /* Request ID R_ID, 
 
 /* Alarm messages */
 static gint hf_s7comm_cpu_alarm_message_item = -1;
-static gint hf_s7comm_cpu_alarm_message_block_item = -1;
-static gint hf_s7comm_cpu_alarm_message_function1 = -1;
-static gint hf_s7comm_cpu_alarm_message_no_add_values = -1;
+static gint hf_s7comm_cpu_alarm_message_obj_item = -1;
+static gint hf_s7comm_cpu_alarm_message_function = -1;
+static gint hf_s7comm_cpu_alarm_message_nr_objects = -1;
+static gint hf_s7comm_cpu_alarm_message_nr_add_values = -1;
 static gint hf_s7comm_cpu_alarm_message_eventid = -1;
+static gint hf_s7comm_cpu_alarm_message_timestamp_coming = -1;
+static gint hf_s7comm_cpu_alarm_message_timestamp_going = -1;
+static gint hf_s7comm_cpu_alarm_message_associated_value = -1;
 static gint hf_s7comm_cpu_alarm_message_eventstate = -1;
-static gint hf_s7comm_cpu_alarm_message_eventstate_sig1 = -1;
-static gint hf_s7comm_cpu_alarm_message_eventstate_sig2 = -1;
-static gint hf_s7comm_cpu_alarm_message_eventstate_sig3 = -1;
-static gint hf_s7comm_cpu_alarm_message_eventstate_sig4 = -1;
-static gint hf_s7comm_cpu_alarm_message_eventstate_sig5 = -1;
-static gint hf_s7comm_cpu_alarm_message_eventstate_sig6 = -1;
-static gint hf_s7comm_cpu_alarm_message_eventstate_sig7 = -1;
-static gint hf_s7comm_cpu_alarm_message_eventstate_sig8 = -1;
-static gint ett_s7comm_cpu_alarm_message_eventstate = -1;
-static const int *s7comm_cpu_alarm_message_eventstate_fields[] = {
-    &hf_s7comm_cpu_alarm_message_eventstate_sig1,
-    &hf_s7comm_cpu_alarm_message_eventstate_sig2,
-    &hf_s7comm_cpu_alarm_message_eventstate_sig3,
-    &hf_s7comm_cpu_alarm_message_eventstate_sig4,
-    &hf_s7comm_cpu_alarm_message_eventstate_sig5,
-    &hf_s7comm_cpu_alarm_message_eventstate_sig6,
-    &hf_s7comm_cpu_alarm_message_eventstate_sig7,
-    &hf_s7comm_cpu_alarm_message_eventstate_sig8,
-    NULL
-};
-static gint hf_s7comm_cpu_alarm_message_reserved2 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_in_sig1 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_in_sig2 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_in_sig3 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_in_sig4 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_in_sig5 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_in_sig6 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_in_sig7 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_in_sig8 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_out_sig1 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_out_sig2 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_out_sig3 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_out_sig4 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_out_sig5 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_out_sig6 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_out_sig7 = -1;
-static gint hf_s7comm_cpu_alarm_message_ackstate_out_sig8 = -1;
+static gint hf_s7comm_cpu_alarm_message_state = -1;
+static gint hf_s7comm_cpu_alarm_message_ackstate_coming = -1;
+static gint hf_s7comm_cpu_alarm_message_ackstate_going = -1;
+static gint hf_s7comm_cpu_alarm_message_event_coming = -1;
+static gint hf_s7comm_cpu_alarm_message_event_going = -1;
+static gint hf_s7comm_cpu_alarm_message_event_lastchanged = -1;
+static gint hf_s7comm_cpu_alarm_message_event_reserved = -1;
 
-static gint ett_s7comm_cpu_alarm_message_ackstate = -1;
-static const int *s7comm_cpu_alarm_message_ackstate_fields[] = {
-    &hf_s7comm_cpu_alarm_message_ackstate_in_sig1,
-    &hf_s7comm_cpu_alarm_message_ackstate_in_sig2,
-    &hf_s7comm_cpu_alarm_message_ackstate_in_sig3,
-    &hf_s7comm_cpu_alarm_message_ackstate_in_sig4,
-    &hf_s7comm_cpu_alarm_message_ackstate_in_sig5,
-    &hf_s7comm_cpu_alarm_message_ackstate_in_sig6,
-    &hf_s7comm_cpu_alarm_message_ackstate_in_sig7,
-    &hf_s7comm_cpu_alarm_message_ackstate_in_sig8,
-    &hf_s7comm_cpu_alarm_message_ackstate_out_sig1,
-    &hf_s7comm_cpu_alarm_message_ackstate_out_sig2,
-    &hf_s7comm_cpu_alarm_message_ackstate_out_sig3,
-    &hf_s7comm_cpu_alarm_message_ackstate_out_sig4,
-    &hf_s7comm_cpu_alarm_message_ackstate_out_sig5,
-    &hf_s7comm_cpu_alarm_message_ackstate_out_sig6,
-    &hf_s7comm_cpu_alarm_message_ackstate_out_sig7,
-    &hf_s7comm_cpu_alarm_message_ackstate_out_sig8,
+static gint hf_s7comm_cpu_alarm_message_signal_sig1 = -1;
+static gint hf_s7comm_cpu_alarm_message_signal_sig2 = -1;
+static gint hf_s7comm_cpu_alarm_message_signal_sig3 = -1;
+static gint hf_s7comm_cpu_alarm_message_signal_sig4 = -1;
+static gint hf_s7comm_cpu_alarm_message_signal_sig5 = -1;
+static gint hf_s7comm_cpu_alarm_message_signal_sig6 = -1;
+static gint hf_s7comm_cpu_alarm_message_signal_sig7 = -1;
+static gint hf_s7comm_cpu_alarm_message_signal_sig8 = -1;
+static gint ett_s7comm_cpu_alarm_message_signal = -1;
+static const int *s7comm_cpu_alarm_message_signal_fields[] = {
+    &hf_s7comm_cpu_alarm_message_signal_sig1,
+    &hf_s7comm_cpu_alarm_message_signal_sig2,
+    &hf_s7comm_cpu_alarm_message_signal_sig3,
+    &hf_s7comm_cpu_alarm_message_signal_sig4,
+    &hf_s7comm_cpu_alarm_message_signal_sig5,
+    &hf_s7comm_cpu_alarm_message_signal_sig6,
+    &hf_s7comm_cpu_alarm_message_signal_sig7,
+    &hf_s7comm_cpu_alarm_message_signal_sig8,
     NULL
 };
+
+static gint hf_s7comm_cpu_alarm_query_unknown1 = -1;
+static gint hf_s7comm_cpu_alarm_query_querytype = -1;
+static gint hf_s7comm_cpu_alarm_query_unknown2 = -1;
+static gint hf_s7comm_cpu_alarm_query_alarmtype = -1;
+static gint hf_s7comm_cpu_alarm_query_completelen = -1;
+static gint hf_s7comm_cpu_alarm_query_datasetlen = -1;
+static gint hf_s7comm_cpu_alarm_query_resunknown1 = -1;
+static gint hf_s7comm_cpu_alarm_query_resunknown2 = -1;
 
 static const true_false_string tfs_s7comm_alarm_message_ackstate = {
     "Event acknowledged",
     "Event not acknowledged"
 };
 
+/**************************************************************************
+ * Type of alarmquery in alarm query request
+ */
+#define S7COMM_ALARM_MESSAGE_QUERYTYPE_BYALARMTYPE      1
+#define S7COMM_ALARM_MESSAGE_QUERYTYPE_BYEVENTID        3
+
+static const value_string alarm_message_querytype_names[] = {
+    { S7COMM_ALARM_MESSAGE_QUERYTYPE_BYALARMTYPE,      "ByAlarmtype" },
+    { S7COMM_ALARM_MESSAGE_QUERYTYPE_BYEVENTID,        "ByEventID" },
+    { 0,                                                NULL }
+};
+
+/**************************************************************************
+ * Alarmtype in alarm query
+ */
+#define S7COMM_ALARM_MESSAGE_QUERY_ALARMTYPE_SCAN       1
+#define S7COMM_ALARM_MESSAGE_QUERY_ALARMTYPE_ALARM_8    2
+#define S7COMM_ALARM_MESSAGE_QUERY_ALARMTYPE_ALARM_S    4
+
+static const value_string alarm_message_query_alarmtype_names[] = {
+    { S7COMM_ALARM_MESSAGE_QUERY_ALARMTYPE_SCAN,        "SCAN" },
+    { S7COMM_ALARM_MESSAGE_QUERY_ALARMTYPE_ALARM_8,     "ALARM_8" },
+    { S7COMM_ALARM_MESSAGE_QUERY_ALARMTYPE_ALARM_S,     "ALARM_S" },
+    { 0,                                                NULL }
+};
+
 /* These are the ids of the subtrees that we are creating */
-static gint ett_s7comm = -1;                                /* S7 communication tree, parent of all other subtree */
-static gint ett_s7comm_header = -1;                         /* Subtree for header block */
-static gint ett_s7comm_param = -1;                          /* Subtree for parameter block */
-static gint ett_s7comm_param_item = -1;                     /* Subtree for items in parameter block */
-static gint ett_s7comm_param_subitem = -1;                  /* Subtree for subitems under items in parameter block */
-static gint ett_s7comm_data = -1;                           /* Subtree for data block */
-static gint ett_s7comm_data_item = -1;                      /* Subtree for an item in data block */
-static gint ett_s7comm_item_address = -1;                   /* Subtree for an address (byte/bit) */
-static gint ett_s7comm_cpu_alarm_message = -1;              /* Subtree for an alarm message */
-static gint ett_s7comm_cpu_alarm_message_block = -1;        /* Subtree for an alarm message block*/
+static gint ett_s7comm = -1;                                        /* S7 communication tree, parent of all other subtree */
+static gint ett_s7comm_header = -1;                                 /* Subtree for header block */
+static gint ett_s7comm_param = -1;                                  /* Subtree for parameter block */
+static gint ett_s7comm_param_item = -1;                             /* Subtree for items in parameter block */
+static gint ett_s7comm_param_subitem = -1;                          /* Subtree for subitems under items in parameter block */
+static gint ett_s7comm_data = -1;                                   /* Subtree for data block */
+static gint ett_s7comm_data_item = -1;                              /* Subtree for an item in data block */
+static gint ett_s7comm_item_address = -1;                           /* Subtree for an address (byte/bit) */
+static gint ett_s7comm_cpu_alarm_message = -1;                      /* Subtree for an alarm message */
+static gint ett_s7comm_cpu_alarm_message_object = -1;               /* Subtree for an alarm message block*/
+static gint ett_s7comm_cpu_alarm_message_timestamp = -1;            /* Subtree for an alarm message timestamp */
+static gint ett_s7comm_cpu_alarm_message_associated_value = -1;    /* Subtree for an alarm message associated value */
 
 static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
@@ -2144,367 +2161,322 @@ s7comm_decode_ud_pbc_subfunc(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
- * PDU Type: User Data -> Function group 4 -> alarm_8 oder alarm_s indication
+ * PDU Type: User Data -> Function group 4 -> alarm, main tree for all except query response
  *
  *******************************************************************************************************/
 static guint32
-s7comm_decode_ud_cpu_alarm_indication(tvbuff_t *tvb,
-                                      packet_info *pinfo,
-                                      proto_tree *data_tree,
-                                      guint8 type,                /* Type of data (request/response) */
-                                      guint8 subfunc,             /* Subfunction */
-                                      guint16 dlength,            /* length of data part given in header */
-                                      guint32 offset)             /* Offset on data part +4 */
+s7comm_decode_ud_cpu_alarm_main(tvbuff_t *tvb,
+                                packet_info *pinfo,
+                                proto_tree *data_tree,
+                                guint8 type,                /* Type of data (request/response) */
+                                guint8 subfunc,             /* Subfunction */
+                                guint16 dlength,            /* length of data part given in header */
+                                guint32 offset)             /* Offset on data part +4 */
 {
+    guint32 start_offset;
+    guint32 asc_start_offset;
+    guint32 msg_obj_start_offset;
+    guint32 ev_id;
     proto_item *msg_item = NULL;
     proto_tree *msg_item_tree = NULL;
-    guint32 start_offset;
-    guint32 ev_id;
-    guint8 no_add_values = 0;
+    proto_item *msg_obj_item = NULL;
+    proto_tree *msg_obj_item_tree = NULL;
+    proto_item *msg_work_item = NULL;
+    proto_tree *msg_work_item_tree = NULL;
+    guint8 nr_objects;
+    guint8 i;
     guint8 syntax_id;
-    guint8 sig_nr;
+    guint8 nr_of_additional_values;
     guint8 signalstate;
+    guint8 sig_nr;
+    guint8 ret_val;
+    guint8 querytype;
+    guint8 varspec_length;
 
     start_offset = offset;
+
     msg_item = proto_tree_add_item(data_tree, hf_s7comm_cpu_alarm_message_item, tvb, offset, 0, ENC_NA);
     msg_item_tree = proto_item_add_subtree(msg_item, ett_s7comm_cpu_alarm_message);
 
-    /* 8 bytes timestamp */
-    offset = s7comm_add_timestamp_to_tree(tvb, msg_item_tree, offset, FALSE, FALSE);
-    /* 2 bytes unknown, timezone? daylight-saving? */
-    proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_function1, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
-    /* 3 bytes  */
-    proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec, tvb, offset, 1, ENC_BIG_ENDIAN);
+    if (subfunc == S7COMM_UD_SUBF_CPU_ALARM8_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMACK_IND ||
+        subfunc == S7COMM_UD_SUBF_CPU_ALARMSQ_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMS_IND ||
+        subfunc == S7COMM_UD_SUBF_CPU_NOTIFY_IND || subfunc == S7COMM_UD_SUBF_CPU_NOTIFY8_IND) {
+        msg_work_item = proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_timestamp_coming, tvb, offset, 8, ENC_NA);
+        msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_timestamp);
+        offset = s7comm_add_timestamp_to_tree(tvb, msg_work_item_tree, offset, TRUE, FALSE);
+    }
+    proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_function, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
-    proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec_length, tvb, offset, 1, ENC_BIG_ENDIAN);
+    nr_objects = tvb_get_guint8(tvb, offset);
+    proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_nr_objects, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
-    syntax_id = tvb_get_guint8(tvb, offset);
-    proto_tree_add_item(msg_item_tree, hf_s7comm_item_syntax_id, tvb, offset, 1, ENC_BIG_ENDIAN);
-    offset += 1;
-    if (syntax_id == S7COMM_SYNTAXID_ALARM_MESSAGE) {
-        /* number of associated values */
-        no_add_values = tvb_get_guint8(tvb, offset);
-        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_no_add_values, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-        /* 4 bytes EventID */
-        ev_id = tvb_get_ntohl(tvb, offset);
-        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
-        offset += 4;
-        proto_item_append_text(msg_item_tree, ": EventID=0x%08x", ev_id);
-        col_append_fstr(pinfo->cinfo, COL_INFO, " EV_ID=0x%08x", ev_id);
-        /* 1 byte signalstate*/
-        signalstate = tvb_get_guint8(tvb, offset);
-        proto_tree_add_bitmask(msg_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_eventstate,
-            ett_s7comm_cpu_alarm_message_eventstate, s7comm_cpu_alarm_message_eventstate_fields, ENC_BIG_ENDIAN);
-        offset += 1;
-        /* show SIG with True signals in column */
-        if (signalstate > 0) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " On=[");
-            for (sig_nr = 0; sig_nr < 8; sig_nr++) {
-                if (signalstate & 0x01) {
-                    signalstate >>= 1;
-                    if (signalstate == 0) {  /* no more signals */
-                        col_append_fstr(pinfo->cinfo, COL_INFO, "SIG_%d", sig_nr + 1);
-                    } else {
-                        col_append_fstr(pinfo->cinfo, COL_INFO, "SIG_%d,", sig_nr + 1);
+    for (i = 1; i <= nr_objects; i++) {
+        msg_obj_start_offset = offset;
+        msg_obj_item = proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_obj_item, tvb, offset, 0, ENC_NA);
+        msg_obj_item_tree = proto_item_add_subtree(msg_obj_item, ett_s7comm_cpu_alarm_message_object);
+        proto_item_append_text(msg_obj_item_tree, " [%d]", i);
+        if (type == S7COMM_UD_TYPE_REQ || type == S7COMM_UD_TYPE_PUSH) {
+            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_item_varspec, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
+            varspec_length = tvb_get_guint8(tvb, offset);
+            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_item_varspec_length, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
+            syntax_id = tvb_get_guint8(tvb, offset);
+            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_item_syntax_id, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
+            switch (syntax_id) {
+                case S7COMM_SYNTAXID_ALARM_LOCKFREESET:
+                case S7COMM_SYNTAXID_ALARM_INDSET:
+                case S7COMM_SYNTAXID_NOTIFY_INDSET:
+                case S7COMM_SYNTAXID_ALARM_ACKSET:
+                    nr_of_additional_values = tvb_get_guint8(tvb, offset);
+                    proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_nr_add_values, tvb, offset, 1, ENC_BIG_ENDIAN);
+                    offset += 1;
+                    ev_id = tvb_get_ntohl(tvb, offset);
+                    proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
+                    offset += 4;
+                    proto_item_append_text(msg_obj_item_tree, ": EventID=0x%08x", ev_id);
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " EventID=0x%08x", ev_id);
+                    if (syntax_id == S7COMM_SYNTAXID_ALARM_INDSET || syntax_id == S7COMM_SYNTAXID_NOTIFY_INDSET) {
+                        signalstate = tvb_get_guint8(tvb, offset);
+                        proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_eventstate,
+                            ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+                        offset += 1;
+                        /* show SIG with True values for a quick overview in info-column */
+                        if (signalstate > 0) {
+                            col_append_fstr(pinfo->cinfo, COL_INFO, " On=[");
+                            for (sig_nr = 0; sig_nr < 8; sig_nr++) {
+                                if (signalstate & 0x01) {
+                                    signalstate >>= 1;
+                                    if (signalstate == 0) {
+                                        col_append_fstr(pinfo->cinfo, COL_INFO, "SIG_%d", sig_nr + 1);
+                                    } else {
+                                        col_append_fstr(pinfo->cinfo, COL_INFO, "SIG_%d,", sig_nr + 1);
+                                    }
+                                } else {
+                                    signalstate >>= 1;
+                                }
+                            }
+                            col_append_fstr(pinfo->cinfo, COL_INFO, "]");
+                        }
+                        proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_state,
+                            ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+                        offset += 1;
                     }
-                } else {
-                    signalstate >>= 1;
-                }
+                    if (syntax_id == S7COMM_SYNTAXID_ALARM_INDSET || syntax_id == S7COMM_SYNTAXID_ALARM_ACKSET || syntax_id == S7COMM_SYNTAXID_NOTIFY_INDSET) {
+                        proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate_going,
+                            ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+                        offset += 1;
+                        proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate_coming,
+                            ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+                        offset += 1;
+                    }
+                    if (syntax_id == S7COMM_SYNTAXID_NOTIFY_INDSET) {
+                        proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_event_going,
+                            ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+                        offset += 1;
+                        proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_event_coming,
+                            ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+                        offset += 1;
+                        proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_event_lastchanged,
+                            ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+                        offset += 1;
+                        proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_event_reserved, tvb, offset, 1, ENC_BIG_ENDIAN);
+                        offset += 1;
+                    }
+                    if (syntax_id == S7COMM_SYNTAXID_ALARM_INDSET || syntax_id == S7COMM_SYNTAXID_NOTIFY_INDSET) {
+                        if (nr_of_additional_values > 0) {
+                            asc_start_offset = offset;
+                            msg_work_item = proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_associated_value, tvb, offset, 0, ENC_NA);
+                            msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_associated_value);
+                            offset = s7comm_decode_response_read_data(tvb, msg_work_item_tree, nr_of_additional_values, offset);
+                            proto_item_set_len(msg_work_item_tree, offset - asc_start_offset);
+                        }
+                    }
+                    break;
+                case S7COMM_SYNTAXID_ALARM_QUERYREQSET:
+                    proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_unknown1, tvb, offset, 1, ENC_BIG_ENDIAN);
+                    offset += 1;
+                    querytype = tvb_get_guint8(tvb, offset);
+                    proto_tree_add_uint(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_querytype, tvb, offset, 1, querytype);
+                    offset += 1;
+                    proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_unknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
+                    offset += 1;
+                    ev_id = tvb_get_ntohl(tvb, offset);
+                    /* there is a querytype=8, which only occurs when a previous SZL request 0x131 index 0x10 has a missing flag in funk_1 */
+                    switch (querytype) {
+                        case S7COMM_ALARM_MESSAGE_QUERYTYPE_BYALARMTYPE:
+                            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_alarmtype, tvb, offset, 4, ENC_BIG_ENDIAN);
+                            col_append_fstr(pinfo->cinfo, COL_INFO, " ByAlarmtype=%s",
+                                val_to_str(ev_id, alarm_message_query_alarmtype_names, "Unknown Alarmtype: %u"));
+                            break;
+                        case S7COMM_ALARM_MESSAGE_QUERYTYPE_BYEVENTID:
+                            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
+                            col_append_fstr(pinfo->cinfo, COL_INFO, " ByEventID=0x%08x", ev_id);
+                            break;
+                        default:
+                            proto_tree_add_text(msg_obj_item_tree, tvb, offset, 4, "Unknown querytype-value: 0x%08x", ev_id);
+                            break;
+                    }
+                    offset += 4;
+                    break;
+                default:
+                    /* for current unknown syntax id, set offset to end of dataset. The varspec_length includes
+                     * the byte for the syntax_id, so minus one.
+                     */
+                    offset += (varspec_length - 1);
+                    break;
             }
-            col_append_fstr(pinfo->cinfo, COL_INFO, "]");
+        } else if (type == S7COMM_UD_TYPE_RES) {
+            ret_val = tvb_get_guint8(tvb, offset);
+            proto_item_append_text(msg_obj_item_tree, ": (%s)", val_to_str(ret_val, s7comm_item_return_valuenames, "Unknown code: 0x%02x"));
+            proto_tree_add_uint(msg_obj_item_tree, hf_s7comm_data_returncode, tvb, offset, 1, ret_val);
+            offset += 1;
         }
-
-        /* 1 byte unknown / reserved */
-        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_reserved2, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-
-        /* 2 bytes ack-state */
-        proto_tree_add_bitmask(msg_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate,
-            ett_s7comm_cpu_alarm_message_ackstate, s7comm_cpu_alarm_message_ackstate_fields, ENC_BIG_ENDIAN);
-        offset += 2;
-
-        /* associated value(s) */
-        if (no_add_values > 0) {
-            offset = s7comm_decode_response_read_data(tvb, msg_item_tree, no_add_values, offset);
-        }
-    } else if (syntax_id == S7COMM_SYNTAXID_ALARM_ACKMESSAGE) {
-        /* 1 byte unknown / reserved */
-        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_reserved2, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-        /* 4 bytes EventID */
-        ev_id = tvb_get_ntohl(tvb, offset);
-        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
-        offset += 4;
-        proto_item_append_text(msg_item_tree, ": EventID=0x%08x", ev_id);
-        col_append_fstr(pinfo->cinfo, COL_INFO, " EV_ID=0x%08x", ev_id);
-        /* 2 bytes ack-state */
-        proto_tree_add_bitmask(msg_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate,
-            ett_s7comm_cpu_alarm_message_ackstate, s7comm_cpu_alarm_message_ackstate_fields, ENC_BIG_ENDIAN);
-        offset += 2;
+        proto_item_set_len(msg_obj_item_tree, offset - msg_obj_start_offset);
     }
     proto_item_set_len(msg_item_tree, offset - start_offset);
     return offset;
 }
-
 /*******************************************************************************************************
  *
- * PDU Type: User Data -> Function group 4 -> alarm acknowledge
+ * PDU Type: User Data -> Function group 4 -> alarm query response
  *
  *******************************************************************************************************/
 static guint32
-s7comm_decode_ud_cpu_alarm_acknowledge(tvbuff_t *tvb,
-                                       packet_info *pinfo,
-                                       proto_tree *data_tree,
-                                       guint8 type,                /* Type of data (request/response) */
-                                       guint8 subfunc,             /* Subfunction */
-                                       guint16 dlength,            /* length of data part given in header */
-                                       guint32 offset)             /* Offset on data part +4 */
+s7comm_decode_ud_cpu_alarm_query_response(tvbuff_t *tvb,
+                                          packet_info *pinfo,
+                                          proto_tree *data_tree,
+                                          guint8 type,                /* Type of data (request/response) */
+                                          guint8 subfunc,             /* Subfunction */
+                                          guint16 dlength,            /* length of data part given in header */
+                                          guint32 offset)             /* Offset on data part +4 */
 {
     proto_item *msg_item = NULL;
     proto_tree *msg_item_tree = NULL;
+    proto_item *msg_obj_item = NULL;
+    proto_tree *msg_obj_item_tree = NULL;
+    proto_item *msg_work_item = NULL;
+    proto_tree *msg_work_item_tree = NULL;
     guint32 start_offset;
+    guint32 msg_obj_start_offset;
+    guint32 asc_start_offset;
     guint32 ev_id;
-    guint8 varspec;
-
-    start_offset = offset;
-    msg_item = proto_tree_add_item(data_tree, hf_s7comm_cpu_alarm_message_item, tvb, offset, 0, ENC_NA);
-    msg_item_tree = proto_item_add_subtree(msg_item, ett_s7comm_cpu_alarm_message);
-
-    /* 2 Bytes funktion, bzw. unbekannt */
-    proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_function1, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
-    /* Syntax id, länge? */
-    varspec = tvb_get_guint8(tvb, offset); /* wenn dieses 0xff, dann ist das ein Antworttelegramm (return_value?) */
-    proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec, tvb, offset, 1, ENC_BIG_ENDIAN);
-    offset += 1;
-    if (varspec == 0x12) {
-        proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec_length, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-        proto_tree_add_item(msg_item_tree, hf_s7comm_item_syntax_id, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-        proto_tree_add_text(msg_item_tree, tvb, offset, 1, "Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
-        ev_id = tvb_get_ntohl(tvb, offset);
-        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
-        offset += 4;
-        proto_item_append_text(msg_item_tree, ": EventID=0x%08x", ev_id);
-        col_append_fstr(pinfo->cinfo, COL_INFO, " EV_ID=0x%08x", ev_id);
-        proto_tree_add_bitmask(msg_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate,
-            ett_s7comm_cpu_alarm_message_ackstate, s7comm_cpu_alarm_message_ackstate_fields, ENC_BIG_ENDIAN);
-        offset += 2;
-    }
-    proto_item_set_len(msg_item_tree, offset - start_offset);
-
-    return offset;
-}
-
-/*******************************************************************************************************
- *
- * PDU Type: User Data -> Function group 4 -> alarm query
- *
- *******************************************************************************************************/
-static guint32
-s7comm_decode_ud_cpu_alarm_query(tvbuff_t *tvb,
-                                 packet_info *pinfo,
-                                 proto_tree *data_tree,
-                                 guint8 type,                /* Type of data (request/response) */
-                                 guint8 subfunc,             /* Subfunction */
-                                 guint16 dlength,            /* length of data part given in header */
-                                 guint32 offset)             /* Offset on data part +4 */
-{
-    proto_item *msg_item = NULL;
-    proto_tree *msg_item_tree = NULL;
-    proto_item *msg_block_item = NULL;
-    proto_tree *msg_block_item_tree = NULL;
-    guint32 start_offset;
-    guint32 alarm_start_offset;
-    guint32 ev_id;
-    guint16 function;
-    guint8 spec;
     guint8 returncode;
     guint8 alarmtype;
     guint16 complete_length;
     gint32 remaining_length;
+    guint8 n_blocks;
+    guint8 func;
 
     start_offset = offset;
     msg_item = proto_tree_add_item(data_tree, hf_s7comm_cpu_alarm_message_item, tvb, offset, 0, ENC_NA);
     msg_item_tree = proto_item_add_subtree(msg_item, ett_s7comm_cpu_alarm_message);
-
-    /* 2 Bytes Funktion, bzw. unbekannt */
-    function = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_function1, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
-    /* Wenn funktion 0000, dann hier Ende. Bei 0x0001 folgen Daten */
-    if (function == 0x0001) {
-        spec = tvb_get_guint8(tvb, offset); /* Request ist hier mit 0x12 -> varspec 12 08 1a  */
-        if (spec == 0x12) {
-            proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec, tvb, offset, 1, ENC_BIG_ENDIAN);
-            offset += 1;
-            proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec_length, tvb, offset, 1, ENC_BIG_ENDIAN);
-            offset += 1;
-            proto_tree_add_item(msg_item_tree, hf_s7comm_item_syntax_id, tvb, offset, 1, ENC_BIG_ENDIAN);
-            offset += 1;
-            proto_tree_add_text(msg_item_tree, tvb, offset, 1, "Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(msg_item_tree, tvb, offset, 1, "Unknown 3: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            proto_tree_add_text(msg_item_tree, tvb, offset, 2, "Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(msg_item_tree, tvb, offset, 2, "Unknown 5: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            alarmtype = tvb_get_guint8(tvb, offset);
-            /* alarmtype = 1 wird übertragen wenn eine Meldesperre einer Einzelmeldung vom HMI aufgehoben wird
-               alarmtype = 3 wird übertragen, wenn eine Meldesperre einer Alarmgruppe vom HMI aufgehoben wird */
-            proto_tree_add_text(msg_item_tree, tvb, offset, 1, "Type (ALARM_8=2/ALARM_S=4): %d", alarmtype);
-            if (alarmtype == 1) {
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Type=ALARM_8-lock/free-1");
-            } else if (alarmtype == 2) {
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Type=ALARM_8");
-            } else if (alarmtype == 3) {
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Type=ALARM_8-lock/free-3");
-            } else if (alarmtype == 4) {
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Type=ALARM_S");
-            } else {
-                col_append_fstr(pinfo->cinfo, COL_INFO, " Type=UNKNOWN");
-            }
-            offset += 1;
-        } else {
-            /*
-                                     EventID  SIG  Ack   Timestamp        begleitwert  Timestamp(going) begleitwert
-            0001 ff 09 ffff 24000004 60000001 0001 0101 1505251049011292 ff0400109876 0000000000000000 0a000000
-            */
-            returncode = tvb_get_guint8(tvb, offset);
-            proto_tree_add_item(msg_item_tree, hf_s7comm_data_returncode, tvb, offset, 1, ENC_BIG_ENDIAN);
-            offset += 1;
-            proto_tree_add_item(msg_item_tree, hf_s7comm_data_transport_size, tvb, offset, 1, ENC_BIG_ENDIAN);
-            offset += 1;
-            /* das hier waere eigentlich die Länge, aber manchmal steht hier 0xffff was nicht zusammenpasst */
-            complete_length = tvb_get_ntohs(tvb, offset);
-            proto_tree_add_text(msg_item_tree, tvb, offset, 2, "Complete data length: %d", complete_length);
-            remaining_length = (gint32)complete_length;
-            if (remaining_length == 0xffff) { remaining_length = 0; }
-            offset += 2;
-            if (returncode == S7COMM_ITEM_RETVAL_DATA_OK) {
-    /* START DATENSATZ */
-                do {
-                    alarm_start_offset = offset;
-
-                    msg_block_item = proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_block_item, tvb, offset, 0, ENC_NA);
-                    msg_block_item_tree = proto_item_add_subtree(msg_block_item, ett_s7comm_cpu_alarm_message_block);
-
-                    proto_tree_add_text(msg_block_item_tree, tvb, offset, 1, "Length of dataset: %d", tvb_get_guint8(tvb, offset));
-                    offset += 1;
-                    proto_tree_add_text(msg_block_item_tree, tvb, offset, 2, "Unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
-                    offset += 2;
-                    /* Ab hier zählt die oben angegebene Datensatzlänge */
-                    alarmtype = tvb_get_guint8(tvb, offset);
-                    proto_tree_add_text(msg_block_item_tree, tvb, offset, 1, "Type (ALARM_8=2/ALARM_S=4): %d", alarmtype);
-                    if (alarmtype == 2) {
-                        proto_item_append_text(msg_block_item_tree, " (Type=ALARM_8)");
-                    } else if (alarmtype == 4) {
-                        proto_item_append_text(msg_block_item_tree, " (Type=ALARM_S)");
-                    } else {
-                        proto_item_append_text(msg_block_item_tree, " (Type=UNKNOWN)");
-                    }
-                    offset += 1;
-
-                    ev_id = tvb_get_ntohl(tvb, offset);
-                    proto_tree_add_item(msg_block_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
-                    proto_item_append_text(msg_block_item_tree, ": EventID=0x%08x", ev_id);
-                    offset += 4;
-
-                    proto_tree_add_text(msg_block_item_tree, tvb, offset, 1, "Unknown 3: %d", tvb_get_guint8(tvb, offset));
-                    offset += 1;
-
-                    /* 1 byte signalstate*/
-                    proto_tree_add_bitmask(msg_block_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_eventstate,
-                        ett_s7comm_cpu_alarm_message_eventstate, s7comm_cpu_alarm_message_eventstate_fields, ENC_BIG_ENDIAN);
-                    offset += 1;
-
-                    proto_tree_add_bitmask(msg_block_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate,
-                        ett_s7comm_cpu_alarm_message_ackstate, s7comm_cpu_alarm_message_ackstate_fields, ENC_BIG_ENDIAN);
-                    offset += 2;
-
-                    /* Die weiteren Felder existieren nur bei Alarm_S */
-                    if (alarmtype == 4) {
-                        /* 8 bytes timestamp (coming?)*/
-                        offset = s7comm_add_timestamp_to_tree(tvb, msg_block_item_tree, offset, FALSE, FALSE);
-
-                        /* Begleitwert */
-                        offset = s7comm_decode_response_read_data(tvb, msg_block_item_tree, 1, offset);
-
-                        /* 8 bytes timestamp (coming?)*/
-                        offset = s7comm_add_timestamp_to_tree(tvb, msg_block_item_tree, offset, FALSE, FALSE);
-
-                        /* Begleitwert */
-                        offset = s7comm_decode_response_read_data(tvb, msg_block_item_tree, 1, offset);
-                    }
-
-                    if (alarmtype == 2) {
-                        remaining_length = remaining_length - (offset - alarm_start_offset);
-                    }
-                    proto_item_set_len(msg_block_item_tree, offset - alarm_start_offset);
-                } while (remaining_length > 0 && alarmtype == 2);
-    /* ENDE DATENSATZ */
-            }
+    /* An alarm response may take more that one response telegram. If it's split into many telegrams,
+     * then the inner telegrams begins with the dataset parts without any header.
+     * The last telegrams of this sequence has the first two bytes zero.
+     */
+    func = tvb_get_guint8(tvb, offset);
+    n_blocks = tvb_get_guint8(tvb, offset + 1);
+    if (func == 0) {
+        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_function, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_nr_objects, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+        if (n_blocks == 0) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " [Last]");
+            proto_item_set_len(msg_item_tree, offset - start_offset);
+            return offset;
         }
+    }
+    if (func > 0) {
+        col_append_fstr(pinfo->cinfo, COL_INFO, " [Continuation]");
+        complete_length = func;
+        remaining_length = (gint32)complete_length;
+        returncode = S7COMM_ITEM_RETVAL_DATA_OK;
+    } else {
+        returncode = tvb_get_guint8(tvb, offset);
+        proto_tree_add_item(msg_item_tree, hf_s7comm_data_returncode, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+        proto_tree_add_item(msg_item_tree, hf_s7comm_data_transport_size, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+        /* As with ALARM_S it's only possible to send one alarm description in a single response telegram,
+         * they are splitted into many telegrams. Therefore the complete length field is set to 0xffff.
+         * To reuse the following dissect-loop, the remaining length is set to zero.
+         */
+        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_query_completelen, tvb, offset, 2, ENC_BIG_ENDIAN);
+        complete_length = tvb_get_ntohs(tvb, offset);
+        remaining_length = (gint32)complete_length;
+        if (remaining_length == 0xffff) {
+            remaining_length = 0;
+        }
+        offset += 2;
+    }
+
+    if (returncode == S7COMM_ITEM_RETVAL_DATA_OK) {
+        do {
+            msg_obj_start_offset = offset;
+            msg_obj_item = proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_obj_item, tvb, offset, 0, ENC_NA);
+            msg_obj_item_tree = proto_item_add_subtree(msg_obj_item, ett_s7comm_cpu_alarm_message_object);
+
+            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_datasetlen, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
+            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_resunknown1, tvb, offset, 2, ENC_BIG_ENDIAN);
+            offset += 2;
+            /* begin of count dataset length */
+            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_alarmtype, tvb, offset, 1, ENC_BIG_ENDIAN);
+            alarmtype = tvb_get_guint8(tvb, offset);
+            proto_item_append_text(msg_obj_item_tree, " (Alarmtype=%s)", val_to_str(alarmtype, alarm_message_query_alarmtype_names, "Unknown Alarmtype: %u"));
+            offset += 1;
+
+            ev_id = tvb_get_ntohl(tvb, offset);
+            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
+            proto_item_append_text(msg_obj_item_tree, ": EventID=0x%08x", ev_id);
+            offset += 4;
+
+            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_resunknown1, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
+
+            proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_eventstate,
+                ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+            offset += 1;
+
+            proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate_going,
+                ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+            offset += 1;
+            proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate_coming,
+                ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
+            offset += 1;
+
+            if (alarmtype == S7COMM_ALARM_MESSAGE_QUERY_ALARMTYPE_ALARM_S) {
+                /* 8 bytes timestamp (coming?)*/
+                msg_work_item = proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_timestamp_coming, tvb, offset, 8, ENC_NA);
+                msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_timestamp);
+                offset = s7comm_add_timestamp_to_tree(tvb, msg_work_item_tree, offset, TRUE, FALSE);
+                /* Associated value of coming alarm */
+                asc_start_offset = offset;
+                msg_work_item = proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_associated_value, tvb, offset, 0, ENC_NA);
+                msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_associated_value);
+                offset = s7comm_decode_response_read_data(tvb, msg_work_item_tree, 1, offset);
+                proto_item_set_len(msg_work_item_tree, offset - asc_start_offset);
+                /* 8 bytes timestamp (going?)
+                 * If all bytes in timestamp are zero, then the message is still active. */
+                msg_work_item = proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_timestamp_going, tvb, offset, 8, ENC_NA);
+                msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_timestamp);
+                offset = s7comm_add_timestamp_to_tree(tvb, msg_work_item_tree, offset, TRUE, FALSE);
+                /* Associated value of going alarm  */
+                asc_start_offset = offset;
+                msg_work_item = proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_associated_value, tvb, offset, 0, ENC_NA);
+                msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_associated_value);
+                offset = s7comm_decode_response_read_data(tvb, msg_work_item_tree, 1, offset);
+                proto_item_set_len(msg_work_item_tree, offset - asc_start_offset);
+            }
+            remaining_length = remaining_length - (offset - msg_obj_start_offset);
+            proto_item_set_len(msg_obj_item_tree, offset - msg_obj_start_offset);
+        } while (remaining_length > 0);
     }
     proto_item_set_len(msg_item_tree, offset - start_offset);
 
-    return offset;
-}
-/*******************************************************************************************************
- *
- * PDU Type: User Data -> Function group 4 -> alarm lock/free
- *
- *******************************************************************************************************/
-static guint32
-s7comm_decode_ud_cpu_alarm_lockfree(tvbuff_t *tvb,
-                                    packet_info *pinfo,
-                                    proto_tree *data_tree,
-                                    guint8 type,                /* Type of data (request/response) */
-                                    guint8 subfunc,             /* Subfunction */
-                                    guint16 dlength,            /* length of data part given in header */
-                                    guint32 offset)             /* Offset on data part +4 */
-{
-    guint16 function;
-    guint32 start_offset;
-    guint32 ev_id;
-    proto_item *msg_item = NULL;
-    proto_tree *msg_item_tree = NULL;
-    guint8 spec;
-
-    start_offset = offset;
-
-    msg_item = proto_tree_add_item(data_tree, hf_s7comm_cpu_alarm_message_item, tvb, offset, 0, ENC_NA);
-    msg_item_tree = proto_item_add_subtree(msg_item, ett_s7comm_cpu_alarm_message);
-
-    /* 2 Bytes Funktion, bzw. unbekannt */
-    /* 0601 = Einzelne Meldung freigeben/sperren
-       0602 = Warnung Gruppe freigeben/sperren
-       0603 = Alarm gruppe freigeben/sperren
-       */
-    function = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_function1, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
-
-    spec = tvb_get_guint8(tvb, offset);
-    if (spec == 0x12) {
-        proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-        proto_tree_add_item(msg_item_tree, hf_s7comm_item_varspec_length, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-        proto_tree_add_item(msg_item_tree, hf_s7comm_item_syntax_id, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-        proto_tree_add_text(msg_item_tree, tvb, offset, 1, "Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
-        ev_id = tvb_get_ntohl(tvb, offset);
-        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
-        proto_item_append_text(msg_item_tree, ": EventID=0x%08x", ev_id);
-        offset += 4;
-    }
     return offset;
 }
 /*******************************************************************************************************
@@ -3076,16 +3048,16 @@ s7comm_decode_ud(tvbuff_t *tvb,
                 case S7COMM_UD_FUNCGROUP_CPU:
                     if (subfunc == S7COMM_UD_SUBF_CPU_READSZL) {
                         offset = s7comm_decode_ud_cpu_szl_subfunc(tvb, pinfo, data_tree, type, ret_val, len, dlength, data_unit_ref, last_data_unit, offset);
-                    } else if (subfunc == S7COMM_UD_SUBF_CPU_NOTIFY_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARM8_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMSQ_IND
-                            || subfunc == S7COMM_UD_SUBF_CPU_ALARMS_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMACK_IND) {
-                        offset = s7comm_decode_ud_cpu_alarm_indication(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
-                    } else if (subfunc == S7COMM_UD_SUBF_CPU_ALARMACK) {
-                        offset = s7comm_decode_ud_cpu_alarm_acknowledge(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
-                    } else if (subfunc == S7COMM_UD_SUBF_CPU_ALARMQUERY) {
-                        offset = s7comm_decode_ud_cpu_alarm_query(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
-                    } else if (subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK || subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK_IND ||
-                               subfunc == S7COMM_UD_SUBF_CPU_ALARM8FREE || subfunc == S7COMM_UD_SUBF_CPU_ALARM8FREE_IND) {
-                        offset = s7comm_decode_ud_cpu_alarm_lockfree(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
+                    } else if (subfunc == S7COMM_UD_SUBF_CPU_NOTIFY_IND || subfunc == S7COMM_UD_SUBF_CPU_NOTIFY8_IND
+                            || subfunc == S7COMM_UD_SUBF_CPU_ALARM8_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMSQ_IND
+                            || subfunc == S7COMM_UD_SUBF_CPU_ALARMS_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMACK_IND
+                            || subfunc == S7COMM_UD_SUBF_CPU_ALARMACK
+                            || subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK || subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK_IND
+                            || subfunc == S7COMM_UD_SUBF_CPU_ALARM8UNLOCK || subfunc == S7COMM_UD_SUBF_CPU_ALARM8UNLOCK_IND
+                            || (subfunc == S7COMM_UD_SUBF_CPU_ALARMQUERY && type != S7COMM_UD_TYPE_RES)) {
+                        offset = s7comm_decode_ud_cpu_alarm_main(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
+                    } else if (subfunc == S7COMM_UD_SUBF_CPU_ALARMQUERY && type == S7COMM_UD_TYPE_RES) {
+                        offset = s7comm_decode_ud_cpu_alarm_query_response(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
                     } else {
                         /* print other currently unknown data as raw bytes */
                         proto_tree_add_item(data_tree, hf_s7comm_userdata_data, tvb, offset, dlength - 4, ENC_NA);
@@ -3885,101 +3857,105 @@ proto_register_s7comm (void)
 
         /* CPU alarms */
         { &hf_s7comm_cpu_alarm_message_item,
-        { "Alarm Message", "s7comm.alarm.message", FT_NONE, BASE_NONE, NULL, 0x0,
+        { "Alarm message", "s7comm.alarm.message", FT_NONE, BASE_NONE, NULL, 0x0,
           NULL, HFILL }},
-        { &hf_s7comm_cpu_alarm_message_block_item,
-        { "Alarm Message Block", "s7comm.alarm.message.block", FT_NONE, BASE_NONE, NULL, 0x0,
+        { &hf_s7comm_cpu_alarm_message_obj_item,
+        { "Message object", "s7comm.alarm.message_object", FT_NONE, BASE_NONE, NULL, 0x0,
           NULL, HFILL }},
-        { &hf_s7comm_cpu_alarm_message_function1,
-        { "Unknown/Function?", "s7comm.alarm.function1", FT_UINT16, BASE_HEX, NULL, 0x0,
+        { &hf_s7comm_cpu_alarm_message_function,
+        { "Function identifier", "s7comm.alarm.function", FT_UINT8, BASE_HEX, NULL, 0x0,
           NULL, HFILL }},
-        { &hf_s7comm_cpu_alarm_message_no_add_values,
-        { "Number of associated values", "s7comm.alarm.no_add_values", FT_UINT8, BASE_DEC, NULL, 0x0,
+        { &hf_s7comm_cpu_alarm_message_nr_objects,
+        { "Number of message objects", "s7comm.alarm.nr_objects", FT_UINT8, BASE_DEC, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_message_nr_add_values,
+        { "Number of associated values", "s7comm.alarm.nr_add_values", FT_UINT8, BASE_DEC, NULL, 0x0,
           NULL, HFILL }},
         { &hf_s7comm_cpu_alarm_message_eventid,
         { "EventID", "s7comm.alarm.event_id", FT_UINT32, BASE_HEX, NULL, 0x0,
           NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_message_timestamp_coming,
+        { "Timestamp message coming", "s7comm.alarm.timestamp_coming", FT_NONE, BASE_NONE, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_message_timestamp_going,
+        { "Timestamp message going", "s7comm.alarm.timestamp_going", FT_NONE, BASE_NONE, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_message_associated_value,
+        { "Associated value(s)", "s7comm.alarm.associated_value", FT_NONE, BASE_NONE, NULL, 0x0,
+          NULL, HFILL }},
         { &hf_s7comm_cpu_alarm_message_eventstate,
-        { "Eventstate SIG", "s7comm.alarm.eventstate", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { "EventState", "s7comm.alarm.eventstate", FT_UINT8, BASE_HEX, NULL, 0x0,
           NULL, HFILL }},
-        { &hf_s7comm_cpu_alarm_message_eventstate_sig1,
-        { "SIG_1", "s7comm.alarm.eventstate.sig1", FT_BOOLEAN, 8, NULL, 0x01,
-          "Current state of event Signal SIG_1", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_eventstate_sig2,
-        { "SIG_2", "s7comm.alarm.eventstate.sig2", FT_BOOLEAN, 8, NULL, 0x02,
-          "Current state of event Signal SIG_2", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_eventstate_sig3,
-        { "SIG_3", "s7comm.alarm.eventstate.sig3", FT_BOOLEAN, 8, NULL, 0x04,
-          "Current state of event Signal SIG_3", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_eventstate_sig4,
-        { "SIG_4", "s7comm.alarm.eventstate.sig4", FT_BOOLEAN, 8, NULL, 0x08,
-          "Current state of event Signal SIG_4", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_eventstate_sig5,
-        { "SIG_5", "s7comm.alarm.eventstate.sig5", FT_BOOLEAN, 8, NULL, 0x10,
-          "Current state of event Signal SIG_5", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_eventstate_sig6,
-        { "SIG_6", "s7comm.alarm.eventstate.sig6", FT_BOOLEAN, 8, NULL, 0x20,
-          "Current state of event Signal SIG_6", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_eventstate_sig7,
-        { "SIG_7", "s7comm.alarm.eventstate.sig7", FT_BOOLEAN, 8, NULL, 0x40,
-          "Current state of event Signal SIG_7", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_eventstate_sig8,
-        { "SIG_8", "s7comm.alarm.eventstate.sig8", FT_BOOLEAN, 8, NULL, 0x80,
-          "Current state of event Signal SIG_8", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_reserved2,
-        { "Reserved/Unknown", "s7comm.alarm.reserved2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { &hf_s7comm_cpu_alarm_message_signal_sig1,
+        { "SIG_1", "s7comm.alarm.signal.sig1", FT_BOOLEAN, 8, NULL, 0x01,
+          "Current state of Signal SIG_1", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_signal_sig2,
+        { "SIG_2", "s7comm.alarm.signal.sig2", FT_BOOLEAN, 8, NULL, 0x02,
+          "Current state of Signal SIG_2", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_signal_sig3,
+        { "SIG_3", "s7comm.alarm.signal.sig3", FT_BOOLEAN, 8, NULL, 0x04,
+          "Current state of Signal SIG_3", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_signal_sig4,
+        { "SIG_4", "s7comm.alarm.signal.sig4", FT_BOOLEAN, 8, NULL, 0x08,
+          "Current state of Signal SIG_4", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_signal_sig5,
+        { "SIG_5", "s7comm.alarm.signal.sig5", FT_BOOLEAN, 8, NULL, 0x10,
+          "Current state of Signal SIG_5", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_signal_sig6,
+        { "SIG_6", "s7comm.alarm.signal.sig6", FT_BOOLEAN, 8, NULL, 0x20,
+          "Current state of Signal SIG_6", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_signal_sig7,
+        { "SIG_7", "s7comm.alarm.signal.sig7", FT_BOOLEAN, 8, NULL, 0x40,
+          "Current state of Signal SIG_7", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_signal_sig8,
+        { "SIG_8", "s7comm.alarm.signal.sig8", FT_BOOLEAN, 8, NULL, 0x80,
+          "Current state of Signal SIG_8", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_state,
+        { "State", "s7comm.alarm.state", FT_UINT8, BASE_HEX, NULL, 0x0,
           NULL, HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate,
-        { "AckState", "s7comm.alarm.ack_state", FT_UINT16, BASE_HEX, NULL, 0x0,
-          "Acknowledge state (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_in_sig1,
-        { "IN-SIG_1", "s7comm.alarm.ack_state.incoming.sig1", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0001,
-          "Incoming acknowledgement status of SIG_1 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_in_sig2,
-        { "IN-SIG_2", "s7comm.alarm.ack_state.incoming.sig2", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0002,
-          "Incoming acknowledgement status of SIG_2 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_in_sig3,
-        { "IN-SIG_3", "s7comm.alarm.ack_state.incoming.sig3", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0004,
-          "Incoming acknowledgement status of SIG_3 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_in_sig4,
-        { "IN-SIG_4", "s7comm.alarm.ack_state.incoming.sig4", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0008,
-          "Incoming acknowledgement status of SIG_4 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_in_sig5,
-        { "IN-SIG_5", "s7comm.alarm.ack_state.incoming.sig5", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0010,
-          "Incoming acknowledgement status of SIG_5 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_in_sig6,
-        { "IN-SIG_6", "s7comm.alarm.ack_state.incoming.sig6", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0020,
-          "Incoming acknowledgement status of SIG_6 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_in_sig7,
-        { "IN-SIG_7", "s7comm.alarm.ack_state.incoming.sig7", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0040,
-          "Incoming acknowledgement status of SIG_7 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_in_sig8,
-        { "IN-SIG_8", "s7comm.alarm.ack_state.incoming.sig8", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0080,
-          "Incoming acknowledgement status of SIG_8 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_out_sig1,
-        { "OUT-SIG_1", "s7comm.alarm.ack_state.outgoing.sig1", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0100,
-          "Outgoing acknowledgement status of SIG_1 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_out_sig2,
-        { "OUT-SIG_2", "s7comm.alarm.ack_state.outgoing.sig2", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0200,
-          "Outgoing acknowledgement status of SIG_2 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_out_sig3,
-        { "OUT-SIG_3", "s7comm.alarm.ack_state.outgoing.sig3", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0400,
-          "Outgoing acknowledgement status of SIG_3 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_out_sig4,
-        { "OUT-SIG_4", "s7comm.alarm.ack_state.outgoing.sig4", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x0800,
-          "Outgoing acknowledgement status of SIG_4 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_out_sig5,
-        { "OUT-SIG_5", "s7comm.alarm.ack_state.outgoing.sig5", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x1000,
-          "Outgoing acknowledgement status of SIG_5 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_out_sig6,
-        { "OUT-SIG_6", "s7comm.alarm.ack_state.outgoing.sig6", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x2000,
-          "Outgoing acknowledgement status of SIG_6 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_out_sig7,
-        { "OUT-SIG_7", "s7comm.alarm.ack_state.outgoing.sig7", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x4000,
-          "Outgoing acknowledgement status of SIG_7 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
-        { &hf_s7comm_cpu_alarm_message_ackstate_out_sig8,
-        { "OUT-SIG_8", "s7comm.alarm.ack_state.outgoing.sig8", FT_BOOLEAN, 16, TFS(&tfs_s7comm_alarm_message_ackstate), 0x8000,
-          "Outgoing acknowledgement status of SIG_8 (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_ackstate_coming,
+        { "AckState coming", "s7comm.alarm.ack_state.coming", FT_UINT8, BASE_HEX, NULL, 0x0,
+          "Acknowledge state coming (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
+        { &hf_s7comm_cpu_alarm_message_ackstate_going,
+        { "AckState going", "s7comm.alarm.ack_state.going", FT_UINT8, BASE_HEX, NULL, 0x0,
+          "Acknowledge state going (1=Event acknowledged, 0=Event not acknowledged)", HFILL }},
+         { &hf_s7comm_cpu_alarm_message_event_coming,
+        { "Event coming", "s7comm.alarm.event.coming", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_message_event_going,
+        { "Event going", "s7comm.alarm.event.going", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_message_event_lastchanged,
+        { "Event last changed", "s7comm.alarm.event.lastchanged", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_message_event_reserved,
+        { "Reserved", "s7comm.alarm.event.reserved", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        /* Alarm message query */
+        { &hf_s7comm_cpu_alarm_query_unknown1,
+        { "Unknown/Reserved (1)", "s7comm.alarm.query.unknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_query_querytype,
+        { "Querytype", "s7comm.alarm.query.querytype", FT_UINT8, BASE_DEC, VALS(alarm_message_querytype_names), 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_query_unknown2,
+        { "Unknown/Reserved (2)", "s7comm.alarm.query.unknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_query_alarmtype,
+        { "Alarmtype", "s7comm.alarm.query.alarmtype", FT_UINT32, BASE_DEC, VALS(alarm_message_query_alarmtype_names), 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_query_completelen,
+        { "Complete data length", "s7comm.alarm.query.complete_length", FT_UINT32, BASE_DEC, NULL, 0x0,
+          "Complete data length (with ALARM_S this is 0xffff, as they might be splitted into many telegrams)", HFILL }},
+        { &hf_s7comm_cpu_alarm_query_datasetlen,
+        { "Length of dataset", "s7comm.alarm.query.dataset_length", FT_UINT8, BASE_DEC, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_query_resunknown1,
+        { "Unknown", "s7comm.alarm.query.resunknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_query_resunknown2,
+        { "Unknown", "s7comm.alarm.query.resunknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
 
         /* TIA Portal stuff */
         { &hf_s7comm_tia1200_item_reserved1,
@@ -4023,9 +3999,10 @@ proto_register_s7comm (void)
         &ett_s7comm_diagdata_registerflag,
         &ett_s7comm_userdata_blockinfo_flags,
         &ett_s7comm_cpu_alarm_message,
-        &ett_s7comm_cpu_alarm_message_block,
-        &ett_s7comm_cpu_alarm_message_eventstate,
-        &ett_s7comm_cpu_alarm_message_ackstate
+        &ett_s7comm_cpu_alarm_message_object,
+        &ett_s7comm_cpu_alarm_message_signal,
+        &ett_s7comm_cpu_alarm_message_timestamp,
+        &ett_s7comm_cpu_alarm_message_associated_value
     };
 
     proto_s7comm = proto_register_protocol (

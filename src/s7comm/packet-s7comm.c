@@ -3088,9 +3088,10 @@ s7comm_decode_ud_cpu_alarm_query_response(tvbuff_t *tvb,
  * Also used as a dataset in the diagnostic buffer, read with SZL-ID 0x00a0 index 0.
  *
  *******************************************************************************************************/
-static guint32
+guint32
 s7comm_decode_ud_cpu_diagnostic_message(tvbuff_t *tvb,
                                         packet_info *pinfo,
+                                        gboolean add_info_to_col,
                                         proto_tree *data_tree,
                                         guint32 offset)
 {
@@ -3108,20 +3109,30 @@ s7comm_decode_ud_cpu_diagnostic_message(tvbuff_t *tvb,
     if ((eventid >= 0x8000) && (eventid <= 0x9fff)) {
         eventid_masked = eventid & 0xf0ff;
         if (event_text = try_val_to_str_ext(eventid_masked, &cpu_diag_eventid_0x8_0x9_names_ext)) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " Event='%s'", event_text);
+            if (add_info_to_col) {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Event='%s'", event_text);
+            }
             has_text = TRUE;
         } else {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " EventID=0x%04x", eventid);
+            if (add_info_to_col) {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " EventID=0x%04x", eventid);
+            }
         }
     } else if (eventid >= 0x1000 && eventid < 0x8000) {
         if (event_text = try_val_to_str_ext(eventid, &cpu_diag_eventid_fix_names_ext)) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " Event='%s'", event_text);
+            if (add_info_to_col) {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " Event='%s'", event_text);
+            }
             has_text = TRUE;
         } else {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " EventID=0x%04x", eventid);
+            if (add_info_to_col) {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " EventID=0x%04x", eventid);
+            }
         }
     } else {
-        col_append_fstr(pinfo->cinfo, COL_INFO, " EventID=0x%04x", eventid);
+        if (add_info_to_col) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " EventID=0x%04x", eventid);
+        }
     }
     proto_tree_add_bitmask(msg_item_tree, tvb, offset, hf_s7comm_cpu_diag_msg_eventid,
             ett_s7comm_cpu_diag_msg_eventid, s7comm_cpu_diag_msg_eventid_fields, ENC_BIG_ENDIAN);
@@ -3726,7 +3737,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
                     } else if (subfunc == S7COMM_UD_SUBF_CPU_ALARMQUERY && type == S7COMM_UD_TYPE_RES) {
                         offset = s7comm_decode_ud_cpu_alarm_query_response(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
                     } else if (subfunc == S7COMM_UD_SUBF_CPU_DIAGMSG) {
-                        offset = s7comm_decode_ud_cpu_diagnostic_message(tvb, pinfo, data_tree, offset);
+                        offset = s7comm_decode_ud_cpu_diagnostic_message(tvb, pinfo, TRUE, data_tree, offset);
                     } else {
                         /* print other currently unknown data as raw bytes */
                         proto_tree_add_item(data_tree, hf_s7comm_userdata_data, tvb, offset, dlength - 4, ENC_NA);

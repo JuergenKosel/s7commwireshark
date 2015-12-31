@@ -1117,7 +1117,6 @@ static gint hf_s7comm_cpu_alarm_query_alarmtype = -1;
 static gint hf_s7comm_cpu_alarm_query_completelen = -1;
 static gint hf_s7comm_cpu_alarm_query_datasetlen = -1;
 static gint hf_s7comm_cpu_alarm_query_resunknown1 = -1;
-static gint hf_s7comm_cpu_alarm_query_resunknown2 = -1;
 
 /* CPU diagnostic messages */
 static gint hf_s7comm_cpu_diag_msg_item = -1;
@@ -2772,7 +2771,6 @@ s7comm_decode_ud_cpu_alarm_main(tvbuff_t *tvb,
                                 proto_tree *data_tree,
                                 guint8 type,                /* Type of data (request/response) */
                                 guint8 subfunc,             /* Subfunction */
-                                guint16 dlength,            /* length of data part given in header */
                                 guint32 offset)             /* Offset on data part +4 */
 {
     guint32 start_offset;
@@ -2810,7 +2808,7 @@ s7comm_decode_ud_cpu_alarm_main(tvbuff_t *tvb,
     proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_function, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
     nr_objects = tvb_get_guint8(tvb, offset);
-    proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_nr_objects, tvb, offset, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_uint(msg_item_tree, hf_s7comm_cpu_alarm_message_nr_objects, tvb, offset, 1, nr_objects);
     offset += 1;
     for (i = 1; i <= nr_objects; i++) {
         msg_obj_start_offset = offset;
@@ -2821,10 +2819,10 @@ s7comm_decode_ud_cpu_alarm_main(tvbuff_t *tvb,
             proto_tree_add_item(msg_obj_item_tree, hf_s7comm_item_varspec, tvb, offset, 1, ENC_BIG_ENDIAN);
             offset += 1;
             varspec_length = tvb_get_guint8(tvb, offset);
-            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_item_varspec_length, tvb, offset, 1, ENC_BIG_ENDIAN);
+            proto_tree_add_uint(msg_obj_item_tree, hf_s7comm_item_varspec_length, tvb, offset, 1, varspec_length);
             offset += 1;
             syntax_id = tvb_get_guint8(tvb, offset);
-            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_item_syntax_id, tvb, offset, 1, ENC_BIG_ENDIAN);
+            proto_tree_add_uint(msg_obj_item_tree, hf_s7comm_item_syntax_id, tvb, offset, 1, syntax_id);
             offset += 1;
             switch (syntax_id) {
                 case S7COMM_SYNTAXID_ALARM_LOCKFREESET:
@@ -2832,10 +2830,10 @@ s7comm_decode_ud_cpu_alarm_main(tvbuff_t *tvb,
                 case S7COMM_SYNTAXID_NOTIFY_INDSET:
                 case S7COMM_SYNTAXID_ALARM_ACKSET:
                     nr_of_additional_values = tvb_get_guint8(tvb, offset);
-                    proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_nr_add_values, tvb, offset, 1, ENC_BIG_ENDIAN);
+                    proto_tree_add_uint(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_nr_add_values, tvb, offset, 1, nr_of_additional_values);
                     offset += 1;
                     ev_id = tvb_get_ntohl(tvb, offset);
-                    proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
+                    proto_tree_add_uint(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ev_id);
                     offset += 4;
                     proto_item_append_text(msg_obj_item_tree, ": EventID=0x%08x", ev_id);
                     col_append_fstr(pinfo->cinfo, COL_INFO, " EventID=0x%08x", ev_id);
@@ -2949,9 +2947,6 @@ static guint32
 s7comm_decode_ud_cpu_alarm_query_response(tvbuff_t *tvb,
                                           packet_info *pinfo,
                                           proto_tree *data_tree,
-                                          guint8 type,                /* Type of data (request/response) */
-                                          guint8 subfunc,             /* Subfunction */
-                                          guint16 dlength,            /* length of data part given in header */
                                           guint32 offset)             /* Offset on data part +4 */
 {
     proto_item *msg_item = NULL;
@@ -2998,7 +2993,7 @@ s7comm_decode_ud_cpu_alarm_query_response(tvbuff_t *tvb,
         returncode = S7COMM_ITEM_RETVAL_DATA_OK;
     } else {
         returncode = tvb_get_guint8(tvb, offset);
-        proto_tree_add_item(msg_item_tree, hf_s7comm_data_returncode, tvb, offset, 1, ENC_BIG_ENDIAN);
+        proto_tree_add_uint(msg_item_tree, hf_s7comm_data_returncode, tvb, offset, 1, returncode);
         offset += 1;
         proto_tree_add_item(msg_item_tree, hf_s7comm_data_transport_size, tvb, offset, 1, ENC_BIG_ENDIAN);
         offset += 1;
@@ -3006,8 +3001,8 @@ s7comm_decode_ud_cpu_alarm_query_response(tvbuff_t *tvb,
          * they are splitted into many telegrams. Therefore the complete length field is set to 0xffff.
          * To reuse the following dissect-loop, the remaining length is set to zero.
          */
-        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_query_completelen, tvb, offset, 2, ENC_BIG_ENDIAN);
         complete_length = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_uint(msg_item_tree, hf_s7comm_cpu_alarm_query_completelen, tvb, offset, 2, complete_length);
         remaining_length = (gint32)complete_length;
         if (remaining_length == 0xffff) {
             remaining_length = 0;
@@ -3026,30 +3021,25 @@ s7comm_decode_ud_cpu_alarm_query_response(tvbuff_t *tvb,
             proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_resunknown1, tvb, offset, 2, ENC_BIG_ENDIAN);
             offset += 2;
             /* begin of count dataset length */
-            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_alarmtype, tvb, offset, 1, ENC_BIG_ENDIAN);
             alarmtype = tvb_get_guint8(tvb, offset);
+            proto_tree_add_uint(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_alarmtype, tvb, offset, 1, alarmtype);
             proto_item_append_text(msg_obj_item_tree, " (Alarmtype=%s)", val_to_str(alarmtype, alarm_message_query_alarmtype_names, "Unknown Alarmtype: %u"));
             offset += 1;
-
             ev_id = tvb_get_ntohl(tvb, offset);
-            proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ENC_BIG_ENDIAN);
+            proto_tree_add_uint(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_eventid, tvb, offset, 4, ev_id);
             proto_item_append_text(msg_obj_item_tree, ": EventID=0x%08x", ev_id);
             offset += 4;
-
             proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_query_resunknown1, tvb, offset, 1, ENC_BIG_ENDIAN);
             offset += 1;
-
             proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_eventstate,
                 ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
             offset += 1;
-
             proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate_going,
                 ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
             offset += 1;
             proto_tree_add_bitmask(msg_obj_item_tree, tvb, offset, hf_s7comm_cpu_alarm_message_ackstate_coming,
                 ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
             offset += 1;
-
             if (alarmtype == S7COMM_ALARM_MESSAGE_QUERY_ALARMTYPE_ALARM_S) {
                 /* 8 bytes timestamp (coming?)*/
                 msg_work_item = proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_timestamp_coming, tvb, offset, 8, ENC_NA);
@@ -3733,9 +3723,9 @@ s7comm_decode_ud(tvbuff_t *tvb,
                             || subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK || subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK_IND
                             || subfunc == S7COMM_UD_SUBF_CPU_ALARM8UNLOCK || subfunc == S7COMM_UD_SUBF_CPU_ALARM8UNLOCK_IND
                             || (subfunc == S7COMM_UD_SUBF_CPU_ALARMQUERY && type != S7COMM_UD_TYPE_RES)) {
-                        offset = s7comm_decode_ud_cpu_alarm_main(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
+                        offset = s7comm_decode_ud_cpu_alarm_main(tvb, pinfo, data_tree, type, subfunc, offset);
                     } else if (subfunc == S7COMM_UD_SUBF_CPU_ALARMQUERY && type == S7COMM_UD_TYPE_RES) {
-                        offset = s7comm_decode_ud_cpu_alarm_query_response(tvb, pinfo, data_tree, type, subfunc, dlength, offset);
+                        offset = s7comm_decode_ud_cpu_alarm_query_response(tvb, pinfo, data_tree, offset);
                     } else if (subfunc == S7COMM_UD_SUBF_CPU_DIAGMSG) {
                         offset = s7comm_decode_ud_cpu_diagnostic_message(tvb, pinfo, TRUE, data_tree, offset);
                     } else {
@@ -4632,9 +4622,6 @@ proto_register_s7comm (void)
           NULL, HFILL }},
         { &hf_s7comm_cpu_alarm_query_resunknown1,
         { "Unknown", "s7comm.alarm.query.resunknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
-          NULL, HFILL }},
-        { &hf_s7comm_cpu_alarm_query_resunknown2,
-        { "Unknown", "s7comm.alarm.query.resunknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
           NULL, HFILL }},
         /* CPU diagnostic messages */
         { &hf_s7comm_cpu_diag_msg_item,

@@ -4805,7 +4805,7 @@ proto_register_s7comm (void)
         { "Username", "s7comm.cpu.msg.username", FT_STRING, BASE_NONE, NULL, 0x0,
           NULL, HFILL }},
         { &hf_s7comm_cpu_msgservice_almtype,
-        { "Messaggetype", "s7comm.cpu.msg.almtype", FT_UINT8, BASE_DEC, VALS(cpu_msgservice_almtype_names), 0x0,
+        { "Alarm type", "s7comm.cpu.msg.almtype", FT_UINT8, BASE_DEC, VALS(cpu_msgservice_almtype_names), 0x0,
           NULL, HFILL }},
         { &hf_s7comm_cpu_msgservice_req_reserved2,
         { "Reserved/Unknown", "s7comm.cpu.msg.req_reserved2", FT_UINT8, BASE_HEX, NULL, 0x0,

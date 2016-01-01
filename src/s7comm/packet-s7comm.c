@@ -474,6 +474,7 @@ static const value_string userdata_lastdataunit_names[] = {
 /**************************************************************************
  * Names of Function groups in userdata parameter part
  */
+#define S7COMM_UD_FUNCGROUP_MODETRANS       0x0
 #define S7COMM_UD_FUNCGROUP_PROG            0x1
 #define S7COMM_UD_FUNCGROUP_CYCLIC          0x2
 #define S7COMM_UD_FUNCGROUP_BLOCK           0x3
@@ -483,6 +484,7 @@ static const value_string userdata_lastdataunit_names[] = {
 #define S7COMM_UD_FUNCGROUP_TIME            0x7
 
 static const value_string userdata_functiongroup_names[] = {
+    { S7COMM_UD_FUNCGROUP_MODETRANS,        "Mode-transition" },
     { S7COMM_UD_FUNCGROUP_PROG,             "Programmer commands" },
     { S7COMM_UD_FUNCGROUP_CYCLIC,           "Cyclic data" },        /* to read data from plc without a request */
     { S7COMM_UD_FUNCGROUP_BLOCK,            "Block functions" },
@@ -1750,6 +1752,47 @@ static const value_string alarm_message_query_alarmtype_names[] = {
     { 0,                                                NULL }
 };
 
+/* CPU message service */
+static gint hf_s7comm_cpu_msgservice_subscribe_events = -1;
+static gint hf_s7comm_cpu_msgservice_subscribe_events_modetrans = -1;
+static gint hf_s7comm_cpu_msgservice_subscribe_events_system = -1;
+static gint hf_s7comm_cpu_msgservice_subscribe_events_userdefined = -1;
+static gint hf_s7comm_cpu_msgservice_subscribe_events_alarms = -1;
+static gint ett_s7comm_cpu_msgservice_subscribe_events = -1;
+static const int *s7comm_cpu_msgservice_subscribe_events_fields[] = {
+    &hf_s7comm_cpu_msgservice_subscribe_events_modetrans,
+    &hf_s7comm_cpu_msgservice_subscribe_events_system,
+    &hf_s7comm_cpu_msgservice_subscribe_events_userdefined,
+    &hf_s7comm_cpu_msgservice_subscribe_events_alarms,
+    NULL
+};
+static gint hf_s7comm_cpu_msgservice_req_reserved1 = -1;
+static gint hf_s7comm_cpu_msgservice_username = -1;
+static gint hf_s7comm_cpu_msgservice_almtype = -1;
+static gint hf_s7comm_cpu_msgservice_req_reserved2 = -1;
+static gint hf_s7comm_cpu_msgservice_res_result = -1;
+static gint hf_s7comm_cpu_msgservice_res_reserved1 = -1;
+static gint hf_s7comm_cpu_msgservice_res_reserved2 = -1;
+static gint hf_s7comm_cpu_msgservice_res_reserved3 = -1;
+
+static const value_string cpu_msgservice_almtype_names[] = {
+    { 0,                                    "SCAN_ABORT" },
+    { 1,                                    "SCAN_INITIATE" },
+    { 4,                                    "ALARM_ABORT" },
+    { 5,                                    "ALARM_INITIATE" },
+    { 8,                                    "ALARM_S_ABORT" },
+    { 9,                                    "ALARM_S_INITIATE" },
+    { 0,                                    NULL }
+};
+
+static gint hf_s7comm_modetrans_param_subfunc = -1;
+static const value_string modetrans_param_subfunc_names[] = {
+    { 0,                                    "STOP" },
+    { 1,                                    "Warm Restart" },
+    { 2,                                    "RUN" },
+    { 0,                                    NULL }
+};
+
 /* These are the ids of the subtrees that we are creating */
 static gint ett_s7comm = -1;                                        /* S7 communication tree, parent of all other subtree */
 static gint ett_s7comm_header = -1;                                 /* Subtree for header block */
@@ -2762,6 +2805,74 @@ s7comm_decode_ud_pbc_subfunc(tvbuff_t *tvb,
 
 /*******************************************************************************************************
  *
+ * PDU Type: User Data -> Message services
+ *
+ *******************************************************************************************************/
+static guint32
+s7comm_decode_message_service(tvbuff_t *tvb,
+                              packet_info *pinfo,
+                              proto_tree *data_tree,
+                              guint8 type,                /* Type of data (request/response) */
+                              guint16 dlength,            /* length of data part given in header */
+                              guint32 offset)             /* Offset on data part +4 */
+{
+    guint8 events;
+    guint8 almtype;
+    gchar events_string[42];
+
+    if (type == S7COMM_UD_TYPE_REQ) {
+        events = tvb_get_guint8(tvb, offset);
+        proto_tree_add_bitmask(data_tree, tvb, offset, hf_s7comm_cpu_msgservice_subscribe_events,
+            ett_s7comm_cpu_msgservice_subscribe_events, s7comm_cpu_msgservice_subscribe_events_fields, ENC_BIG_ENDIAN);
+        offset += 1;
+        proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_req_reserved1, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+
+        g_strlcpy(events_string, "", sizeof(events_string));
+        if (events & 0x01) g_strlcat(events_string, "MODE,", sizeof(events_string));    /* Change in mode-transition: Stop, Run, by Push and Function-group=0, Subfunction: 0=Stop, 1=Warm Restart, 2=RUN */
+        if (events & 0x02) g_strlcat(events_string, "SYS,", sizeof(events_string));     /* System diagnostics */
+        if (events & 0x04) g_strlcat(events_string, "USR,", sizeof(events_string));     /* User-defined diagnostic messages */
+        if (events & 0x08) g_strlcat(events_string, "-4-,", sizeof(events_string));     /* currently unknown flag */
+        if (events & 0x10) g_strlcat(events_string, "-5-,", sizeof(events_string));     /* currently unknown flag */
+        if (events & 0x20) g_strlcat(events_string, "-6-,", sizeof(events_string));     /* currently unknown flag */
+        if (events & 0x40) g_strlcat(events_string, "-7-,", sizeof(events_string));     /* currently unknown flag */
+        if (events & 0x80) g_strlcat(events_string, "ALM,", sizeof(events_string));     /* Program block message, type of message in additional field */
+        if (strlen(events_string) > 2)
+            events_string[strlen(events_string) - 1 ] = '\0';
+        col_append_fstr(pinfo->cinfo, COL_INFO, " SubscribedEvents=(%s)", events_string);
+
+        proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_username, tvb, offset, 8, ENC_ASCII|ENC_NA);
+        offset += 8;
+        if ((events & 0x80) && (dlength > 10)) {
+            almtype = tvb_get_guint8(tvb, offset);
+            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_almtype, tvb, offset, 1, ENC_BIG_ENDIAN);
+            col_append_fstr(pinfo->cinfo, COL_INFO, " AlmType=%s", val_to_str(almtype, cpu_msgservice_almtype_names, "Unknown type: 0x%02x"));
+            offset += 1;
+            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_req_reserved2, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
+        }
+    } else if (type == S7COMM_UD_TYPE_RES) {
+        proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_result, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+        proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_reserved1, tvb, offset, 1, ENC_BIG_ENDIAN);
+        offset += 1;
+        if (dlength > 2) {
+            almtype = tvb_get_guint8(tvb, offset);
+            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_almtype, tvb, offset, 1, ENC_BIG_ENDIAN);
+            col_append_fstr(pinfo->cinfo, COL_INFO, " AlmType=%s", val_to_str(almtype, cpu_msgservice_almtype_names, "Unknown type: 0x%02x"));
+            offset += 1;
+            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_reserved2, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
+            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_reserved3, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
+        }
+    }
+
+    return offset;
+}
+
+/*******************************************************************************************************
+ *
  * PDU Type: User Data -> Function group 4 -> alarm, main tree for all except query response
  *
  *******************************************************************************************************/
@@ -3108,7 +3219,7 @@ s7comm_decode_ud_cpu_diagnostic_message(tvbuff_t *tvb,
                 col_append_fstr(pinfo->cinfo, COL_INFO, " EventID=0x%04x", eventid);
             }
         }
-    } else if (eventid >= 0x1000 && eventid < 0x8000) {
+    } else if ((eventid >= 0x1000) && (eventid < 0x8000)) {
         if (event_text = try_val_to_str_ext(eventid, &cpu_diag_eventid_fix_names_ext)) {
             if (add_info_to_col) {
                 col_append_fstr(pinfo->cinfo, COL_INFO, " Event='%s'", event_text);
@@ -3656,6 +3767,12 @@ s7comm_decode_ud(tvbuff_t *tvb,
                 val_to_str(subfunc, userdata_time_subfunc_names, "Unknown subfunc: 0x%02x"));
             proto_item_append_text(param_tree, " ->(%s)", val_to_str(subfunc, userdata_time_subfunc_names, "Unknown subfunc: 0x%02x"));
             break;
+        case S7COMM_UD_FUNCGROUP_MODETRANS:
+            proto_tree_add_uint(param_tree, hf_s7comm_modetrans_param_subfunc, tvb, offset_temp, 1, subfunc);
+            col_append_fstr(pinfo->cinfo, COL_INFO, " -> [%s]",
+                val_to_str(subfunc, modetrans_param_subfunc_names, "Unknown subfunc: 0x%02x"));
+            proto_item_append_text(param_tree, " ->(%s)", val_to_str(subfunc, modetrans_param_subfunc_names, "Unknown subfunc: 0x%02x"));
+            break;
         default:
             proto_tree_add_uint(param_tree, hf_s7comm_userdata_param_subfunc, tvb, offset_temp, 1, subfunc);
             break;
@@ -3728,6 +3845,8 @@ s7comm_decode_ud(tvbuff_t *tvb,
                         offset = s7comm_decode_ud_cpu_alarm_query_response(tvb, pinfo, data_tree, offset);
                     } else if (subfunc == S7COMM_UD_SUBF_CPU_DIAGMSG) {
                         offset = s7comm_decode_ud_cpu_diagnostic_message(tvb, pinfo, TRUE, data_tree, offset);
+                    } else if (subfunc == S7COMM_UD_SUBF_CPU_MSGS) {
+                        offset = s7comm_decode_message_service(tvb, pinfo, data_tree, type, dlength - 4, offset);
                     } else {
                         /* print other currently unknown data as raw bytes */
                         proto_tree_add_item(data_tree, hf_s7comm_userdata_data, tvb, offset, dlength - 4, ENC_NA);
@@ -4663,6 +4782,49 @@ proto_register_s7comm (void)
         { &hf_s7comm_cpu_diag_msg_info2,
         { "INFO2 Additional information 2", "s7comm.cpu.diag_msg.info2", FT_UINT32, BASE_HEX, NULL, 0x0,
           NULL, HFILL }},
+        /* CPU message service */
+        { &hf_s7comm_cpu_msgservice_subscribe_events,
+        { "Subscribed events", "s7comm.cpu.msg.events.modetrans", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_msgservice_subscribe_events_modetrans,
+        { "Mode-transition", "s7comm.cpu.msg.events.modetrans", FT_BOOLEAN, 8, NULL, 0x01,
+          "MODE: Register for mode-transition events via func-group=0 and subfunction=state", HFILL }},
+        { &hf_s7comm_cpu_msgservice_subscribe_events_system,
+        { "System-diagnostics", "s7comm.cpu.msg.events.system", FT_BOOLEAN, 8, NULL, 0x02,
+          "SYS: Register for system diagnostic events", HFILL }},
+        { &hf_s7comm_cpu_msgservice_subscribe_events_userdefined,
+        { "Userdefined", "s7comm.cpu.msg.events.userdefined", FT_BOOLEAN, 8, NULL, 0x04,
+          "USR: Register system user-defined diagnostic messages", HFILL }},
+        { &hf_s7comm_cpu_msgservice_subscribe_events_alarms,
+        { "Alarms", "s7comm.cpu.msg.events.alarms", FT_BOOLEAN, 8, NULL, 0x80,
+          "ALM: Register alarm events (ALARM, SCAN, ALARM_S) type of event defined in additional field", HFILL }},
+        { &hf_s7comm_cpu_msgservice_req_reserved1,
+        { "Reserved/Unknown", "s7comm.cpu.msg.req_reserved1", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_msgservice_username,
+        { "Username", "s7comm.cpu.msg.username", FT_STRING, BASE_NONE, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_msgservice_almtype,
+        { "Messaggetype", "s7comm.cpu.msg.almtype", FT_UINT8, BASE_DEC, VALS(cpu_msgservice_almtype_names), 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_msgservice_req_reserved2,
+        { "Reserved/Unknown", "s7comm.cpu.msg.req_reserved2", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_msgservice_res_result,
+        { "Result", "s7comm.cpu.msg.res_result", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_msgservice_res_reserved1,
+        { "Reserved/Unknown", "s7comm.cpu.msg.res_reserved1", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_msgservice_res_reserved2,
+        { "Reserved/Unknown", "s7comm.cpu.msg.res_reserved2", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_msgservice_res_reserved3,
+        { "Reserved/Unknown", "s7comm.cpu.msg.res_reserved3", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_modetrans_param_subfunc,
+        { "Current mode", "s7comm.param.modetrans.subfunc", FT_UINT8, BASE_DEC, VALS(modetrans_param_subfunc_names), 0x0,
+          NULL, HFILL }},
 
         /* TIA Portal stuff */
         { &hf_s7comm_tia1200_item_reserved1,
@@ -4711,7 +4873,8 @@ proto_register_s7comm (void)
         &ett_s7comm_cpu_alarm_message_timestamp,
         &ett_s7comm_cpu_alarm_message_associated_value,
         &ett_s7comm_cpu_diag_msg,
-        &ett_s7comm_cpu_diag_msg_eventid
+        &ett_s7comm_cpu_diag_msg_eventid,
+        &ett_s7comm_cpu_msgservice_subscribe_events
     };
 
     proto_s7comm = proto_register_protocol (

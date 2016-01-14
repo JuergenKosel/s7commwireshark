@@ -619,6 +619,7 @@ static const value_string userdata_cpu_subfunc_names[] = {
     { S7COMM_UD_SUBF_CPU_ALARM8_IND,        "ALARM_8 indication" },             /* PLC is indicating an ALARM message, using ALARM_8 SFBs */
     { S7COMM_UD_SUBF_CPU_NOTIFY_IND,        "NOTIFY indication" },              /* PLC is indicating a NOTIFY message, using NOTIFY SFBs */
     { S7COMM_UD_SUBF_CPU_ALARM8LOCK,        "ALARM_8 lock" },                   /* Lock an ALARM message from HMI/SCADA */
+    { S7COMM_UD_SUBF_CPU_SCAN_IND,          "SCAN indication" },                /* PLC is indicating a SCAN message */
     { S7COMM_UD_SUBF_CPU_ALARM8UNLOCK,      "ALARM_8 unlock" },                 /* Unlock an ALARM message from HMI/SCADA */
     { S7COMM_UD_SUBF_CPU_ALARMS_IND,        "ALARM_S indication" },             /* PLC is indicating an ALARM message, using ALARM_S/ALARM_D SFCs */
     { S7COMM_UD_SUBF_CPU_ALARMSQ_IND,       "ALARM_SQ indication" },            /* PLC is indicating an ALARM message, using ALARM_SQ/ALARM_DQ SFCs */
@@ -1090,6 +1091,8 @@ static gint hf_s7comm_cpu_alarm_message_event_coming = -1;
 static gint hf_s7comm_cpu_alarm_message_event_going = -1;
 static gint hf_s7comm_cpu_alarm_message_event_lastchanged = -1;
 static gint hf_s7comm_cpu_alarm_message_event_reserved = -1;
+static gint hf_s7comm_cpu_alarm_message_scan_unknown1 = -1;
+static gint hf_s7comm_cpu_alarm_message_scan_unknown2 = -1;
 
 static gint hf_s7comm_cpu_alarm_message_signal_sig1 = -1;
 static gint hf_s7comm_cpu_alarm_message_signal_sig2 = -1;
@@ -2912,12 +2915,21 @@ s7comm_decode_ud_cpu_alarm_main(tvbuff_t *tvb,
     msg_item = proto_tree_add_item(data_tree, hf_s7comm_cpu_alarm_message_item, tvb, offset, 0, ENC_NA);
     msg_item_tree = proto_item_add_subtree(msg_item, ett_s7comm_cpu_alarm_message);
 
+    if (subfunc == S7COMM_UD_SUBF_CPU_SCAN_IND) {
+        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_scan_unknown1, tvb, offset, 2, ENC_BIG_ENDIAN);
+        offset += 2;
+    }
     if (subfunc == S7COMM_UD_SUBF_CPU_ALARM8_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMACK_IND ||
         subfunc == S7COMM_UD_SUBF_CPU_ALARMSQ_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMS_IND ||
-        subfunc == S7COMM_UD_SUBF_CPU_NOTIFY_IND || subfunc == S7COMM_UD_SUBF_CPU_NOTIFY8_IND) {
+        subfunc == S7COMM_UD_SUBF_CPU_NOTIFY_IND || subfunc == S7COMM_UD_SUBF_CPU_NOTIFY8_IND ||
+        subfunc == S7COMM_UD_SUBF_CPU_SCAN_IND) {
         msg_work_item = proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_timestamp_coming, tvb, offset, 8, ENC_NA);
         msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_timestamp);
         offset = s7comm_add_timestamp_to_tree(tvb, msg_work_item_tree, offset, TRUE, FALSE);
+    }
+    if (subfunc == S7COMM_UD_SUBF_CPU_SCAN_IND) {
+        proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_scan_unknown2, tvb, offset, 2, ENC_BIG_ENDIAN);
+        offset += 2;
     }
     proto_tree_add_item(msg_item_tree, hf_s7comm_cpu_alarm_message_function, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
@@ -3838,7 +3850,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
                     } else if (subfunc == S7COMM_UD_SUBF_CPU_NOTIFY_IND || subfunc == S7COMM_UD_SUBF_CPU_NOTIFY8_IND
                             || subfunc == S7COMM_UD_SUBF_CPU_ALARM8_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMSQ_IND
                             || subfunc == S7COMM_UD_SUBF_CPU_ALARMS_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMACK_IND
-                            || subfunc == S7COMM_UD_SUBF_CPU_ALARMACK
+                            || subfunc == S7COMM_UD_SUBF_CPU_SCAN_IND || subfunc == S7COMM_UD_SUBF_CPU_ALARMACK
                             || subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK || subfunc == S7COMM_UD_SUBF_CPU_ALARM8LOCK_IND
                             || subfunc == S7COMM_UD_SUBF_CPU_ALARM8UNLOCK || subfunc == S7COMM_UD_SUBF_CPU_ALARM8UNLOCK_IND
                             || (subfunc == S7COMM_UD_SUBF_CPU_ALARMQUERY && type != S7COMM_UD_TYPE_RES)) {
@@ -4721,6 +4733,12 @@ proto_register_s7comm (void)
           NULL, HFILL }},
         { &hf_s7comm_cpu_alarm_message_event_reserved,
         { "Reserved", "s7comm.alarm.event.reserved", FT_UINT8, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_message_scan_unknown1,
+        { "SCAN Unknown 1", "s7comm.alarm.scan_unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
+          NULL, HFILL }},
+        { &hf_s7comm_cpu_alarm_message_scan_unknown2,
+        { "SCAN Unknown 2", "s7comm.alarm.scan_unknown2", FT_UINT16, BASE_HEX, NULL, 0x0,
           NULL, HFILL }},
         /* Alarm message query */
         { &hf_s7comm_cpu_alarm_query_unknown1,

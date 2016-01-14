@@ -343,7 +343,7 @@ static const value_string item_syntaxid_names[] = {
  */
 #define S7COMM_DATA_TRANSPORT_SIZE_NULL     0
 #define S7COMM_DATA_TRANSPORT_SIZE_BBIT     3           /* bit access, len is in bits */
-#define S7COMM_DATA_TRANSPORT_SIZE_BBYTE    4           /* byte/word/dword acces, len is in bits */
+#define S7COMM_DATA_TRANSPORT_SIZE_BBYTE    4           /* byte/word/dword access, len is in bits */
 #define S7COMM_DATA_TRANSPORT_SIZE_BINT     5           /* integer access, len is in bits */
 #define S7COMM_DATA_TRANSPORT_SIZE_BDINT    6           /* integer access, len is in bytes */
 #define S7COMM_DATA_TRANSPORT_SIZE_BREAL    7           /* real access, len is in bytes */
@@ -479,7 +479,7 @@ static const value_string userdata_lastdataunit_names[] = {
 #define S7COMM_UD_FUNCGROUP_CYCLIC          0x2
 #define S7COMM_UD_FUNCGROUP_BLOCK           0x3
 #define S7COMM_UD_FUNCGROUP_CPU             0x4
-#define S7COMM_UD_FUNCGROUP_SEC             0x5                     /* Security funnctions e.g. plc password */
+#define S7COMM_UD_FUNCGROUP_SEC             0x5                     /* Security functions e.g. plc password */
 #define S7COMM_UD_FUNCGROUP_PBC             0x6                     /* PBC = Programmable Block Communication (PBK in german) */
 #define S7COMM_UD_FUNCGROUP_TIME            0x7
 
@@ -576,7 +576,7 @@ static const value_string userdata_prog_subfunc_names[] = {
     { S7COMM_UD_SUBF_PROG_REMOVEDIAGDATA,   "Remove diag data" },               /* Stop online block view */
     { S7COMM_UD_SUBF_PROG_ERASE,            "Erase" },
     { S7COMM_UD_SUBF_PROG_FORCE,            "Forces" },
-    { S7COMM_UD_SUBF_PROG_REQDIAGDATA2,     "Request diag data (Type 2)" },      /* Start online block view */
+    { S7COMM_UD_SUBF_PROG_REQDIAGDATA2,     "Request diag data (Type 2)" },     /* Start online block view */
     { 0,                                    NULL }
 };
 
@@ -589,7 +589,7 @@ static const value_string userdata_prog_subfunc_names[] = {
 
 static const value_string userdata_cyclic_subfunc_names[] = {
     { S7COMM_UD_SUBF_CYCLIC_MEM,            "Memory" },                         /* read data from memory (DB/M/etc.) */
-    { S7COMM_UD_SUBF_CYCLIC_UNSUBSCRIBE,    "Unsubscribe" },                    /* Unsubcribe (disable) cyclic data */
+    { S7COMM_UD_SUBF_CYCLIC_UNSUBSCRIBE,    "Unsubscribe" },                    /* Unsubscribe (disable) cyclic data */
     { S7COMM_UD_SUBF_CYCLIC_MEMDB,          "MemoryDB" },                       /* read data from only DB */
     { 0,                                    NULL }
 };
@@ -824,9 +824,9 @@ static const value_string nck_module_names[] = {
     { 0x72,                                 "SSP - State data: Spindle" },
     { 0x73,                                 "SGA - State data: Geometry axes in tool offset memory" },
     { 0x74,                                 "SMA - State data: Machine axes" },
-    { 0x75,                                 "SALAL - Alarms: Liste organized according to time," },
+    { 0x75,                                 "SALAL - Alarms: List organized according to time" },
     { 0x76,                                 "SALAP - Alarms: List organized according to priority" },
-    { 0x77,                                 "SALA - Alarms: List organized according to time," },
+    { 0x77,                                 "SALA - Alarms: List organized according to time" },
     { 0x78,                                 "SSYNAC - Synchronous actions" },
     { 0x79,                                 "SPARPF - Program pointers for block search and stop run" },
     { 0x7a,                                 "SPARPP - Program pointer in automatic operation" },
@@ -1813,7 +1813,7 @@ static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "
 /*******************************************************************************************************
  *
  * Converts a siemens special timestamp to a string of 25+1 bytes length (e.g. "Apr 15, 2009 12:49:30.520").
- * The timestamp is 6 bytes long, one word is the number of days since 1.1.1984, and 4 bytes millisecods of the day
+ * The timestamp is 6 bytes long, one word is the number of days since 1.1.1984, and 4 bytes milliseconds of the day
  *
  *******************************************************************************************************/
 static void
@@ -1853,7 +1853,7 @@ s7comm_guint8_from_bcd(guint8 i)
 /*******************************************************************************************************
  *
  * Helper for time functions
- * Add a BCD coded timestamp (10 /8 Bytes length) to tree
+ * Add a BCD coded timestamp (10/8 Bytes length) to tree
  *
  *******************************************************************************************************/
 static guint32
@@ -2820,52 +2820,55 @@ s7comm_decode_message_service(tvbuff_t *tvb,
     guint8 almtype;
     gchar events_string[42];
 
-    if (type == S7COMM_UD_TYPE_REQ) {
-        events = tvb_get_guint8(tvb, offset);
-        proto_tree_add_bitmask(data_tree, tvb, offset, hf_s7comm_cpu_msgservice_subscribe_events,
-            ett_s7comm_cpu_msgservice_subscribe_events, s7comm_cpu_msgservice_subscribe_events_fields, ENC_BIG_ENDIAN);
-        offset += 1;
-        proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_req_reserved1, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
+    switch (type) {
+        case S7COMM_UD_TYPE_REQ:
+            events = tvb_get_guint8(tvb, offset);
+            proto_tree_add_bitmask(data_tree, tvb, offset, hf_s7comm_cpu_msgservice_subscribe_events,
+                ett_s7comm_cpu_msgservice_subscribe_events, s7comm_cpu_msgservice_subscribe_events_fields, ENC_BIG_ENDIAN);
+            offset += 1;
+            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_req_reserved1, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
 
-        g_strlcpy(events_string, "", sizeof(events_string));
-        if (events & 0x01) g_strlcat(events_string, "MODE,", sizeof(events_string));    /* Change in mode-transition: Stop, Run, by Push and Function-group=0, Subfunction: 0=Stop, 1=Warm Restart, 2=RUN */
-        if (events & 0x02) g_strlcat(events_string, "SYS,", sizeof(events_string));     /* System diagnostics */
-        if (events & 0x04) g_strlcat(events_string, "USR,", sizeof(events_string));     /* User-defined diagnostic messages */
-        if (events & 0x08) g_strlcat(events_string, "-4-,", sizeof(events_string));     /* currently unknown flag */
-        if (events & 0x10) g_strlcat(events_string, "-5-,", sizeof(events_string));     /* currently unknown flag */
-        if (events & 0x20) g_strlcat(events_string, "-6-,", sizeof(events_string));     /* currently unknown flag */
-        if (events & 0x40) g_strlcat(events_string, "-7-,", sizeof(events_string));     /* currently unknown flag */
-        if (events & 0x80) g_strlcat(events_string, "ALM,", sizeof(events_string));     /* Program block message, type of message in additional field */
-        if (strlen(events_string) > 2)
-            events_string[strlen(events_string) - 1 ] = '\0';
-        col_append_fstr(pinfo->cinfo, COL_INFO, " SubscribedEvents=(%s)", events_string);
+            g_strlcpy(events_string, "", sizeof(events_string));
+            if (events & 0x01) g_strlcat(events_string, "MODE,", sizeof(events_string));    /* Change in mode-transition: Stop, Run, by Push and Function-group=0, Subfunction: 0=Stop, 1=Warm Restart, 2=RUN */
+            if (events & 0x02) g_strlcat(events_string, "SYS,", sizeof(events_string));     /* System diagnostics */
+            if (events & 0x04) g_strlcat(events_string, "USR,", sizeof(events_string));     /* User-defined diagnostic messages */
+            if (events & 0x08) g_strlcat(events_string, "-4-,", sizeof(events_string));     /* currently unknown flag */
+            if (events & 0x10) g_strlcat(events_string, "-5-,", sizeof(events_string));     /* currently unknown flag */
+            if (events & 0x20) g_strlcat(events_string, "-6-,", sizeof(events_string));     /* currently unknown flag */
+            if (events & 0x40) g_strlcat(events_string, "-7-,", sizeof(events_string));     /* currently unknown flag */
+            if (events & 0x80) g_strlcat(events_string, "ALM,", sizeof(events_string));     /* Program block message, type of message in additional field */
+            if (strlen(events_string) > 2)
+                events_string[strlen(events_string) - 1 ] = '\0';
+            col_append_fstr(pinfo->cinfo, COL_INFO, " SubscribedEvents=(%s)", events_string);
 
-        proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_username, tvb, offset, 8, ENC_ASCII|ENC_NA);
-        offset += 8;
-        if ((events & 0x80) && (dlength > 10)) {
-            almtype = tvb_get_guint8(tvb, offset);
-            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_almtype, tvb, offset, 1, ENC_BIG_ENDIAN);
-            col_append_fstr(pinfo->cinfo, COL_INFO, " AlmType=%s", val_to_str(almtype, cpu_msgservice_almtype_names, "Unknown type: 0x%02x"));
+            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_username, tvb, offset, 8, ENC_ASCII|ENC_NA);
+            offset += 8;
+            if ((events & 0x80) && (dlength > 10)) {
+                almtype = tvb_get_guint8(tvb, offset);
+                proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_almtype, tvb, offset, 1, ENC_BIG_ENDIAN);
+                col_append_fstr(pinfo->cinfo, COL_INFO, " AlmType=%s", val_to_str(almtype, cpu_msgservice_almtype_names, "Unknown type: 0x%02x"));
+                offset += 1;
+                proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_req_reserved2, tvb, offset, 1, ENC_BIG_ENDIAN);
+                offset += 1;
+            }
+            break;
+        case S7COMM_UD_TYPE_RES:
+            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_result, tvb, offset, 1, ENC_BIG_ENDIAN);
             offset += 1;
-            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_req_reserved2, tvb, offset, 1, ENC_BIG_ENDIAN);
+            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_reserved1, tvb, offset, 1, ENC_BIG_ENDIAN);
             offset += 1;
-        }
-    } else if (type == S7COMM_UD_TYPE_RES) {
-        proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_result, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-        proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_reserved1, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
-        if (dlength > 2) {
-            almtype = tvb_get_guint8(tvb, offset);
-            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_almtype, tvb, offset, 1, ENC_BIG_ENDIAN);
-            col_append_fstr(pinfo->cinfo, COL_INFO, " AlmType=%s", val_to_str(almtype, cpu_msgservice_almtype_names, "Unknown type: 0x%02x"));
-            offset += 1;
-            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_reserved2, tvb, offset, 1, ENC_BIG_ENDIAN);
-            offset += 1;
-            proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_reserved3, tvb, offset, 1, ENC_BIG_ENDIAN);
-            offset += 1;
-        }
+            if (dlength > 2) {
+                almtype = tvb_get_guint8(tvb, offset);
+                proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_almtype, tvb, offset, 1, ENC_BIG_ENDIAN);
+                col_append_fstr(pinfo->cinfo, COL_INFO, " AlmType=%s", val_to_str(almtype, cpu_msgservice_almtype_names, "Unknown type: 0x%02x"));
+                offset += 1;
+                proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_reserved2, tvb, offset, 1, ENC_BIG_ENDIAN);
+                offset += 1;
+                proto_tree_add_item(data_tree, hf_s7comm_cpu_msgservice_res_reserved3, tvb, offset, 1, ENC_BIG_ENDIAN);
+                offset += 1;
+            }
+            break;
     }
 
     return offset;
@@ -3026,7 +3029,6 @@ s7comm_decode_ud_cpu_alarm_main(tvbuff_t *tvb,
                             col_append_fstr(pinfo->cinfo, COL_INFO, " ByEventID=0x%08x", ev_id);
                             break;
                         default:
-                            proto_tree_add_text(msg_obj_item_tree, tvb, offset, 4, "Unknown querytype-value: 0x%08x", ev_id);
                             break;
                     }
                     offset += 4;
@@ -3152,7 +3154,7 @@ s7comm_decode_ud_cpu_alarm_query_response(tvbuff_t *tvb,
                 ett_s7comm_cpu_alarm_message_signal, s7comm_cpu_alarm_message_signal_fields, ENC_BIG_ENDIAN);
             offset += 1;
             if (alarmtype == S7COMM_ALARM_MESSAGE_QUERY_ALARMTYPE_ALARM_S) {
-                /* 8 bytes timestamp (coming?)*/
+                /* 8 bytes timestamp (coming)*/
                 msg_work_item = proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_timestamp_coming, tvb, offset, 8, ENC_NA);
                 msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_timestamp);
                 offset = s7comm_add_timestamp_to_tree(tvb, msg_work_item_tree, offset, TRUE, FALSE);
@@ -3162,7 +3164,7 @@ s7comm_decode_ud_cpu_alarm_query_response(tvbuff_t *tvb,
                 msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_associated_value);
                 offset = s7comm_decode_response_read_data(tvb, msg_work_item_tree, 1, offset);
                 proto_item_set_len(msg_work_item_tree, offset - asc_start_offset);
-                /* 8 bytes timestamp (going?)
+                /* 8 bytes timestamp (going)
                  * If all bytes in timestamp are zero, then the message is still active. */
                 msg_work_item = proto_tree_add_item(msg_obj_item_tree, hf_s7comm_cpu_alarm_message_timestamp_going, tvb, offset, 8, ENC_NA);
                 msg_work_item_tree = proto_item_add_subtree(msg_work_item, ett_s7comm_cpu_alarm_message_timestamp);
@@ -3209,7 +3211,7 @@ s7comm_decode_ud_cpu_diagnostic_message(tvbuff_t *tvb,
     eventid = tvb_get_ntohs(tvb, offset);
     if ((eventid >= 0x8000) && (eventid <= 0x9fff)) {
         eventid_masked = eventid & 0xf0ff;
-        if (event_text = try_val_to_str_ext(eventid_masked, &cpu_diag_eventid_0x8_0x9_names_ext)) {
+        if ((event_text = try_val_to_str_ext(eventid_masked, &cpu_diag_eventid_0x8_0x9_names_ext))) {
             if (add_info_to_col) {
                 col_append_fstr(pinfo->cinfo, COL_INFO, " Event='%s'", event_text);
             }
@@ -3220,7 +3222,7 @@ s7comm_decode_ud_cpu_diagnostic_message(tvbuff_t *tvb,
             }
         }
     } else if ((eventid >= 0x1000) && (eventid < 0x8000)) {
-        if (event_text = try_val_to_str_ext(eventid, &cpu_diag_eventid_fix_names_ext)) {
+        if ((event_text = try_val_to_str_ext(eventid, &cpu_diag_eventid_fix_names_ext))) {
             if (add_info_to_col) {
                 col_append_fstr(pinfo->cinfo, COL_INFO, " Event='%s'", event_text);
             }
@@ -3700,7 +3702,7 @@ s7comm_decode_ud(tvbuff_t *tvb,
     param_tree = proto_item_add_subtree(item, ett_s7comm_param);
 
     /* Try do decode some functions...
-     * Some functions may use data that does't fit one telegram
+     * Some functions may use data that doesn't fit one telegram
      */
     offset_temp = offset;   /* Save offset */
     /* 3 bytes constant head */
@@ -4077,7 +4079,7 @@ dissect_s7comm(tvbuff_t *tvb,
     /* Show pdu type beside the header tree */
     proto_item_append_text(s7comm_header_tree, ": (%s)", val_to_str(rosctr, rosctr_names, "Unknown ROSCTR: 0x%02x"));
     offset += 1;
-    /* Redundacy ID, reserved */
+    /* Redundancy ID, reserved */
     proto_tree_add_item(s7comm_header_tree, hf_s7comm_header_redid, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset += 2;
     /* Protocol Data Unit Reference */

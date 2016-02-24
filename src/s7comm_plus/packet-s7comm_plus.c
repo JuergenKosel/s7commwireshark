@@ -892,7 +892,7 @@ proto_reg_handoff_s7commp(void)
     static gboolean initialized = FALSE;
     if (!initialized) {
         #ifdef DONT_ADD_AS_HEURISTIC_DISSECTOR
-            new_register_dissector("dlt", dissect_s7commp, "S7 Communication Plus over COTP", "s7comm_plus_dlt", proto_s7commp, HEURISTIC_ENABLE););
+            register_dissector("dlt", dissect_s7commp, proto_s7commp);
         #else
             heur_dissector_add("cotp", dissect_s7commp, "S7 Communication Plus over COTP", "s7comm_plus_cotp", proto_s7commp, HEURISTIC_ENABLE);
         #endif

@@ -22,17 +22,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
+#include "config.h"
 #include <stdio.h>
-#include <glib.h>
+#include <time.h>
+#include <stdarg.h>
 #include <epan/packet.h>
 #include <epan/reassemble.h>
 #include <epan/conversation.h>
-#include <string.h>
-#include <time.h>
+#include <epan/proto_data.h>
+
+void proto_reg_handoff_s7commp(void);
+void proto_register_s7commp(void);
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
 //#define USE_INTERNALS
@@ -46,8 +46,6 @@
  * https://www.wireshark.org/docs/man-pages/text2pcap.html
  */
 //#define DONT_ADD_AS_HEURISTIC_DISSECTOR
-
-#include "packet-s7comm_plus.h"
 
 #define PROTO_TAG_S7COMM_PLUS                   "S7COMM-PLUS"
 
@@ -64,7 +62,7 @@
 static int proto_s7commp = -1;
 
 /* Forward declaration */
-static gboolean dissect_s7commp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_);
+static gboolean dissect_s7commp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data);
 
 /**************************************************************************
  * PDU types
@@ -855,6 +853,8 @@ static const fragment_items s7commp_frag_items = {
     "S7COMM-PLUS fragments"
 };
 
+static gint hf_s7commp_proto_tree_add_text_dummy = -1;      /* dummy header field for conversion to wireshark 2.0 */
+
 typedef struct {
     gboolean first_fragment;
     gboolean inner_fragment;
@@ -892,9 +892,9 @@ proto_reg_handoff_s7commp(void)
     static gboolean initialized = FALSE;
     if (!initialized) {
         #ifdef DONT_ADD_AS_HEURISTIC_DISSECTOR
-            new_register_dissector("dlt", dissect_s7commp, proto_s7commp);
+            new_register_dissector("dlt", dissect_s7commp, "S7 Communication Plus over COTP", "s7comm_plus_dlt", proto_s7commp, HEURISTIC_ENABLE););
         #else
-            heur_dissector_add("cotp", dissect_s7commp, proto_s7commp);
+            heur_dissector_add("cotp", dissect_s7commp, "S7 Communication Plus over COTP", "s7comm_plus_cotp", proto_s7commp, HEURISTIC_ENABLE);
         #endif
         initialized = TRUE;
     }
@@ -1280,6 +1280,11 @@ proto_register_s7commp (void)
         { &hf_s7commp_fragments,
           { "S7COMM-PLUS Fragments", "s7comm-plus.fragments", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
+
+        /* Dummy header-field for conversion to wireshark 2.0. Should be removed competely later. */
+            { &hf_s7commp_proto_tree_add_text_dummy,
+          { "TEXT", "s7comm-plus.proto_tree_add_text_dummy", FT_STRING, BASE_NONE, NULL, 0,
+             NULL, HFILL }}
     };
 
     static gint *ett[] = {
@@ -1324,6 +1329,32 @@ proto_register_s7commp (void)
     /* Register the init routine. */
     register_init_routine(s7commp_defragment_init);
 }
+
+
+/*******************************************************************************************************
+* Dummy proto_tree_add_text function used for conversion to Wireshark 2.0.
+* As the function proto_tree_add_text() is no longer public in the libwireshark, because you should
+* use appropriate header-fields.
+* But for reverse-engineering, this is much easier to use.
+* This should be removed competely later.
+*******************************************************************************************************/
+proto_item *
+proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, const char *format, ...)
+{
+    proto_item *pi;
+    va_list ap;
+    int	ret;
+    gchar s[ITEM_LABEL_LENGTH + 1];
+    s[0] = '\0';
+
+    va_start(ap, format);
+    ret = g_vsnprintf(s, ITEM_LABEL_LENGTH, format, ap);
+    va_end(ap);
+
+    pi = proto_tree_add_string_format(tree, hf_s7commp_proto_tree_add_text_dummy, tvb, start, length, "DUMMY", "%s", s);
+    return pi;
+}
+
 /*******************************************************************************************************
  *
  * Spezial gepacktes Datenformat
@@ -1852,7 +1883,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_text(current_tree, tvb, offset, octet_count, "Blob size: %u", length_of_value);
                 offset += octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%s", tvb_bytes_to_ep_str(tvb, offset, length_of_value));
+                g_snprintf(str_val, sizeof(str_val), "%s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_ASCII));
                 offset += length_of_value;
                 break;
             default:
@@ -3870,7 +3901,7 @@ static gboolean
 dissect_s7commp(tvbuff_t *tvb,
                 packet_info *pinfo,
                 proto_tree *tree,
-                void *data _U_)
+                void *data)
 {
     proto_item *s7commp_item = NULL;
     proto_item *s7commp_sub_item = NULL;

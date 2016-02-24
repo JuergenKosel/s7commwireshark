@@ -24,9 +24,5 @@
 #ifndef __PACKET_S7COMM_PLUS_H__
 #define __PACKET_S7COMM_PLUS_H__
 
-void proto_reg_handoff_s7commp(void);
-void proto_register_s7commp(void);
-
-static gboolean dissect_s7commp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_);
 
 #endif

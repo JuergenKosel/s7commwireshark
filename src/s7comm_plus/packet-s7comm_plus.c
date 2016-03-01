@@ -967,27 +967,29 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_returnvalue,
           { "Return value", "s7comm-plus.returnvalue", FT_UINT64, BASE_HEX, NULL, 0x0,
             "varuint64: Return value", HFILL }},
-        /* The extension for 64 bit Bitmasks was implemented on Oct 2014, so don't use it yet to support older Wireshark versions */
+        /* The extension for 64 bit Bitmasks was implemented on Oct 2014, so don't use it yet to support older Wireshark versions.
+         * 01.03.2016: Using Bitmask does not work, as it does not allow to pass our own length and value 
+         */
         { &hf_s7commp_data_retval_errorcode,
-          { "Bitmask 0x000000000000ffff - Error code", "s7comm-plus.returnvalue.errorcode", FT_INT16, BASE_DEC, VALS(errorcode_names), 0x000000000000ffff,
+          { "Bitmask 0x000000000000ffff - Error code", "s7comm-plus.returnvalue.errorcode", FT_INT16, BASE_DEC, VALS(errorcode_names), 0x0, /* 0x000000000000ffff, */
             NULL, HFILL }},
         { &hf_s7commp_data_retval_omsline,
-          { "Bitmask 0x00000000ffff0000 - OMS line", "s7comm-plus.returnvalue.omsline", FT_UINT16, BASE_DEC, NULL, 0x00000000ffff0000,
+          { "Bitmask 0x00000000ffff0000 - OMS line", "s7comm-plus.returnvalue.omsline", FT_UINT16, BASE_DEC, NULL, 0x0, /* 0x00000000ffff0000, */
             NULL, HFILL }},
         { &hf_s7commp_data_retval_errorsource,
-          { "Bitmask 0x000000ff00000000 - Error source", "s7comm-plus.returnvalue.errorsource", FT_UINT8, BASE_HEX, NULL, 0x000000ff00000000,
+          { "Bitmask 0x000000ff00000000 - Error source", "s7comm-plus.returnvalue.errorsource", FT_UINT8, BASE_HEX, NULL, 0x0, /* 0x000000ff00000000, */
             NULL, HFILL }},
         { &hf_s7commp_data_retval_genericerrorcode,
-          { "Bitmask 0x0000ef0000000000 - Generic error code", "s7comm-plus.returnvalue.genericerrorcode", FT_UINT8, BASE_HEX, NULL, 0x0000ef0000000000,
+          { "Bitmask 0x0000ef0000000000 - Generic error code", "s7comm-plus.returnvalue.genericerrorcode", FT_UINT8, BASE_HEX, NULL, 0x0, /* 0x0000ef0000000000, */
             NULL, HFILL }},
         { &hf_s7commp_data_retval_servererror,
-          { "Bitmask 0x0000800000000000 - Server error", "s7comm-plus.returnvalue.servererror", FT_BOOLEAN, BASE_NONE, NULL, 0x0, 0x0000800000000000,
+          { "Bitmask 0x0000800000000000 - Server error", "s7comm-plus.returnvalue.servererror", FT_BOOLEAN, BASE_NONE, NULL, 0x0, /* 0x0000800000000000, */
             NULL, HFILL }},
         { &hf_s7commp_data_retval_debuginfo,
-          { "Bitmask 0x3fff000000000000 - Debug info", "s7comm-plus.returnvalue.debuginfo", FT_UINT16, BASE_DEC, NULL, 0x0, 0x3fff000000000000,
+          { "Bitmask 0x3fff000000000000 - Debug info", "s7comm-plus.returnvalue.debuginfo", FT_UINT16, BASE_DEC, NULL, 0x0, /* 0x3fff000000000000, */
             NULL, HFILL }},
         { &hf_s7commp_data_retval_errorextension,
-          { "Bitmask 0x4000000000000000 - Error extension", "s7comm-plus.returnvalue.errorextension", FT_BOOLEAN, BASE_NONE, NULL, 0x0, 0x4000000000000000,
+          { "Bitmask 0x4000000000000000 - Error extension", "s7comm-plus.returnvalue.errorextension", FT_BOOLEAN, BASE_NONE, NULL, 0x0, /* 0x4000000000000000, */
             NULL, HFILL }},
 
         { &hf_s7commp_data_opcode,

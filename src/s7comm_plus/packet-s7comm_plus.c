@@ -1922,13 +1922,13 @@ s7commp_decode_value(tvbuff_t *tvb,
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%llu", uint64val);
+                g_snprintf(str_val, sizeof(str_val), "%" G_GINT64_MODIFIER "u", uint64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_LINT:
                 int64val = tvb_get_varint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%lld", int64val);
+                g_snprintf(str_val, sizeof(str_val), "%" G_GINT64_MODIFIER "d", int64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_SINT:
                 uint8val = tvb_get_guint8(tvb, offset);
@@ -1973,7 +1973,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             case S7COMMP_ITEM_DATATYPE_LWORD:
                 length_of_value = 8;
-                g_snprintf(str_val, sizeof(str_val), "0x%016llx", tvb_get_ntoh64(tvb, offset));
+                g_snprintf(str_val, sizeof(str_val), "0x%016" G_GINT64_MODIFIER "x", tvb_get_ntoh64(tvb, offset));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_REAL:
@@ -1996,7 +1996,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%llu ns", uint64val);
+                g_snprintf(str_val, sizeof(str_val), "%" G_GINT64_MODIFIER "u ns", uint64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_RID:
                 length_of_value = 4;

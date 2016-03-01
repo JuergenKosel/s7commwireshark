@@ -58,6 +58,10 @@ void proto_register_s7commp(void);
 /* Max number of array values displays on Item-Value tree. */
 #define S7COMMP_ITEMVAL_ARR_MAX_DISPLAY         10
 
+/* String length used for variant value decoding */
+#define S7COMMP_ITEMVAL_STR_VAL_MAX             128         /* length for a simgle value */
+#define S7COMMP_ITEMVAL_STR_ARRVAL_MAX          512         /* length for array values */
+
 /* Wireshark ID of the S7COMM_PLUS protocol */
 static int proto_s7commp = -1;
 
@@ -968,7 +972,7 @@ proto_register_s7commp (void)
           { "Return value", "s7comm-plus.returnvalue", FT_UINT64, BASE_HEX, NULL, 0x0,
             "varuint64: Return value", HFILL }},
         /* The extension for 64 bit Bitmasks was implemented on Oct 2014, so don't use it yet to support older Wireshark versions.
-         * 01.03.2016: Using Bitmask does not work, as it does not allow to pass our own length and value 
+         * 01.03.2016: Using Bitmask does not work, as it does not allow to pass our own length and value
          */
         { &hf_s7commp_data_retval_errorcode,
           { "Bitmask 0x000000000000ffff - Error code", "s7comm-plus.returnvalue.errorcode", FT_INT16, BASE_DEC, VALS(errorcode_names), 0x0, /* 0x000000000000ffff, */
@@ -1820,16 +1824,18 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint8 uint8val = 0;
     gint64 int64val = 0;
     gint8 int8val = 0;
-    gchar str_val[128];     /* Value of one single item */
-    gchar str_arrval[512];  /* Value of array values */
+    gchar *str_val = NULL;          /* Value of one single item */
+    gchar *str_arrval = NULL;       /* Value of array values */
     guint32 sparsearray_key;
     const gchar *str_arr_prefix = "Unknown";
 
     guint32 start_offset = 0;
     guint32 length_of_value = 0;
 
-    memset(str_val, 0, sizeof(str_val));
-    memset(str_arrval, 0, sizeof(str_arrval));
+    str_val = wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
+    str_val[0] = '\0';
+    str_arrval = wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_ARRVAL_MAX);
+    str_arrval[0] = '\0';
 
     datatype_flags = tvb_get_guint8(tvb, offset);
     proto_tree_add_bitmask(data_item_tree, tvb, offset, hf_s7commp_itemval_datatype_flags,
@@ -1894,126 +1900,126 @@ s7commp_decode_value(tvbuff_t *tvb,
         switch (datatype) {
             case S7COMMP_ITEM_DATATYPE_NULL:
                 /* No value following */
-                g_snprintf(str_val, sizeof(str_val), "<NO VALUE>");
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "<NO VALUE>");
                 length_of_value = 0;
                 break;
             case S7COMMP_ITEM_DATATYPE_BOOL:
                 length_of_value = 1;
-                g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%02x", tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_USINT:
                 length_of_value = 1;
-                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_guint8(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_UINT:
                 length_of_value = 2;
-                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohs(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_UDINT:
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_ULINT:
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%" G_GINT64_MODIFIER "u", uint64val);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "u", uint64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_LINT:
                 int64val = tvb_get_varint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%" G_GINT64_MODIFIER "d", int64val);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "d", int64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_SINT:
                 uint8val = tvb_get_guint8(tvb, offset);
                 memcpy(&int8val, &uint8val, sizeof(int8val));
                 length_of_value = 1;
-                g_snprintf(str_val, sizeof(str_val), "%d", int8val);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%d", int8val);
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_INT:
                 uint16val = tvb_get_ntohs(tvb, offset);
                 memcpy(&int16val, &uint16val, sizeof(int16val));
                 length_of_value = 2;
-                g_snprintf(str_val, sizeof(str_val), "%d", int16val);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%d", int16val);
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_DINT:
                 int32val = tvb_get_varint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%d", int32val);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%d", int32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_BYTE:
                 length_of_value = 1;
-                g_snprintf(str_val, sizeof(str_val), "0x%02x", tvb_get_guint8(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%02x", tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_WORD:
                 length_of_value = 2;
-                g_snprintf(str_val, sizeof(str_val), "0x%04x", tvb_get_ntohs(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%04x", tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_STRUCT:
                 if (struct_level) *struct_level += 1; /* entering a new structure level */
                 length_of_value = 4;
-                g_snprintf(str_val, sizeof(str_val), "%u", tvb_get_ntohl(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_DWORD:
                 length_of_value = 4;
-                g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LWORD:
                 length_of_value = 8;
-                g_snprintf(str_val, sizeof(str_val), "0x%016" G_GINT64_MODIFIER "x", tvb_get_ntoh64(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%016" G_GINT64_MODIFIER "x", tvb_get_ntoh64(tvb, offset));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_REAL:
                 length_of_value = 4;
-                g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_float(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_float(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LREAL:
                 length_of_value = 8;
-                g_snprintf(str_val, sizeof(str_val), "%f", tvb_get_ntohieee_double(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_double(tvb, offset));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESTAMP:
                 length_of_value = 8;
                 uint64val = tvb_get_ntoh64(tvb, offset);
-                s7commp_get_timestring_from_uint64(uint64val, str_val, sizeof(str_val));
+                s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESPAN:
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%" G_GINT64_MODIFIER "u ns", uint64val);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "u ns", uint64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_RID:
                 length_of_value = 4;
-                g_snprintf(str_val, sizeof(str_val), "0x%08x", tvb_get_ntohl(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_AID:
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_WSTRING:
                 length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(current_tree, hf_s7commp_itemval_stringactlen, tvb, offset, octet_count, length_of_value);
                 offset += octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%s",
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s",
                        tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
                 offset += length_of_value;
                 break;
@@ -2021,7 +2027,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%u", uint32val);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_BLOB:
                 proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobreserved, tvb, offset, 1, tvb_get_guint8(tvb, offset));
@@ -2029,12 +2035,12 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, octet_count, length_of_value);
                 offset += octet_count;
-                g_snprintf(str_val, sizeof(str_val), "%s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_ASCII));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_ASCII));
                 offset += length_of_value;
                 break;
             default:
                 unknown_type_occured = TRUE;
-                g_strlcpy(str_val, "Unknown Type occured. Could not interpret value!", sizeof(str_val));
+                g_strlcpy(str_val, "Unknown Type occured. Could not interpret value!", S7COMMP_ITEMVAL_STR_VAL_MAX);
                 break;
         } /* switch */
 
@@ -2046,12 +2052,12 @@ s7commp_decode_value(tvbuff_t *tvb,
             /* Build a string of all array values. Maximum number of 10 values */
             if (array_index < S7COMMP_ITEMVAL_ARR_MAX_DISPLAY) {
                 if (array_index > 1 && array_size > 1) {
-                    g_strlcat(str_arrval, ", ", sizeof(str_arrval));
+                    g_strlcat(str_arrval, ", ", S7COMMP_ITEMVAL_STR_ARRVAL_MAX);
                 }
-                g_strlcat(str_arrval, str_val, sizeof(str_arrval));
+                g_strlcat(str_arrval, str_val, S7COMMP_ITEMVAL_STR_ARRVAL_MAX);
             } else if (array_index == S7COMMP_ITEMVAL_ARR_MAX_DISPLAY) {
                 /* truncate */
-                g_strlcat(str_arrval, "...", sizeof(str_arrval));
+                g_strlcat(str_arrval, "...", S7COMMP_ITEMVAL_STR_ARRVAL_MAX);
             }
             if (is_sparsearray) {
                 proto_tree_add_text(array_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);

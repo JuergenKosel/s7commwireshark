@@ -1432,7 +1432,7 @@ proto_register_s7commp (void)
             NULL, HFILL }},
 
         /* Dummy header-field for conversion to wireshark 2.0. Should be removed competely later. */
-            { &hf_s7commp_proto_tree_add_text_dummy,
+        { &hf_s7commp_proto_tree_add_text_dummy,
           { "TEXT", "s7comm-plus.proto_tree_add_text_dummy", FT_STRING, BASE_NONE, NULL, 0,
              NULL, HFILL }}
     };
@@ -1471,7 +1471,7 @@ proto_register_s7commp (void)
         "S7 Communication Plus",            /* name */
         "S7COMM-PLUS",                      /* short name */
         "s7comm-plus"                       /* abbrev */
-        );
+    );
 
     proto_register_field_array(proto_s7commp, hf, array_length (hf));
 
@@ -1494,7 +1494,9 @@ proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, co
     proto_item *pi;
     va_list ap;
     int ret;
-    gchar s[ITEM_LABEL_LENGTH + 1];
+    gchar *s;
+
+    s = wmem_alloc(wmem_packet_scope(), ITEM_LABEL_LENGTH);
     s[0] = '\0';
 
     va_start(ap, format);

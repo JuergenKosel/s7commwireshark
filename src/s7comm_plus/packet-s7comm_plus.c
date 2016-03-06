@@ -2858,6 +2858,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_response_createobject(tvbuff_t *tvb,
+                                    packet_info *pinfo,
                                     proto_tree *tree,
                                     guint32 offset,
                                     guint8 pdutype)
@@ -2872,12 +2873,17 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
     /* TODO: hier die gleiche ID wie beim Request, d.h. aus der Liste? */
     proto_tree_add_uint(tree, hf_s7commp_object_createobjidcount, tvb, offset, 1, object_id_count);
     offset += 1;
-    for (i = 1; i <= object_id_count; i++) {
+    for (i = 0; i < object_id_count; i++) {
         object_id = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint_format(tree, hf_s7commp_object_createobjid, tvb, offset, octet_count, object_id,
-                    "Object Id [%i]: 0x%08x", i, object_id);
-
+                    "Object Id [%i]: 0x%08x", i+1, object_id);
         offset += octet_count;
+        /* add result object ids to info column, usually it's only one single id */
+        if (i == 0) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+        } else {
+            col_append_fstr(pinfo->cinfo, COL_INFO, ",0x%08x", object_id);
+        }
     }
     /* Ein Daten-Objekt gibt es nur beim Connect */
     if (pdutype == S7COMMP_PDUTYPE_CONNECT) {
@@ -4192,7 +4198,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_response_setvariable(tvb, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
-                    offset = s7commp_decode_response_createobject(tvb, item_tree, offset, pdutype);
+                    offset = s7commp_decode_response_createobject(tvb, pinfo, item_tree, offset, pdutype);
                     break;
                 case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
                     offset = s7commp_decode_response_deleteobject(tvb, pinfo, item_tree, offset, &has_integrity_id);

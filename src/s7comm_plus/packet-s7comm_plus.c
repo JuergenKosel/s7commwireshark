@@ -2502,7 +2502,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     offset += octet_count;
 
     proto_tree_add_item(tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA);
-    proto_item_append_text(tree, ", for Tag: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
+    proto_item_append_text(tree, " for Tag: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
     offset += length_of_value;
 
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
@@ -3004,11 +3004,11 @@ s7commp_decode_item_address(tvbuff_t *tvb,
         if (tia_var_area1 == S7COMMP_VAR_ITEM_AREA1_IQMCT) {
             proto_tree_add_uint(area_item_tree, hf_s7commp_itemaddr_area2, tvb, offset, octet_count, tia_var_area2);
             proto_item_append_text(area_item_tree, " (%s)", val_to_str(tia_var_area2, var_item_area2_names, "Unknown IQMCT Area: 0x%04x"));
-            proto_item_append_text(adr_item_tree, ", LID=%s", val_to_str(tia_var_area2, var_item_area2_names_short, "Unknown IQMCT Area: 0x%04x"));
+            proto_item_append_text(adr_item_tree, " LID=%s", val_to_str(tia_var_area2, var_item_area2_names_short, "Unknown IQMCT Area: 0x%04x"));
         } else if (tia_var_area1 == S7COMMP_VAR_ITEM_AREA1_DB) {
             proto_tree_add_uint(area_item_tree, hf_s7commp_itemaddr_dbnumber, tvb, offset, octet_count, tia_var_area2);
             proto_item_append_text(area_item_tree, " (Datablock, DB-Number: %u)", tia_var_area2);
-            proto_item_append_text(adr_item_tree, ", LID=DB%u", tia_var_area2);
+            proto_item_append_text(adr_item_tree, " LID=DB%u", tia_var_area2);
         } else {
             proto_tree_add_uint(area_item_tree, hf_s7commp_itemaddr_areaunknown, tvb, offset, octet_count, value);
             proto_item_append_text(adr_item_tree, " Unknown Area 0x%04x / 0x%04x", tia_var_area1, tia_var_area2);
@@ -3049,7 +3049,7 @@ s7commp_decode_item_address(tvbuff_t *tvb,
         proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_base_area, tvb, offset, octet_count, value);
     } else {
         proto_tree_add_uint(adr_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, value);
-        proto_item_append_text(adr_item_tree, ", ID=%u", value);
+        proto_item_append_text(adr_item_tree, " ID=%u", value);
     }
     offset += octet_count;
 
@@ -3066,7 +3066,7 @@ s7commp_decode_item_address(tvbuff_t *tvb,
             proto_item_append_text(adr_item_tree, ".%u", value);
         } else {
             proto_tree_add_uint(adr_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, value);
-            proto_item_append_text(adr_item_tree, ", ID=%u", value);
+            proto_item_append_text(adr_item_tree, " ID=%u", value);
         }
         offset += octet_count;
         *number_of_fields += 1;
@@ -3404,8 +3404,8 @@ s7commp_decode_notification(tvbuff_t *tvb,
             proto_tree_add_uint(tree, hf_s7commp_notification_seqnum_uint8, tvb, offset, 1, seqnum);
             offset += 1;
         }
-        col_append_fstr(pinfo->cinfo, COL_INFO, ", Ctick=%u", credit_tick);
-        col_append_fstr(pinfo->cinfo, COL_INFO, ", NSeq=%u", seqnum);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Ctick=%u", credit_tick);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " NSeq=%u", seqnum);
 
         item_return_value = tvb_get_guint8(tvb, offset);
         if (item_return_value != 0x00 && item_return_value < 0x10) {    /* sehr speziell... */
@@ -4086,7 +4086,7 @@ s7commp_decode_data(tvbuff_t *tvb,
 
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
-    proto_item_append_text(tree, ", Op: %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
+    proto_item_append_text(tree, " Op: %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
     proto_tree_add_uint(tree, hf_s7commp_data_opcode, tvb, offset, 1, opcode);
     col_append_fstr(pinfo->cinfo, COL_INFO, " Op: [%s]", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
     offset += 1;
@@ -4347,7 +4347,7 @@ dissect_s7commp(tvbuff_t *tvb,
      ******************************************************/
     s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_header, tvb, offset, hlength, FALSE );
     s7commp_header_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_header);
-    proto_item_append_text(s7commp_header_tree, ", PDU-Type: %s", val_to_str(pdutype, pdutype_names, ", PDU-Type: 0x%02x"));
+    proto_item_append_text(s7commp_header_tree, " PDU-Type: %s", val_to_str(pdutype, pdutype_names, " PDU-Type: 0x%02x"));
     proto_tree_add_item(s7commp_header_tree, hf_s7commp_header_protid, tvb, offset, 1, FALSE);
     offset += 1;
     proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_pdutype, tvb, offset, 1, pdutype);
@@ -4579,7 +4579,7 @@ dissect_s7commp(tvbuff_t *tvb,
                 proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, next_tvb, offset, 1, FALSE);
                 offset += 1;
                 proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_pdutype, next_tvb, offset, 1, tvb_get_guint8(next_tvb, offset));
-                proto_item_append_text(s7commp_trailer_tree, ", PDU-Type: %s", val_to_str(tvb_get_guint8(next_tvb, offset), pdutype_names, ", PDU-Type: 0x%02x"));
+                proto_item_append_text(s7commp_trailer_tree, " PDU-Type: %s", val_to_str(tvb_get_guint8(next_tvb, offset), pdutype_names, " PDU-Type: 0x%02x"));
                 offset += 1;
                 proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_datlg, next_tvb, offset, 2, tvb_get_ntohs(next_tvb, offset));
                 offset += 2;

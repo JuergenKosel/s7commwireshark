@@ -30,6 +30,7 @@
 #include <epan/reassemble.h>
 #include <epan/conversation.h>
 #include <epan/proto_data.h>
+#include <wsutil/utf8_entities.h>
 
 void proto_reg_handoff_s7commp(void);
 void proto_register_s7commp(void);
@@ -4327,8 +4328,11 @@ dissect_s7commp(tvbuff_t *tvb,
     hlength = 4;                                            /* Header 4 Bytes */
 
     /* display some infos in info-column of wireshark */
-    col_add_fstr(pinfo->cinfo, COL_INFO, "PDU-Type: [%s]", val_to_str(pdutype, pdutype_names, "PDU-Type: 0x%02x"));
-
+    if (pinfo->srcport == 102) {
+        col_add_fstr(pinfo->cinfo, COL_INFO, "%s%u PDU-Type: [%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport, val_to_str(pdutype, pdutype_names, "PDU-Type: 0x%02x"));
+    } else {
+        col_add_fstr(pinfo->cinfo, COL_INFO, "%s%u PDU-Type: [%s]", UTF8_LEFTWARDS_ARROW, pinfo->srcport, val_to_str(pdutype, pdutype_names, "PDU-Type: 0x%02x"));
+    }
     s7commp_item = proto_tree_add_item(tree, proto_s7commp, tvb, 0, -1, FALSE);
     s7commp_tree = proto_item_add_subtree(s7commp_item, ett_s7commp);
 

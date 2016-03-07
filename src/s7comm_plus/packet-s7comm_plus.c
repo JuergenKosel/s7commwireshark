@@ -1506,7 +1506,7 @@ proto_register_s7commp (void)
           { "Unknown 4", "s7comm-plus.notification.unknown4", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_notification_credittick,
-          { "Notification Credit tickcount", "s7comm-plus.notification.credittick", FT_UINT8, BASE_HEX, NULL, 0x0,
+          { "Notification Credit tickcount", "s7comm-plus.notification.credittick", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_notification_seqnum_vlq,
           { "Notification sequence number (VLQ)", "s7comm-plus.notification.seqnum_vlq", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -2250,7 +2250,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, octet_count, length_of_value);
                 offset += octet_count;
-                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_ASCII));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
                 offset += length_of_value;
                 break;
             default:

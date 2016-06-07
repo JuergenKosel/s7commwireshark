@@ -4550,40 +4550,39 @@ dissect_s7commp(tvbuff_t *tvb,
         }
         pinfo->fragmented = save_fragmented;
         /******************************************************* END REASSEMBLING *******************************************************************/
-        if (tree) {
-            /******************************************************
-             * Data
-             ******************************************************/
-             /* insert data tree */
-            s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, next_tvb, offset, dlength, FALSE);
-            /* insert sub-items in data tree */
-            s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
-            /* main dissect data function */
-            dlength = tvb_reported_length_remaining(next_tvb, offset) - 4;
-            if (first_fragment || inner_fragment) {
-                col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS %s fragment)", first_fragment ? "first" : "inner" );
-                proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, tvb_get_ptr(next_tvb, offset, dlength));
-                offset += dlength;
-            } else {
-                if (last_fragment) {
-                    col_append_str(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS reassembled)");
-                }
-                offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, pdutype);
+
+        /******************************************************
+         * Data
+         ******************************************************/
+         /* insert data tree */
+        s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, next_tvb, offset, dlength, FALSE);
+        /* insert sub-items in data tree */
+        s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
+        /* main dissect data function */
+        dlength = tvb_reported_length_remaining(next_tvb, offset) - 4;
+        if (first_fragment || inner_fragment) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS %s fragment)", first_fragment ? "first" : "inner" );
+            proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, tvb_get_ptr(next_tvb, offset, dlength));
+            offset += dlength;
+        } else {
+            if (last_fragment) {
+                col_append_str(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS reassembled)");
             }
-            /******************************************************
-             * Trailer
-             ******************************************************/
-            if (has_trailer) {
-                s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_trailer, next_tvb, offset, 4, FALSE);
-                s7commp_trailer_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_trailer);
-                proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, next_tvb, offset, 1, FALSE);
-                offset += 1;
-                proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_pdutype, next_tvb, offset, 1, tvb_get_guint8(next_tvb, offset));
-                proto_item_append_text(s7commp_trailer_tree, " PDU-Type: %s", val_to_str(tvb_get_guint8(next_tvb, offset), pdutype_names, " PDU-Type: 0x%02x"));
-                offset += 1;
-                proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_datlg, next_tvb, offset, 2, tvb_get_ntohs(next_tvb, offset));
-                offset += 2;
-            }
+            offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, pdutype);
+        }
+        /******************************************************
+         * Trailer
+         ******************************************************/
+        if (has_trailer) {
+            s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_trailer, next_tvb, offset, 4, FALSE);
+            s7commp_trailer_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_trailer);
+            proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, next_tvb, offset, 1, FALSE);
+            offset += 1;
+            proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_pdutype, next_tvb, offset, 1, tvb_get_guint8(next_tvb, offset));
+            proto_item_append_text(s7commp_trailer_tree, " PDU-Type: %s", val_to_str(tvb_get_guint8(next_tvb, offset), pdutype_names, " PDU-Type: 0x%02x"));
+            offset += 1;
+            proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_datlg, next_tvb, offset, 2, tvb_get_ntohs(next_tvb, offset));
+            offset += 2;
         }
     }
     return TRUE;

@@ -2492,6 +2492,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     guint32 start_offset;
     guint32 number_of_array_dimensions;
     guint32 array_dimension;
+    const guint8 *str_name;
 
     offsetinfotype = tvb_get_guint8(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_offsetinfotype, tvb, offset, 1, offsetinfotype);
@@ -2501,8 +2502,8 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_namelength, tvb, offset, octet_count, length_of_value);
     offset += octet_count;
 
-    proto_tree_add_item(tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA);
-    proto_item_append_text(tree, " for Tag: %s", tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
+    proto_tree_add_item_ret_string(tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA, wmem_packet_scope(), &str_name);
+    proto_item_append_text(tree, " for Tag: %s", str_name);
     offset += length_of_value;
 
     proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
@@ -2712,6 +2713,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
     proto_item *item;
     proto_tree *tag_tree;
     int i = 1;
+    const guint8 *str_type;
 
     start_offset = offset;
     proto_tree_add_text(tree, tvb, offset, 4, "Unknown 1: 0x%08x", tvb_get_ntohl(tvb, offset));
@@ -2722,7 +2724,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
         item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, -1, FALSE);
         tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
-        proto_item_append_text(tag_tree, " [%d]", i);
 
         lid = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_lid, tvb, offset, octet_count, lid);
@@ -2740,6 +2741,12 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
         softdatatype = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_softdatatype, tvb, offset, octet_count, softdatatype);
         offset += octet_count;
+
+        if ((str_type = try_val_to_str_ext(softdatatype, &tagdescr_softdatatype_names_ext))) {
+            proto_item_append_text(tag_tree, "[%d]: %s", i, str_type);
+        } else {
+            proto_item_append_text(tag_tree, "[%d]: Unknown softdatatype 0x%04x", i, softdatatype);
+        }
 
         /* ab hier nicht bekannt, evtl. offset type? */
         proto_tree_add_text(tag_tree, tvb, offset, 2, "Unknown 4 (flags?): 0x%04x", tvb_get_ntohs(tvb, offset));
@@ -2833,7 +2840,7 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
     guint8 octet_count = 0;
     proto_item *item;
     proto_tree *tag_tree;
-
+    const guint8 *str_name;
     int i = 1;
 
     do {
@@ -2843,11 +2850,11 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
         }
         item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, (octet_count + length_of_value + 1), FALSE);
         tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
-        proto_item_append_text(tag_tree, " [%d]", i);
 
         proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_namelength, tvb, offset, octet_count, length_of_value);
         offset += octet_count;
-        proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA);
+        proto_tree_add_item_ret_string(tag_tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA, wmem_packet_scope(), &str_name);
+        proto_item_append_text(tag_tree, "[%d]: %s", i, str_name);
         offset += length_of_value;
         /* String-terminierende Null? Bei Längenangabe eigentlich überflüssig */
         proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
@@ -3035,10 +3042,10 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_response_createobject(tvbuff_t *tvb,
-                                    packet_info *pinfo,
-                                    proto_tree *tree,
-                                    guint32 offset,
-                                    guint8 pdutype)
+                                     packet_info *pinfo,
+                                     proto_tree *tree,
+                                     guint32 offset,
+                                     guint8 pdutype)
 {
     guint8 object_id_count = 0;
     guint8 octet_count = 0;
@@ -4148,9 +4155,9 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_objectqualifier(tvbuff_t *tvb,
-                                proto_tree *tree,
-                                gint16 dlength,
-                                guint32 offset)
+                               proto_tree *tree,
+                               gint16 dlength,
+                               guint32 offset)
 {
     guint32 offset_save;
     guint32 offsetmax;
@@ -4437,7 +4444,20 @@ s7commp_decode_data(tvbuff_t *tvb,
             dlength -= octet_count;
         }
     } else {
-        if (dlength >= 32) {
+        if (dlength > 4 && dlength < 32 && has_integrity_id) {
+            /* Plcsim für die 1500 verwendet keine Integrität, dafür gibt es aber am Endeblock (vor den üblichen 4 Nullbytes)
+             * eine fortlaufende Nummer.
+             * Vermutlich ist das trotzdem die Id, aber der andere Teil fehlt dann. Wenn die vorige Response ebenfalls eine
+             * Id hatte, dann wird die für den nächsten Request wieder aus der letzten Id+Seqnum berechnet, d.h. so wie auch 
+             * bei der Id wenn es einen kompletten Integritätsteil gibt. 
+             * War dort keine vorhanden, dann wird immer um 1 erhöht.
+             * Unklar was für eine Funktion das haben soll.
+             */
+            integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
+            offset += octet_count;
+            dlength -= octet_count;
+        } else if (dlength >= 32) {
             offset_save = offset;
             offset = s7commp_decode_integrity(tvb, pinfo, tree, has_integrity_id, offset);
             dlength = dlength - (offset - offset_save);

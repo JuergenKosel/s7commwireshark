@@ -424,28 +424,38 @@ static const value_string explore_class_lib_names[] = {
 static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
 /* Attribute flags in tag description */
-#define S7COMMP_TAGDESCR_ATTRIBUTE_HOSTRELEVANT       0x8000000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_PLAINMEMBERRETAIN  0x2000000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_PLAINMEMBERCLASSIC 0x1000000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIVISIBLE         0x0800000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIREADONLY        0x0400000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_HMICACHED          0x0200000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIACCESSIBLE      0x0100000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_ISQUALIFIER        0x0040000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_NORMALACCESS       0x0008000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_NEEDSLEGITIMIZATION 0x0004000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_CHANGEBLEINRUN     0x0002000
-#define S7COMMP_TAGDESCR_ATTRIBUTE_SERVERONLY         0x0000800
-#define S7COMMP_TAGDESCR_ATTRIBUTE_CLIENTREADRONLY    0x0000400
-#define S7COMMP_TAGDESCR_ATTRIBUTE_SEPLOADMEMFA       0x0000200
-#define S7COMMP_TAGDESCR_ATTRIBUTE_ASEVALREQ          0x0000100
-#define S7COMMP_TAGDESCR_ATTRIBUTE_BL                 0x0000040
-#define S7COMMP_TAGDESCR_ATTRIBUTE_PERSISTENT         0x0000020
-#define S7COMMP_TAGDESCR_ATTRIBUTE_CORE               0x0000010
-#define S7COMMP_TAGDESCR_ATTRIBUTE_ISOUT              0x0000008
-#define S7COMMP_TAGDESCR_ATTRIBUTE_ISIN               0x0000004
-#define S7COMMP_TAGDESCR_ATTRIBUTE_APPWRITEABLE       0x0000002
-#define S7COMMP_TAGDESCR_ATTRIBUTE_APPREADABLE        0x0000001
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HOSTRELEVANT         0x08000000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_PLAINMEMBERRETAIN    0x02000000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_PLAINMEMBERCLASSIC   0x01000000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIVISIBLE           0x00800000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIREADONLY          0x00400000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMICACHED            0x00200000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_HMIACCESSIBLE        0x00100000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_ISQUALIFIER          0x00040000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_NORMALACCESS         0x00008000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_NEEDSLEGITIMIZATION  0x00004000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_CHANGEBLEINRUN       0x00002000
+#define S7COMMP_TAGDESCR_ATTRIBUTE_SERVERONLY           0x00000800
+#define S7COMMP_TAGDESCR_ATTRIBUTE_CLIENTREADRONLY      0x00000400
+#define S7COMMP_TAGDESCR_ATTRIBUTE_SEPLOADMEMFA         0x00000200
+#define S7COMMP_TAGDESCR_ATTRIBUTE_ASEVALREQ            0x00000100
+#define S7COMMP_TAGDESCR_ATTRIBUTE_BL                   0x00000040
+#define S7COMMP_TAGDESCR_ATTRIBUTE_PERSISTENT           0x00000020
+#define S7COMMP_TAGDESCR_ATTRIBUTE_CORE                 0x00000010
+#define S7COMMP_TAGDESCR_ATTRIBUTE_ISOUT                0x00000008
+#define S7COMMP_TAGDESCR_ATTRIBUTE_ISIN                 0x00000004
+#define S7COMMP_TAGDESCR_ATTRIBUTE_APPWRITEABLE         0x00000002
+#define S7COMMP_TAGDESCR_ATTRIBUTE_APPREADABLE          0x00000001
+
+/* flags in tag description for 1500, only 32 Bits, << 4 */
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_HOSTRELEVANT        0x8000
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_PLAINMEMBERRETAIN   0x2000
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_PLAINMEMBERCLASSIC  0x1000
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_HMIVISIBLE          0x0800
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_HMIREADONLY         0x0400
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_HMICACHED           0x0200
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_HMIACCESSIBLE       0x0100
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_ISQUALIFIER         0x0040
 
 /* Offsetinfo type for tag description */
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE_LIBELEMENT      0x00
@@ -830,6 +840,27 @@ static const int *s7commp_tagdescr_attributeflags_fields[] = {
     &hf_s7commp_tagdescr_attributeflags_isin,
     &hf_s7commp_tagdescr_attributeflags_appwriteable,
     &hf_s7commp_tagdescr_attributeflags_appreadable,
+    NULL
+};
+
+static gint hf_s7commp_tagdescr_attributeflags2 = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_hostrelevant = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_retain = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_classic = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_hmivisible = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_hmireadonly = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_hmicached = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_hmiaccessible = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_isqualifier = -1;
+static const int *s7commp_tagdescr_attributeflags2_fields[] = {
+    &hf_s7commp_tagdescr_attributeflags2_hostrelevant,
+    &hf_s7commp_tagdescr_attributeflags2_retain,
+    &hf_s7commp_tagdescr_attributeflags2_classic,
+    &hf_s7commp_tagdescr_attributeflags2_hmivisible,
+    &hf_s7commp_tagdescr_attributeflags2_hmireadonly,
+    &hf_s7commp_tagdescr_attributeflags2_hmicached,
+    &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
+    &hf_s7commp_tagdescr_attributeflags2_isqualifier,
     NULL
 };
 
@@ -1279,6 +1310,7 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_softdatatype,
           { "SoftDataType", "s7comm-plus.tagdescr.softdatatype", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &tagdescr_softdatatype_names_ext, 0x0,
             NULL, HFILL }},
+
         { &hf_s7commp_tagdescr_attributeflags,
           { "Attributes", "s7comm-plus.tagdescr.attributeflags", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -1348,6 +1380,35 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_attributeflags_appreadable,
           { "App-Readable", "s7comm-plus.tagdescr.attributeflags.appreadable", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_APPREADABLE,
             NULL, HFILL }},
+
+        { &hf_s7commp_tagdescr_attributeflags2,
+          { "Attributes", "s7comm-plus.tagdescr.attributeflags", FT_UINT16, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_hostrelevant,
+          { "Hostrelevant", "s7comm-plus.tagdescr.attributeflags.hostrelevant", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HOSTRELEVANT,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_retain,
+          { "Plainmember-Retain", "s7comm-plus.tagdescr.attributeflags.retain", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_PLAINMEMBERRETAIN,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_classic,
+          { "Plainmember-Classic", "s7comm-plus.tagdescr.attributeflags.classic", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_PLAINMEMBERCLASSIC,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_hmivisible,
+          { "HMI-Visible", "s7comm-plus.tagdescr.attributeflags.hmivisible", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMIVISIBLE,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_hmireadonly,
+          { "HMI-Readonly", "s7comm-plus.tagdescr.attributeflags.hmireadonly", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMIREADONLY,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_hmicached,
+          { "HMI-Cached", "s7comm-plus.tagdescr.attributeflags.hmicached", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMICACHED,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
+          { "HMI-Accessible", "s7comm-plus.tagdescr.attributeflags.hmiaccessible", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMIACCESSIBLE,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_isqualifier,
+          { "Is-Qualifier", "s7comm-plus.tagdescr.attributeflags.isqualifier", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_ISQUALIFIER,
+            NULL, HFILL }},
+
         { &hf_s7commp_tagdescr_unknown4,
           { "Unknown 4", "s7comm-plus.tagdescr.unknown4", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -2701,128 +2762,165 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
 static guint32
 s7commp_decode_vartypelist(tvbuff_t *tvb,
                            proto_tree *tree,
-                           guint16 data_len,
                            guint32 offset)
 {
-    guint32 lid;
-    guint32 vlq_value;
-    guint32 start_offset;
     guint32 tag_start_offset;
-    guint8 octet_count = 0;
+    guint32 max_offset;
+    guint8 bitoffset;
     guint32 softdatatype;
     proto_item *item;
     proto_tree *tag_tree;
     int i = 1;
     const guint8 *str_type;
+    guint16 block_len;
 
-    start_offset = offset;
-    proto_tree_add_text(tree, tvb, offset, 4, "Unknown 1: 0x%08x", tvb_get_ntohl(tvb, offset));
+    /* Hier können mehrere Datenblöcke vorhanden sein (gleiches bei varnamelist).
+     * Ist die Länge == 0, dann folgt kein weiterer Datenblock mehr.
+     * Nur der erste Datenblock besitzt zusätzlich noch eine 4-Byte ID (oder Flags?).
+     *
+     * Die Bytereihenfolge ist in diesem Block Little-Endian!!
+     * Auf so eine Idee muss man erstmal kommen, ob da noch die S7 classic Abteilung am Werk war...
+     */
+    block_len = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_object_blocklength, tvb, offset, 2, block_len);
+    offset += 2;
+    max_offset = offset + block_len;
+
+    proto_tree_add_text(tree, tvb, offset, 4, "Unknown in first Block (LittleEndian): 0x%08x / %u", tvb_get_letohl(tvb, offset), tvb_get_letohl(tvb, offset));
     offset += 4;
 
-    do {
-        tag_start_offset = offset;
+    while (block_len > 0) {
+        do {
+            tag_start_offset = offset;
+            item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, -1, FALSE);
+            tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
 
-        item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, -1, FALSE);
-        tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
+            proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_lid, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+            offset += 4;
 
-        lid = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_lid, tvb, offset, octet_count, lid);
-        offset += octet_count;
+            proto_tree_add_text(tag_tree, tvb, offset, 4, "Unknown ID?: 0x%08x", tvb_get_letohl(tvb, offset));
+            offset += 4;
 
-        proto_tree_add_text(tag_tree, tvb, offset, 1, "Unknown 2: 0x%02x", tvb_get_guint8(tvb, offset));
-        offset += 1;
-
-        proto_tree_add_text(tag_tree, tvb, offset, 2, "Unknown 3: 0x%04x", tvb_get_ntohs(tvb, offset));
-        offset += 2;
-
-        proto_tree_add_text(tag_tree, tvb, offset, 4, "Unknown ID?: 0x%08x", tvb_get_ntohl(tvb, offset));
-        offset += 4;
-
-        softdatatype = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_softdatatype, tvb, offset, octet_count, softdatatype);
-        offset += octet_count;
-
-        if ((str_type = try_val_to_str_ext(softdatatype, &tagdescr_softdatatype_names_ext))) {
-            proto_item_append_text(tag_tree, "[%d]: %s", i, str_type);
-        } else {
-            proto_item_append_text(tag_tree, "[%d]: Unknown softdatatype 0x%04x", i, softdatatype);
-        }
-
-        /* ab hier nicht bekannt, evtl. offset type? */
-        proto_tree_add_text(tag_tree, tvb, offset, 2, "Unknown 4 (flags?): 0x%04x", tvb_get_ntohs(tvb, offset));
-        offset += 2;
-
-        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tag_tree, tvb, offset, octet_count, "Section? VLQ: %u", vlq_value);
-        offset += octet_count;
-
-        if (softdatatype == 19 || softdatatype == 62) { /* 19=String, 62=Wstring immer 28 bytes?*/
-            /* oder 2 Bytes, und das davor gehört dazu? */
-            proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_s7stringlength, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+            softdatatype = tvb_get_guint8(tvb, offset); /* hier nur 1 Byte */
+            proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_softdatatype, tvb, offset, 1, softdatatype);
             offset += 1;
-            proto_tree_add_text(tag_tree, tvb, offset, 1, "String-Unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+
+            if ((str_type = try_val_to_str_ext(softdatatype, &tagdescr_softdatatype_names_ext))) {
+                proto_item_append_text(tag_tree, "[%d]: Type=%s", i, str_type);
+            } else {
+                proto_item_append_text(tag_tree, "[%d]: Unknown softdatatype 0x%04x", i, softdatatype);
+            }
+
+            /* Werte dieser 2 Bytes:
+             * Bei M/I/C/T:                           0x8a40 = 1000 1010 0100 0000
+             * Bei M/I/C/T wenn "nicht sichtbar":     0x8240 = 1000 0010 0100 0000
+             * Bei M/I/C/T wenn "nicht erreichbar":   0x8040 = 1000 0000 0100 0000
+             * Bei Variablen in einem optimierten DB: 0x8ac0 = 1000 1010 1100 0000
+             * Bei Struct in einem optimierten DB:    0xcac0 = 1100 1010 1100 0000
+             * Bei Variablen in einem NICHT opt. DB:  0x8a40 = 1000 1010 0100 0000
+             * Bei String/WStr in einem NICHT opt. DB:0x9a40 = 1001 1010 0100 0000
+             * Structmember                           0x1a80 = 0001 1010 1000 0000
+             *
+             * Flags:
+             * STRUCT    = 0x4000
+             * STRING    = 0x1000 -> nein, auch struct
+             * VISIBLE   = 0x0800
+             * REACHABLE = 0x0200
+             * OPTDB     = 0x0080
+             *
+             * TODO: Bitfeld noch nicht korrigiert!
+             */
+            /* Das Bitfeld ist eigentlich 32 Bit lang, hier aber nur 16 */
+            proto_tree_add_bitmask(tag_tree, tvb, offset, hf_s7commp_tagdescr_attributeflags2,
+                ett_s7commp_tagdescr_attributeflags, s7commp_tagdescr_attributeflags2_fields, ENC_BIG_ENDIAN);
+            offset += 2;
+
+            /* Bitoffset pro Nibble:
+             * Bit .0 = 0x08
+             * Bit .1 = 0x19
+             * Bit .2 = 0x2a
+             * Bit .3 = 0x3b
+             * Bit .4 = 0x4c
+             * Wenn kein Bool-Typ, dann 0x00
+             */
+
+            bitoffset = tvb_get_guint8(tvb, offset);
+            if (softdatatype == 1 || (bitoffset & 0x0f) > 0) {
+                /* Es gibt auch bei anderen Datentypen einen Bitoffset (z.B. Int 0x08, aber nicht einheitlich. Darum die ODER Abfrage. */
+                proto_tree_add_text(tag_tree, tvb, offset, 1, "Bitoffset 1 (left Nibble) : %d", ((bitoffset >> 4) & 0x0f));
+                proto_tree_add_text(tag_tree, tvb, offset, 1, "Bitoffset 2 (right Nibble): %d", (bitoffset & 0x0f) - 8);
+            } else if (softdatatype == 40) {
+                /* 40 = BBOOL (Bool in einem optimierten DB) benötigt laut Siemens Doku 1 Byte. Hier gibt es Werte wie z.B. 0x90, 0x20, ... */
+                proto_tree_add_text(tag_tree, tvb, offset, 1, "Bitoffset 1 (left Nibble) : %d", ((bitoffset >> 4) & 0x0f));
+                proto_tree_add_text(tag_tree, tvb, offset, 1, "Bitoffset 2 (right Nibble): %d", bitoffset & 0x0f);
+            } else {
+                proto_tree_add_text(tag_tree, tvb, offset, 1, "Unknown/Reserved (Bitoffset): 0x%02x", tvb_get_guint8(tvb, offset));
+            }
             offset += 1;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Unknown 3: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Unknown 5: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Unknown 6: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-        } else if (softdatatype == 67 || softdatatype == 17) { /* 67 = DTL, 17 = Struct : 48 Bytes gesamt - 16 vorher*/
-            /* hier ist alles ganz anders .... */
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 1: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 2: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 3: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 5: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 6: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 7: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 8: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 9: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 10: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 11: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 12: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 13: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 14: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 15: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-            proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct Unknown 16: 0x%04x", tvb_get_ntohs(tvb, offset));
-            offset += 2;
-        } else {
-            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(tag_tree, tvb, offset, octet_count, "Offsetinfo 1-1? VLQ: %u", vlq_value);
-            offset += octet_count;
-            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(tag_tree, tvb, offset, octet_count, "Offsetinfo 1-2? VLQ: %u", vlq_value);
-            offset += octet_count;
-            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(tag_tree, tvb, offset, octet_count, "Offsetinfo 2-1? VLQ: %u", vlq_value);
-            offset += octet_count;
-            vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(tag_tree, tvb, offset, octet_count, "Offsetinfo 2-2? VLQ  %u", vlq_value);
-            offset += octet_count;
-        }
-        proto_item_set_len(tag_tree, offset - tag_start_offset);
-        i++;
-    } while ((offset - start_offset) < data_len);
+
+            if (softdatatype == 19 || softdatatype == 62) { /* 19=String, 62=Wstring immer 28 bytes?*/
+                proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_s7stringlength, tvb, offset, 2, tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Offsetinfo 1: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Offsetinfo 2: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Offsetinfo 3: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Offsetinfo 4: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Offsetinfo 5: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+            } else if (softdatatype == 67 || softdatatype == 17) { /* 67 = DTL, 17 = Struct : 48 Bytes gesamt - 16 vorher*/
+                /* hier ist alles ganz anders .... */
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 1: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 2: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 3: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 4: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 5: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 6: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 7: %u", tvb_get_letohs(tvb, offset)); // Libtype / DB number?
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 8: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 9: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 10: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 11: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 12: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 13: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 14: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 15: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 16: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+            } else {
+                 /* Beispielwert: %M600.3: Bei beiden Offsets eine 600.
+                  */
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "Offsetinfo 1: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+                proto_tree_add_text(tag_tree, tvb, offset, 2, "Offsetinfo 2: %u", tvb_get_letohs(tvb, offset));
+                offset += 2;
+            }
+            proto_item_set_len(tag_tree, offset - tag_start_offset);
+            i++;
+        } while (offset < max_offset);
+        block_len = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_object_blocklength, tvb, offset, 2, block_len);
+        offset += 2;
+        max_offset = offset + block_len;
+    }; /* while blocklen > 0 */
 
     return offset;
 }
@@ -2836,32 +2934,40 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
                            proto_tree *tree,
                            guint32 offset)
 {
-    guint32 length_of_value;
-    guint8 octet_count = 0;
+    guint8 length_of_value;
+    guint32 max_offset;
     proto_item *item;
     proto_tree *tag_tree;
     const guint8 *str_name;
     int i = 1;
+    guint16 block_len;
 
-    do {
-        length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-        if (length_of_value == 0) {
-            break;
-        }
-        item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, (octet_count + length_of_value + 1), FALSE);
-        tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
+    block_len = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_object_blocklength, tvb, offset, 2, block_len);
+    offset += 2;
+    max_offset = offset + block_len;
 
-        proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_namelength, tvb, offset, octet_count, length_of_value);
-        offset += octet_count;
-        proto_tree_add_item_ret_string(tag_tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA, wmem_packet_scope(), &str_name);
-        proto_item_append_text(tag_tree, "[%d]: %s", i, str_name);
-        offset += length_of_value;
-        /* String-terminierende Null? Bei Längenangabe eigentlich überflüssig */
-        proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
-        offset += 1;
-        i++;
-    } while (length_of_value > 0);
-    proto_tree_add_text(tree, tvb, offset, 1, "Reserved ??: 0x%02x", tvb_get_guint8(tvb, offset));
+    while (block_len > 0) {
+        do {
+            /* Länge eines Namens max. 128 Zeichen */
+            length_of_value = tvb_get_guint8(tvb, offset);
+            item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, (1 + length_of_value + 1), FALSE);
+            tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
+            proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_namelength, tvb, offset, 1, length_of_value);
+            offset += 1;
+            proto_tree_add_item_ret_string(tag_tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA, wmem_packet_scope(), &str_name);
+            proto_item_append_text(tag_tree, "[%d]: Name=%s", i, str_name);
+            offset += length_of_value;
+            /* String-terminierende Null? Bei Längenangabe eigentlich überflüssig */
+            proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+            offset += 1;
+            i++;
+        } while (offset < max_offset);
+        block_len = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_object_blocklength, tvb, offset, 2, block_len);
+        offset += 2;
+        max_offset = offset + block_len;
+    }
 
     return offset;
 }
@@ -2879,7 +2985,6 @@ s7commp_decode_object(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     guint32 start_offset;
     guint32 uint32_value;
-    guint16 data_len;
     guint8 octet_count = 0;
     guint8 element_id;
     gboolean terminate = FALSE;
@@ -2949,13 +3054,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 proto_item_append_text(data_item_tree, ": VarnameList");
-                data_len = tvb_get_ntohs(tvb, offset);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_object_blocklength, tvb, offset, 2, data_len);
-                offset += 2;
-                s7commp_decode_varnamelist(tvb, data_item_tree, offset); /* Rückgabe-Offset wird nicht benötigt */
-                offset += data_len;
-                proto_tree_add_uint(data_item_tree, hf_s7commp_object_blockunknown1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
-                offset += 2;
+                offset = s7commp_decode_varnamelist(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
             case S7COMMP_ITEMVAL_ELEMENTID_VARTYPELIST:                /* 0xab */
@@ -2964,14 +3063,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 proto_item_append_text(data_item_tree, ": VartypeList");
-                data_len = tvb_get_ntohs(tvb, offset);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_object_blocklength, tvb, offset, 2, data_len);
-                offset += 2;
-                /*proto_tree_add_bytes(data_item_tree, hf_s7commp_data_data, tvb, offset, data_len, tvb_get_ptr(tvb, offset, data_len)); */
-                s7commp_decode_vartypelist(tvb, data_item_tree, data_len, offset); /* Rückgabe-Offset wird nicht benötigt */
-                offset += data_len;
-                proto_tree_add_uint(data_item_tree, hf_s7commp_object_blockunknown1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
-                offset += 2;
+                offset = s7commp_decode_vartypelist(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
             case S7COMMP_ITEMVAL_ELEMENTID_ATTRIBUTE:                /* 0xa3 */
@@ -4448,8 +4540,8 @@ s7commp_decode_data(tvbuff_t *tvb,
             /* Plcsim für die 1500 verwendet keine Integrität, dafür gibt es aber am Endeblock (vor den üblichen 4 Nullbytes)
              * eine fortlaufende Nummer.
              * Vermutlich ist das trotzdem die Id, aber der andere Teil fehlt dann. Wenn die vorige Response ebenfalls eine
-             * Id hatte, dann wird die für den nächsten Request wieder aus der letzten Id+Seqnum berechnet, d.h. so wie auch 
-             * bei der Id wenn es einen kompletten Integritätsteil gibt. 
+             * Id hatte, dann wird die für den nächsten Request wieder aus der letzten Id+Seqnum berechnet, d.h. so wie auch
+             * bei der Id wenn es einen kompletten Integritätsteil gibt.
              * War dort keine vorhanden, dann wird immer um 1 erhöht.
              * Unklar was für eine Funktion das haben soll.
              */

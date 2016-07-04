@@ -3557,6 +3557,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
      * Aufbau aus den anderen Telegrammen.
      * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte übertragen. Dann ist Datatype=NULL
      * Folgende Rückgabewerte wurden gesichtet:
+     *  0x03 -> Fehler bei einer Adresse (S7-1500 - Plcsim)
      *  0x13 -> Fehler bei einer Adresse (S7-1200)
      *  0x92 -> Erfolg (S7-1200)
      *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
@@ -3574,7 +3575,6 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
             start_offset = offset;
             data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
             data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
-            //!proto_tree_add_text(data_item_tree, tvb, offset, 1, "Return value: 0x%02x", item_return_value);
             proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_retval, tvb, offset, 1, item_return_value);
             offset += 1;
             if (item_return_value == 0x92) {
@@ -3595,7 +3595,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_unknown0x9c, tvb, offset, 4, item_number);
                 proto_item_append_text(data_item_tree, " Returncode 0x9c, Value: 0x%08x", item_number);
                 offset += 4;
-            } else if (item_return_value == 0x13) {
+            } else if (item_return_value == 0x13 || item_return_value == 0x03) {
                 item_number = tvb_get_ntohl(tvb, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_refnumber, tvb, offset, 4, item_number);
                 proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
@@ -3684,7 +3684,14 @@ s7commp_decode_notification(tvbuff_t *tvb,
         col_append_fstr(pinfo->cinfo, COL_INFO, " NSeq=%u", seqnum);
 
         item_return_value = tvb_get_guint8(tvb, offset);
-        if (item_return_value != 0x00 && item_return_value < 0x10) {    /* sehr speziell... */
+        /* Woran zu erkennen ist, dass hier ein eingeschobener Wert folgt ist noch nicht bekannt.
+         * Wenn vorhanden, wird dieser Wert (gelegentlich) jedes Telegramm erhöht, sodass auch normal "gültige"
+         * retval Werte einer Variable möglich sind.
+         * Ist es ein retval der Variable, dann folgt üblicherweise min. ein 0xff da die Referenznummern von
+         * 0xffffffff abwärts gezählt werden.
+         * Hier besteht auf jeden Fall noch Analysebedarf.
+         */
+        if (item_return_value != 0x00 && (tvb_get_guint8(tvb, offset + 1) != 0xff)) {
             proto_tree_add_uint(tree, hf_s7commp_notification_unknown5, tvb, offset, 1, item_return_value);
             offset += 1;
         }

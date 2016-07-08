@@ -1770,7 +1770,7 @@ proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, co
     int ret;
     gchar *s;
 
-    s = wmem_alloc(wmem_packet_scope(), ITEM_LABEL_LENGTH);
+    s = (gchar *)wmem_alloc(wmem_packet_scope(), ITEM_LABEL_LENGTH);
     s[0] = '\0';
 
     va_start(ap, format);
@@ -2108,9 +2108,9 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint32 start_offset = 0;
     guint32 length_of_value = 0;
 
-    str_val = wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
+    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
     str_val[0] = '\0';
-    str_arrval = wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_ARRVAL_MAX);
+    str_arrval = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_ARRVAL_MAX);
     str_arrval[0] = '\0';
 
     datatype_flags = tvb_get_guint8(tvb, offset);

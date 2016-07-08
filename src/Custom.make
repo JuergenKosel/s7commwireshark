@@ -3,7 +3,6 @@
 #
 
 _CUSTOM_SUBDIRS_ = \
-	s7comm \
 	s7comm_plus
 
 _CUSTOM_EXTRA_DIST_ = \
@@ -11,5 +10,4 @@ _CUSTOM_EXTRA_DIST_ = \
 	Custom.make
 
 _CUSTOM_plugin_ldadd_ = \
-	-dlopen plugins/s7comm/s7comm.la \
 	-dlopen plugins/s7comm_plus/s7comm_plus.la

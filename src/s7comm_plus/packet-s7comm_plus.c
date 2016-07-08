@@ -694,6 +694,7 @@ static gint hf_s7commp_data_retval_genericerrorcode = -1;
 static gint hf_s7commp_data_retval_servererror = -1;
 static gint hf_s7commp_data_retval_debuginfo = -1;
 static gint hf_s7commp_data_retval_errorextension = -1;
+/* Z.Zt. nicht verwendet, da 64 Bit Feld nicht vernünftig unterstützt wird.
 static const int *s7commp_data_returnvalue_fields[] = {
     &hf_s7commp_data_retval_errorcode,
     &hf_s7commp_data_retval_omsline,
@@ -703,7 +704,7 @@ static const int *s7commp_data_returnvalue_fields[] = {
     &hf_s7commp_data_retval_debuginfo,
     NULL
 };
-
+*/
 /* These are the ids of the subtrees that we are creating */
 static gint ett_s7commp = -1;                           /* S7 communication tree, parent of all other subtree */
 static gint ett_s7commp_header = -1;                    /* Subtree for header block */
@@ -1767,14 +1768,13 @@ proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, co
 {
     proto_item *pi;
     va_list ap;
-    int ret;
     gchar *s;
 
     s = (gchar *)wmem_alloc(wmem_packet_scope(), ITEM_LABEL_LENGTH);
     s[0] = '\0';
 
     va_start(ap, format);
-    ret = g_vsnprintf(s, ITEM_LABEL_LENGTH, format, ap);
+    g_vsnprintf(s, ITEM_LABEL_LENGTH, format, ap);
     va_end(ap);
 
     pi = proto_tree_add_string_format(tree, hf_s7commp_proto_tree_add_text_dummy, tvb, start, length, "DUMMY", "%s", s);
@@ -1978,95 +1978,95 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
   * zerlegt wird. GGf. später die Feldinformationen in anderer Weise hinzufügen.
   * Z.B. Funktion mit (arr_size, arr_index_actual, return_string_with_info).
   */
-static guint32
-s7commp_decode_udint_address_array(tvbuff_t *tvb,
-                                   proto_tree *tree,
-                                   guint32 array_size,
-                                   guint32 offset)
-{
-    guint32 value = 0;
-    guint8 octet_count = 0;
-    guint32 item_count = 0;
-    guint32 i = 0;
-    guint32 array_size_act = 0;
-    guint16 tia_var_area1;
-    guint16 tia_var_area2;
-
-    value = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown 1 (ID?): %u", value);
-    offset += octet_count;
-    array_size_act += 1;
-
-    value = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown 2: %u", value);
-    offset += octet_count;
-    array_size_act += 1;
-
-    item_count = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_text(tree, tvb, offset, octet_count, "Number of addresses following: %u", item_count);
-    offset += octet_count;
-    array_size_act += 1;
-
-    for (i = 1; i <= item_count; i++) {
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Unknown 1 (ID?): %u", i, value);
-        offset += octet_count;
-        array_size_act += 1;
-
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Item reference number: %u", i, value);
-        offset += octet_count;
-        array_size_act += 1;
-
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Unknown 2: %u", i, value);
-        offset += octet_count;
-        array_size_act += 1;
-
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        /* Area ausmaskieren, ist hier etwas anders codiert als bei einem normalen Read einer Variable */
-        tia_var_area1 = (value >> 16);
-        tia_var_area2 = (value & 0xffff);
-        if (tia_var_area1 == S7COMMP_VAR_ITEM_AREA1_DB) {
-            proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Area: %u (Datablock, DB-Number %u)", i, value, tia_var_area2);
-        } else {
-            proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] IQMCT Area: %u (%s)", i, value, val_to_str(value, var_item_area2_names, "Unknown IQMCT Area"));
-        }
-        offset += octet_count;
-        array_size_act += 1;
-
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Symbol-CRC: %u (0x%08x)", i, value, value);
-        offset += octet_count;
-        array_size_act += 1;
-
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Base Area: %u (%s)", i, value, val_to_str(value, var_item_base_area_names, "Unknown Base Area"));
-        offset += octet_count;
-        array_size_act += 1;
-
-        /* When accessing a variable inside a struct / array, the adress has one LID for each struct / array index.
-         * There is no header which says how many LIDs are following.
-         * When another address follows, the ID of this is always bigger than 2^31. If not, then another LID follows.
-         * If this is the last address, check if the number of fields in the array is reached.
-         */
-        do {
-            value = tvb_get_varuint32(tvb, &octet_count, offset);
-            if (value < 2147483648lu) {
-                proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] LID-Value: %u", i, value);
-                offset += octet_count;
-                array_size_act += 1;
-            }
-        } while ((value < 2147483648lu) && (array_size_act < array_size));
-
-        /* break decoding if out of array-size range*/
-        if (array_size_act >= array_size) {
-            break;
-        }
-    }
-
-    return offset;
-}
+//static guint32
+//s7commp_decode_udint_address_array(tvbuff_t *tvb,
+//                                   proto_tree *tree,
+//                                   guint32 array_size,
+//                                   guint32 offset)
+//{
+//    guint32 value = 0;
+//    guint8 octet_count = 0;
+//    guint32 item_count = 0;
+//    guint32 i = 0;
+//    guint32 array_size_act = 0;
+//    guint16 tia_var_area1;
+//    guint16 tia_var_area2;
+//
+//    value = tvb_get_varuint32(tvb, &octet_count, offset);
+//    proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown 1 (ID?): %u", value);
+//    offset += octet_count;
+//    array_size_act += 1;
+//
+//    value = tvb_get_varuint32(tvb, &octet_count, offset);
+//    proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown 2: %u", value);
+//    offset += octet_count;
+//    array_size_act += 1;
+//
+//    item_count = tvb_get_varuint32(tvb, &octet_count, offset);
+//    proto_tree_add_text(tree, tvb, offset, octet_count, "Number of addresses following: %u", item_count);
+//    offset += octet_count;
+//    array_size_act += 1;
+//
+//    for (i = 1; i <= item_count; i++) {
+//        value = tvb_get_varuint32(tvb, &octet_count, offset);
+//        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Unknown 1 (ID?): %u", i, value);
+//        offset += octet_count;
+//        array_size_act += 1;
+//
+//        value = tvb_get_varuint32(tvb, &octet_count, offset);
+//        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Item reference number: %u", i, value);
+//        offset += octet_count;
+//        array_size_act += 1;
+//
+//        value = tvb_get_varuint32(tvb, &octet_count, offset);
+//        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Unknown 2: %u", i, value);
+//        offset += octet_count;
+//        array_size_act += 1;
+//
+//        value = tvb_get_varuint32(tvb, &octet_count, offset);
+//        /* Area ausmaskieren, ist hier etwas anders codiert als bei einem normalen Read einer Variable */
+//        tia_var_area1 = (value >> 16);
+//        tia_var_area2 = (value & 0xffff);
+//        if (tia_var_area1 == S7COMMP_VAR_ITEM_AREA1_DB) {
+//            proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Area: %u (Datablock, DB-Number %u)", i, value, tia_var_area2);
+//        } else {
+//            proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] IQMCT Area: %u (%s)", i, value, val_to_str(value, var_item_area2_names, "Unknown IQMCT Area"));
+//        }
+//        offset += octet_count;
+//        array_size_act += 1;
+//
+//        value = tvb_get_varuint32(tvb, &octet_count, offset);
+//        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Symbol-CRC: %u (0x%08x)", i, value, value);
+//        offset += octet_count;
+//        array_size_act += 1;
+//
+//        value = tvb_get_varuint32(tvb, &octet_count, offset);
+//        proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] Base Area: %u (%s)", i, value, val_to_str(value, var_item_base_area_names, "Unknown Base Area"));
+//        offset += octet_count;
+//        array_size_act += 1;
+//
+//        /* When accessing a variable inside a struct / array, the adress has one LID for each struct / array index.
+//         * There is no header which says how many LIDs are following.
+//         * When another address follows, the ID of this is always bigger than 2^31. If not, then another LID follows.
+//         * If this is the last address, check if the number of fields in the array is reached.
+//         */
+//        do {
+//            value = tvb_get_varuint32(tvb, &octet_count, offset);
+//            if (value < 2147483648lu) {
+//                proto_tree_add_text(tree, tvb, offset, octet_count, "Address[%u] LID-Value: %u", i, value);
+//                offset += octet_count;
+//                array_size_act += 1;
+//            }
+//        } while ((value < 2147483648lu) && (array_size_act < array_size));
+//
+//        /* break decoding if out of array-size range*/
+//        if (array_size_act >= array_size) {
+//            break;
+//        }
+//    }
+//
+//    return offset;
+//}
 /*******************************************************************************************************
  *
  * Decoding of a single value with datatype flags, datatype specifier and the value data
@@ -3359,7 +3359,7 @@ static guint32
 s7commp_decode_request_setmultivar(tvbuff_t *tvb,
                                    packet_info *pinfo,
                                    proto_tree *tree,
-                                   gint16 dlength,
+                                   gint16 dlength _U_,
                                    guint32 offset)
 {
     guint32 item_count = 0;
@@ -3918,7 +3918,7 @@ s7commp_decode_response_getlink(tvbuff_t *tvb,
 static guint32
 s7commp_decode_request_beginsequence(tvbuff_t *tvb,
                                      proto_tree *tree,
-                                     gint16 dlength,
+                                     gint16 dlength _U_,
                                      guint32 offset)
 {
     proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown1, tvb, offset, 2, ENC_BIG_ENDIAN);
@@ -4580,7 +4580,7 @@ static gboolean
 dissect_s7commp(tvbuff_t *tvb,
                 packet_info *pinfo,
                 proto_tree *tree,
-                void *data)
+                void *data _U_)
 {
     proto_item *s7commp_item = NULL;
     proto_item *s7commp_sub_item = NULL;
@@ -4603,7 +4603,6 @@ dissect_s7commp(tvbuff_t *tvb,
     frame_state_t *packet_state;
     conversation_t *conversation;
     conv_state_t *conversation_state = NULL;
-    gboolean no_fragment = FALSE;
     gboolean first_fragment = FALSE;
     gboolean inner_fragment = FALSE;
     gboolean last_fragment = FALSE;
@@ -4750,7 +4749,6 @@ dissect_s7commp(tvbuff_t *tvb,
 
             if (has_trailer) {
                 if (conversation_state->state == CONV_STATE_NEW) {
-                    no_fragment = TRUE;
                     #ifdef DEBUG_REASSEMBLING
                     printf(" no_fragment=1");
                     #endif

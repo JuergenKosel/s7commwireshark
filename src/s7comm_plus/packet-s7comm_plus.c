@@ -4205,13 +4205,12 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
             proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
             offset += 1;
             if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT) {
-                //!proto_tree_add_text(data_item_tree, tvb, offset, 4, "Value: %d", tvb_get_ntohl(tvb, offset));
-                proto_tree_add_item(tree, hf_s7commp_explore_structvalue, tvb, offset, 4, ENC_BIG_ENDIAN);
+                proto_tree_add_item(data_item_tree, hf_s7commp_explore_structvalue, tvb, offset, 4, ENC_BIG_ENDIAN);
                 offset += 4;
                 offset = s7commp_decode_id_value_list(tvb, data_item_tree, offset, TRUE);
                 /* Dann folgt nochmal eine Anzahl an IDs, 2 Bytes */
                 id_count = tvb_get_ntohs(tvb, offset);
-                proto_tree_add_uint(tree, hf_s7commp_explore_subidcount, tvb, offset, 2, id_count);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_explore_subidcount, tvb, offset, 2, id_count);
                 offset += 2;
                 for (j = 0; j < id_count; j++) {
                     id_number = tvb_get_varuint32(tvb, &octet_count, offset);

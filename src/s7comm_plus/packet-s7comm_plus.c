@@ -361,6 +361,7 @@ static const value_string var_item_base_area_names[] = {
 };
 
 /* Explore areas */
+#define S7COMMP_EXPLORE_CLASS_ASALARMS          0x8a
 #define S7COMMP_EXPLORE_CLASS_IQMCT             0x90
 #define S7COMMP_EXPLORE_CLASS_UDT               0x91
 #define S7COMMP_EXPLORE_CLASS_DB                0x92
@@ -370,6 +371,7 @@ static const value_string var_item_base_area_names[] = {
 #define S7COMMP_EXPLORE_CLASS_FBT               0x96
 #define S7COMMP_EXPLORE_CLASS_LIB               0x02
 static const value_string explore_class_names[] = {
+    { S7COMMP_EXPLORE_CLASS_ASALARMS,           "AS Alarms" },
     { S7COMMP_EXPLORE_CLASS_IQMCT,              "IQMCT" },
     { S7COMMP_EXPLORE_CLASS_UDT,                "UDT" },
     { S7COMMP_EXPLORE_CLASS_DB,                 "DB" },
@@ -4058,6 +4060,7 @@ s7commp_decode_explore_area(tvbuff_t *tvb,
      *  9004 0000 = ?
      *  9005 0000 = ?
      *  9006 0000 = ?
+     *  8a7e 0000 = Program Alarm bzw. AS Alarmmeldungen allgemein
      */
     proto_item *item = NULL;
     proto_tree *item_tree = NULL;
@@ -4083,6 +4086,14 @@ s7commp_decode_explore_area(tvbuff_t *tvb,
         proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_class, tvb, offset, 4, area);
 
         switch (exp_class) {
+            case S7COMMP_EXPLORE_CLASS_ASALARMS:
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_structindex, tvb, offset, 4, area);
+                proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_section, tvb, offset, 4, area);
+                proto_item_append_text(item, " Area:[%s %d.%d]", val_to_str(exp_class, explore_class_names, "0x%02x"), section, sub_class);
+                if (pinfo != NULL) {
+                    col_append_fstr(pinfo->cinfo, COL_INFO, " Area:[%s %d.%d]", val_to_str(exp_class, explore_class_names, "0x%02x"), section, sub_class);
+                }
+                break;
             case S7COMMP_EXPLORE_CLASS_IQMCT:
                 proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_class_iqmct, tvb, offset, 4, area);
                 proto_tree_add_uint(item_tree, hf_s7commp_explore_req_area_section, tvb, offset, 4, area);

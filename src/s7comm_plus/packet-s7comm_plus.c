@@ -2809,6 +2809,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
     int i = 1;
     const guint8 *str_type;
     guint16 block_len;
+    guint16 attributeflags2;
 
     /* Hier können mehrere Datenblöcke vorhanden sein (gleiches bei varnamelist).
      * Ist die Länge == 0, dann folgt kein weiterer Datenblock mehr.
@@ -2867,6 +2868,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
              * TODO: Bitfeld noch nicht korrigiert!
              */
             /* Das Bitfeld ist eigentlich 32 Bit lang, hier aber nur 16 */
+            attributeflags2 = tvb_get_ntohs(tvb, offset);
             proto_tree_add_bitmask(tag_tree, tvb, offset, hf_s7commp_tagdescr_attributeflags2,
                 ett_s7commp_tagdescr_attributeflags, s7commp_tagdescr_attributeflags2_fields, ENC_BIG_ENDIAN);
             offset += 2;
@@ -2907,7 +2909,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                 offset += 2;
                 proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Offsetinfo 5: %u", tvb_get_letohs(tvb, offset));
                 offset += 2;
-            } else if (softdatatype == 67 || softdatatype == 17) { /* 67 = DTL, 17 = Struct : 48 Bytes gesamt - 16 vorher*/
+            } else if (softdatatype == 67 || softdatatype == 17 || softdatatype == 21) { /* 67 = DTL, 17 = Struct, 21=MultiFB /
                 /* hier ist alles ganz anders .... */
                 proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 1: %u", tvb_get_letohs(tvb, offset));
                 offset += 2;
@@ -2941,6 +2943,17 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                 offset += 2;
                 proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 16: %u", tvb_get_letohs(tvb, offset));
                 offset += 2;
+                /* Reine Vermutung, dass es sich genau an diesem Flag festmachen lässt. Scheint aber zu funktionieren. */
+                if (attributeflags2 & S7COMMP_TAGDESCR_ATTRIBUTE2_PLAINMEMBERCLASSIC) {
+                    proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo Extra-Classic 17: %u", tvb_get_letohs(tvb, offset));
+                    offset += 2;
+                    proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo Extra-Classic 18: %u", tvb_get_letohs(tvb, offset));
+                    offset += 2;
+                    proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo Extra-Classic 19: %u", tvb_get_letohs(tvb, offset));
+                    offset += 2;
+                    proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo Extra-Classic 20: %u", tvb_get_letohs(tvb, offset));
+                    offset += 2;
+                }
             } else {
                  /* Beispielwert: %M600.3: Bei beiden Offsets eine 600.
                   */

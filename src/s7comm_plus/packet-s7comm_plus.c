@@ -35,6 +35,8 @@
 void proto_reg_handoff_s7commp(void);
 void proto_register_s7commp(void);
 
+static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, guint32 offset, gboolean looping);
+
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
 //#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
@@ -2087,7 +2089,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     gboolean is_address_array = FALSE;
     gboolean is_sparsearray = FALSE;
     gboolean unknown_type_occured = FALSE;
-    gboolean is_possible_struct_array = FALSE;
+    gboolean is_struct_addressarray = FALSE;
     guint32 array_size = 1;     /* use 1 as default, so non-arrays can be dissected in the same way as arrays */
     guint32 array_index = 0;
 
@@ -2119,27 +2121,22 @@ s7commp_decode_value(tvbuff_t *tvb,
     datatype_flags = tvb_get_guint8(tvb, offset);
     proto_tree_add_bitmask(data_item_tree, tvb, offset, hf_s7commp_itemval_datatype_flags,
         ett_s7commp_itemval_datatype_flags, s7commp_itemval_datatype_flags_fields, ENC_BIG_ENDIAN);
-    is_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ARRAY);
-    is_address_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY);
-    is_sparsearray = (datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY);
     offset += 1;
 
     datatype = tvb_get_guint8(tvb, offset);
     proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
     offset += 1;
 
-    /* TODO: Besonderheit bei Adressarray und Datentyp Struct!
-     * Hier folgt nach dem Struct-Wert (üblicherweise eine AID) vermutlich die Anzahl der folgenden
-     * Array-Elemente. Bisher habe ich hier immer nur eine 1 gesehen. Falls hier wirklich mehrere
-     * Array-Elemente vorhanden sein können, muss das ganze Konzept des rekursiven Aufrufs dieser Funktion
-     * überdacht werden. Bevor definitiv klar ist, dass es wirklich ein Array of Struct sein kann, setze ich
-     * die Array-Kennung zurück, damit die weitere Auswertung funktioniert. Am Ende dieser Funktion wird dann
-     * noch die (vermutete) Array-Größenangabe eingefügt.
+    is_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ARRAY);
+    is_address_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY) && (datatype != S7COMMP_ITEM_DATATYPE_STRUCT);
+    is_sparsearray = (datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY);
+    is_struct_addressarray = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY) && (datatype == S7COMMP_ITEM_DATATYPE_STRUCT);
+    /* Besonderheit bei Adressarray und Datentyp Struct:
+     * Hier folgt nach dem Struct-Wert (üblicherweise eine AID) die Anzahl der folgenden
+     * Array-Elemente. Die Elemente bestehen aber wieder aus einer ID mit Wert, darum
+     * kann es in diesem Fall nicht wie die anderen Arrays innerhalb dieser Funktion zerlegt werden,
+     * sondern es wird pro Array Element die Zerlegefunktion für eine ID/Value Liste aufgerufen.
      */
-    is_possible_struct_array = is_address_array && datatype == S7COMMP_ITEM_DATATYPE_STRUCT;
-    if (is_possible_struct_array) {
-        is_address_array = FALSE;
-    }
 
     if (is_array || is_address_array || is_sparsearray) {
         if (is_sparsearray) {
@@ -2370,12 +2367,26 @@ s7commp_decode_value(tvbuff_t *tvb,
         proto_item_append_text(array_item_tree, " %s = %s", str_arr_prefix, str_arrval);
         proto_item_set_len(array_item_tree, offset - start_offset);
         proto_item_append_text(data_item_tree, " (%s) %s = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_arr_prefix, str_arrval);
-    } else if (is_possible_struct_array) {
+    } else if (is_struct_addressarray) {
         proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
         array_size = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_arraysize, tvb, offset, octet_count, array_size);
         offset += octet_count;
         proto_item_append_text(data_item_tree, " (Addressarray %s) = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_val);
+        /* Das Handling der Array-Elemente erfolgt hier */
+        for (array_index = 1; array_index <= array_size; array_index++) {
+            start_offset = offset;
+            array_item = proto_tree_add_item(data_item_tree, hf_s7commp_itemval_value, tvb, offset, -1, FALSE);
+            array_item_tree = proto_item_add_subtree(array_item, ett_s7commp_itemval_array);
+            proto_item_append_text(array_item_tree, " [%u]", array_index);
+
+            offset = s7commp_decode_id_value_list(tvb, array_item_tree, offset, TRUE);
+
+            proto_item_set_len(array_item_tree, offset - start_offset);
+        }
+        if (struct_level) {
+            *struct_level = -1;       /* Zur Signalisierung benutzen, dass anschließend keine Item-ID sondern eine Element-ID folgen muss. */
+        }
     } else { /* not an array or address array */
         if (length_of_value > 0) {
             proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
@@ -2422,6 +2433,9 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
                 offset = s7commp_decode_id_value_list(tvb, data_item_tree, offset, TRUE);
             }
             proto_item_set_len(data_item_tree, offset - start_offset);
+            if (struct_level < 0) {
+                return offset;
+            }
         }
     } while (looping);
     return offset;

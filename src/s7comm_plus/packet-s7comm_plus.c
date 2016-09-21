@@ -2923,10 +2923,10 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                 offset += 2;
                 proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 6: %u", tvb_get_letohs(tvb, offset));
                 offset += 2;
-                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 7: %u", tvb_get_letohs(tvb, offset)); // Libtype / DB number?
-                offset += 2;
-                proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 8: %u", tvb_get_letohs(tvb, offset));
-                offset += 2;
+                /* mit der folgenden ID kann ein weiterer Explore Request aufgerufen werden, mit dem die Struct-Beschreibung abgerufen
+                 * werden kann. */
+                proto_tree_add_text(tag_tree, tvb, offset, 4, "DTL/Struct-Offsetinfo Relation-Id: 0x%08x", tvb_get_letohl(tvb, offset));
+                offset += 4;
                 proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 9: %u", tvb_get_letohs(tvb, offset));
                 offset += 2;
                 proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 10: %u", tvb_get_letohs(tvb, offset));
@@ -3953,7 +3953,7 @@ s7commp_decode_response_getlink(tvbuff_t *tvb,
     for (i = 1; i <= number_of_items; i++) {
         /* Es scheint eine Link-Id zu sein, die im folgenden verwendet werden kann (z.B. Vartab als Start-Id für getmultivar */
         linkid = tvb_get_ntohl(tvb, offset);
-        proto_tree_add_int_format(tree, hf_s7commp_getlink_linkid, tvb, offset, 2, linkid,
+        proto_tree_add_uint_format(tree, hf_s7commp_getlink_linkid, tvb, offset, 4, linkid,
             "Link-Id [%d]: 0x%08x", i, linkid);
         offset += 4;
     }

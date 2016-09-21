@@ -1796,7 +1796,7 @@ proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, co
  * Solange das Protokoll noch nicht sicher erkannt wird, ist diese Version hier sicherer.
  *
  *******************************************************************************************************/
-guint32
+static guint32
 tvb_get_varint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
 {
     int counter;
@@ -1824,7 +1824,7 @@ tvb_get_varint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     return val;
 }
 /*******************************************************************************************************/
-guint32
+static guint32
 tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
 {
     int counter;
@@ -1846,7 +1846,7 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     return  val;
 }
 /*******************************************************************************************************/
-guint64
+static guint64
 tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
 {
     int counter;
@@ -1874,7 +1874,7 @@ tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     return  val;
 }
 /*******************************************************************************************************/
-gint64
+static gint64
 tvb_get_varint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
 {
     int counter;

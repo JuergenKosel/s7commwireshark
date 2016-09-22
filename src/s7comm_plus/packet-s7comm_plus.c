@@ -792,6 +792,7 @@ static gint hf_s7commp_explore_objectcount = -1;
 static gint hf_s7commp_explore_addresscount = -1;
 static gint hf_s7commp_explore_structvalue = -1;
 static gint hf_s7commp_explore_subidcount = -1;
+static gint hf_s7commp_explore_resunknown1 = -1;
 
 /* Explore result, variable (tag) description */
 static gint hf_s7commp_tagdescr_offsetinfo = -1;
@@ -1299,6 +1300,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_explore_subidcount,
           { "Number of following Sub-Ids", "s7comm-plus.explore.subidcount", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
+        { &hf_s7commp_explore_resunknown1,
+          { "Explore response unknown 1", "s7comm-plus.explore.resunknown1", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "VLQ: Explore request unknown 1", HFILL }},
 
          /* Explore result, variable (tag) description */
         { &hf_s7commp_tagdescr_offsetinfo,
@@ -4355,11 +4359,12 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
          * Welche Logik dahinterstecken mag. Das macht auch nur die 1500.
          */
         if (tvb_get_guint8(tvb, offset) != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
+            /* Unbekannt wozu dieses Feld ist. Bei aufeinanderfolgenden Abfragen erhöht sich der Wert
+             * pro Telegramm um 2.
+             */
             id_number = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+            proto_tree_add_uint(tree, hf_s7commp_explore_resunknown1, tvb, offset, octet_count, id_number);
             offset += octet_count;
-            col_append_str(pinfo->cinfo, COL_INFO, ",");
-            s7commp_pinfo_append_idname(pinfo, id_number);
         }
         /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst würde ein Null-Byte
          * zur Terminierung der Liste eingefügt werden.

@@ -1786,6 +1786,23 @@ proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, co
 }
 
 /*******************************************************************************************************
+* Helper function for adding the id-name to the given proto_tree.
+* If the given id is known in the id_number_names_ext list, then text+id is added,
+* otherwise only the id.
+*******************************************************************************************************/
+static void
+s7commp_proto_item_append_idname(proto_tree *tree, guint32 id_number)
+{
+    const guint8 *str_id_name;
+
+    if ((str_id_name = try_val_to_str_ext(id_number, &id_number_names_ext))) {
+        proto_item_append_text(tree, " [%s (%u)]:", str_id_name, id_number);
+    } else {
+        proto_item_append_text(tree, " [%u]:", id_number);
+    }
+}
+
+/*******************************************************************************************************
  *
  * Spezial gepacktes Datenformat
  * siehe: http://en.wikipedia.org/wiki/Variable-length_quantity
@@ -1865,7 +1882,7 @@ tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
         }
     }
     *octet_count = counter;
-    if(cont) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+    if (cont) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 8;
@@ -1898,7 +1915,7 @@ tvb_get_varint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
         }
     }
     *octet_count = counter;
-    if(cont) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+    if (cont) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 8;
@@ -2425,7 +2442,7 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
             data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
             data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
             proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
-            proto_item_append_text(data_item_tree, " [%u]:", id_number);
+            s7commp_proto_item_append_idname(data_item_tree, id_number);
             offset += octet_count;
             struct_level = 0;
             offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
@@ -3155,7 +3172,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
     id_number = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
-    proto_item_append_text(data_item_tree, " [%u]:", id_number);
+    s7commp_proto_item_append_idname(data_item_tree, id_number);
     offset += 4;
     offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
     proto_item_set_len(data_item_tree, offset - start_offset);

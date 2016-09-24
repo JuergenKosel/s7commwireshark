@@ -3231,7 +3231,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
         proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-CreateObject: %u", value);
         offset += octet_count;
     }
-    return s7commp_decode_object(tvb, NULL, tree, offset);
+    return s7commp_decode_object(tvb, pinfo, tree, offset);
 }
 /*******************************************************************************************************
  *

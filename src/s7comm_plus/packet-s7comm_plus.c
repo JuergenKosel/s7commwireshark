@@ -1824,7 +1824,7 @@ s7commp_pinfo_append_idname(packet_info *pinfo, guint32 id_number)
     const guint8 *str_id_name;
 
     if ((str_id_name = try_val_to_str_ext(id_number, &id_number_names_ext))) {
-        col_append_fstr(pinfo->cinfo, COL_INFO, " %s", str_id_name, id_number);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " %s", str_id_name);
     } else {
         col_append_fstr(pinfo->cinfo, COL_INFO, " (%u)", id_number);
     }
@@ -2019,7 +2019,7 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
 
     /* add info about return value to info column */
     if (pinfo != NULL) {
-        col_append_fstr(pinfo->cinfo, COL_INFO, " Retval=%s", val_to_str(errorcode, errorcode_names, "%d"), errorcode);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Retval=%s", val_to_str(errorcode, errorcode_names, "%d"));
     }
 
     return offset;
@@ -2960,7 +2960,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                 offset += 2;
                 proto_tree_add_text(tag_tree, tvb, offset, 2, "String-Offsetinfo 5: %u", tvb_get_letohs(tvb, offset));
                 offset += 2;
-            } else if (softdatatype == 67 || softdatatype == 17 || softdatatype == 21) { /* 67 = DTL, 17 = Struct, 21=MultiFB /
+            } else if (softdatatype == 67 || softdatatype == 17 || softdatatype == 21) { /* 67 = DTL, 17 = Struct, 21=MultiFB */
                 /* hier ist alles ganz anders .... */
                 proto_tree_add_text(tag_tree, tvb, offset, 2, "DTL/Struct-Offsetinfo 1: %u", tvb_get_letohs(tvb, offset));
                 offset += 2;

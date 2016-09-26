@@ -55,6 +55,9 @@ static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, gui
 /* Min. telegram length for heuristic check */
 #define S7COMMP_MIN_TELEGRAM_LENGTH             4
 
+#define S7COMMP_HEADER_LEN                      4
+#define S7COMMP_TRAILER_LEN                     4
+
 /* Protocol identifier */
 #define S7COMM_PLUS_PROT_ID                     0x72
 
@@ -4683,9 +4686,9 @@ dissect_s7commp(tvbuff_t *tvb,
     proto_tree *s7commp_trailer_tree = NULL;
 
     guint32 offset = 0;
+    guint32 offset_save = 0;
 
     guint8 pdutype = 0;
-    guint8 hlength = 4;
     gint dlength = 0;
     guint8 keepaliveseqnum = 0;
 
@@ -4718,7 +4721,6 @@ dissect_s7commp(tvbuff_t *tvb,
     col_clear(pinfo->cinfo, COL_INFO);
 
     pdutype = tvb_get_guint8(tvb, 1);                       /* Get the type byte */
-    hlength = 4;                                            /* Header 4 Bytes */
 
     /* display some infos in info-column of wireshark */
     if (pinfo->srcport == 102) {
@@ -4732,7 +4734,7 @@ dissect_s7commp(tvbuff_t *tvb,
     /******************************************************
      * Header
      ******************************************************/
-    s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_header, tvb, offset, hlength, FALSE );
+    s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_header, tvb, offset, S7COMMP_HEADER_LEN, FALSE );
     s7commp_header_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_header);
     proto_item_append_text(s7commp_header_tree, " PDU-Type: %s", val_to_str(pdutype, pdutype_names, " PDU-Type: 0x%02x"));
     proto_tree_add_item(s7commp_header_tree, hf_s7commp_header_protid, tvb, offset, 1, FALSE);
@@ -4757,6 +4759,9 @@ dissect_s7commp(tvbuff_t *tvb,
         proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_datlg, tvb, offset, 2, dlength);
         offset += 2;
 
+        /* Paket hat einen Trailer, wenn nach der angegebenen Datenlänge noch 4 Bytes übrig bleiben */
+        has_trailer = ((signed) packetlength) > (dlength + 4);
+
         /* Bei einer 1500 mit Firmware Version >= V1.5 wurde der Integritätsteil vom Ende des Datenteils an den Anfang verschoben.
          * Bei fragmentierten Paketen hatte bisher nur das letzte Fragment einen Integritätsteil.
          * Bei FW >= V1.5 hat nun auch bei fragmentierten Paketen jedes Fragment einen Integritätsteil. Der Integritätsteil
@@ -4766,11 +4771,10 @@ dissect_s7commp(tvbuff_t *tvb,
          * Leider wird damit der Zweig nicht unter dem Datenteil, sondern als eigener separater Zweig eingefügt.
          */
         if (pdutype == S7COMMP_PDUTYPE_DATAFW1_5) {
+            offset_save = offset;
             offset = s7commp_decode_integrity(tvb, pinfo, s7commp_tree, FALSE, offset);
+            dlength -= (offset - offset_save);
         }
-
-        /* Paket hat einen Trailer, wenn nach der angegebenen Datenlänge noch 4 Bytes übrig bleiben */
-        has_trailer = ((signed) packetlength) > (dlength + 4);
 
         /************************************************** START REASSEMBLING *************************************************************************/
         /*
@@ -4940,12 +4944,17 @@ dissect_s7commp(tvbuff_t *tvb,
         /******************************************************
          * Data
          ******************************************************/
-         /* insert data tree */
+        if (last_fragment) {
+            /* when reassembled, instead of using the dlength from header, use the length of the
+             * complete reassembled packet, minus the header length.
+             */
+            dlength = tvb_reported_length_remaining(next_tvb, offset) - S7COMMP_HEADER_LEN;
+        }
+        /* insert data tree */
         s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, next_tvb, offset, dlength, FALSE);
         /* insert sub-items in data tree */
         s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
         /* main dissect data function */
-        dlength = tvb_reported_length_remaining(next_tvb, offset) - 4;
         if (first_fragment || inner_fragment) {
             col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS %s fragment)", first_fragment ? "first" : "inner" );
             proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, tvb_get_ptr(next_tvb, offset, dlength));
@@ -4960,7 +4969,7 @@ dissect_s7commp(tvbuff_t *tvb,
          * Trailer
          ******************************************************/
         if (has_trailer) {
-            s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_trailer, next_tvb, offset, 4, FALSE);
+            s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_trailer, next_tvb, offset, S7COMMP_TRAILER_LEN, FALSE);
             s7commp_trailer_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_trailer);
             proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, next_tvb, offset, 1, FALSE);
             offset += 1;

@@ -467,133 +467,259 @@ static const value_string tagdescr_section_names[] = {
     { 0,                                        NULL }
 };
 
+#define S7COMMP_SOFTDATATYPE_VOID               0
+#define S7COMMP_SOFTDATATYPE_BOOL               1
+#define S7COMMP_SOFTDATATYPE_BYTE               2
+#define S7COMMP_SOFTDATATYPE_CHAR               3
+#define S7COMMP_SOFTDATATYPE_WORD               4
+#define S7COMMP_SOFTDATATYPE_INT                5
+#define S7COMMP_SOFTDATATYPE_DWORD              6
+#define S7COMMP_SOFTDATATYPE_DINT               7
+#define S7COMMP_SOFTDATATYPE_REAL               8
+#define S7COMMP_SOFTDATATYPE_DATE               9
+#define S7COMMP_SOFTDATATYPE_TIMEOFDAY          10
+#define S7COMMP_SOFTDATATYPE_TIME               11
+#define S7COMMP_SOFTDATATYPE_S5TIME             12
+#define S7COMMP_SOFTDATATYPE_S5COUNT            13
+#define S7COMMP_SOFTDATATYPE_DATEANDTIME        14
+#define S7COMMP_SOFTDATATYPE_INTERNETTIME       15
+#define S7COMMP_SOFTDATATYPE_ARRAY              16
+#define S7COMMP_SOFTDATATYPE_STRUCT             17
+#define S7COMMP_SOFTDATATYPE_ENDSTRUCT          18
+#define S7COMMP_SOFTDATATYPE_STRING             19
+#define S7COMMP_SOFTDATATYPE_POINTER            20
+#define S7COMMP_SOFTDATATYPE_MULTIFB            21
+#define S7COMMP_SOFTDATATYPE_ANY                22
+#define S7COMMP_SOFTDATATYPE_BLOCKFB            23
+#define S7COMMP_SOFTDATATYPE_BLOCKFC            24
+#define S7COMMP_SOFTDATATYPE_BLOCKDB            25
+#define S7COMMP_SOFTDATATYPE_BLOCKSDB           26
+#define S7COMMP_SOFTDATATYPE_MULTISFB           27
+#define S7COMMP_SOFTDATATYPE_COUNTER            28
+#define S7COMMP_SOFTDATATYPE_TIMER              29
+#define S7COMMP_SOFTDATATYPE_IECCOUNTER         30
+#define S7COMMP_SOFTDATATYPE_IECTIMER           31
+#define S7COMMP_SOFTDATATYPE_BLOCKSFB           32
+#define S7COMMP_SOFTDATATYPE_BLOCKSFC           33
+#define S7COMMP_SOFTDATATYPE_BLOCKCB            34
+#define S7COMMP_SOFTDATATYPE_BLOCKSCB           35
+#define S7COMMP_SOFTDATATYPE_BLOCKOB            36
+#define S7COMMP_SOFTDATATYPE_BLOCKUDT           37
+#define S7COMMP_SOFTDATATYPE_OFFSET             38
+#define S7COMMP_SOFTDATATYPE_BLOCKSDT           39
+#define S7COMMP_SOFTDATATYPE_BBOOL              40
+#define S7COMMP_SOFTDATATYPE_BLOCKEXT           41
+#define S7COMMP_SOFTDATATYPE_LREAL              48
+#define S7COMMP_SOFTDATATYPE_ULINT              49
+#define S7COMMP_SOFTDATATYPE_LINT               50
+#define S7COMMP_SOFTDATATYPE_LWORD              51
+#define S7COMMP_SOFTDATATYPE_USINT              52
+#define S7COMMP_SOFTDATATYPE_UINT               53
+#define S7COMMP_SOFTDATATYPE_UDINT              54
+#define S7COMMP_SOFTDATATYPE_SINT               55
+#define S7COMMP_SOFTDATATYPE_BCD8               56
+#define S7COMMP_SOFTDATATYPE_BCD16              57
+#define S7COMMP_SOFTDATATYPE_BCD32              58
+#define S7COMMP_SOFTDATATYPE_BCD64              59
+#define S7COMMP_SOFTDATATYPE_AREF               60
+#define S7COMMP_SOFTDATATYPE_WCHAR              61
+#define S7COMMP_SOFTDATATYPE_WSTRING            62
+#define S7COMMP_SOFTDATATYPE_VARIANT            63
+#define S7COMMP_SOFTDATATYPE_LTIME              64
+#define S7COMMP_SOFTDATATYPE_LTOD               65
+#define S7COMMP_SOFTDATATYPE_LDT                66
+#define S7COMMP_SOFTDATATYPE_DTL                67
+#define S7COMMP_SOFTDATATYPE_IECLTIMER          68
+#define S7COMMP_SOFTDATATYPE_SCOUNTER           69
+#define S7COMMP_SOFTDATATYPE_DCOUNTER           70
+#define S7COMMP_SOFTDATATYPE_LCOUNTER           71
+#define S7COMMP_SOFTDATATYPE_UCOUNTER           72
+#define S7COMMP_SOFTDATATYPE_USCOUNTER          73
+#define S7COMMP_SOFTDATATYPE_UDCOUNTER          74
+#define S7COMMP_SOFTDATATYPE_ULCOUNTER          75
+#define S7COMMP_SOFTDATATYPE_REMOTE             96
+#define S7COMMP_SOFTDATATYPE_ERRORSTRUCT        97
+#define S7COMMP_SOFTDATATYPE_NREF               98
+#define S7COMMP_SOFTDATATYPE_VREF               99
+#define S7COMMP_SOFTDATATYPE_FBTREF             100
+#define S7COMMP_SOFTDATATYPE_CREF               101
+#define S7COMMP_SOFTDATATYPE_VAREF              102
+#define S7COMMP_SOFTDATATYPE_AOMIDENT           128
+#define S7COMMP_SOFTDATATYPE_EVENTANY           129
+#define S7COMMP_SOFTDATATYPE_EVENTATT           130
+#define S7COMMP_SOFTDATATYPE_EVENTHWINT         131
+#define S7COMMP_SOFTDATATYPE_FOLDER             132
+#define S7COMMP_SOFTDATATYPE_AOMAID             133
+#define S7COMMP_SOFTDATATYPE_AOMLINK            134
+#define S7COMMP_SOFTDATATYPE_HWANY              144
+#define S7COMMP_SOFTDATATYPE_HWIOSYSTEM         145
+#define S7COMMP_SOFTDATATYPE_HWDPMASTER         146
+#define S7COMMP_SOFTDATATYPE_HWDEVICE           147
+#define S7COMMP_SOFTDATATYPE_HWDPSLAVE          148
+#define S7COMMP_SOFTDATATYPE_HWIO               149
+#define S7COMMP_SOFTDATATYPE_HWMODULE           150
+#define S7COMMP_SOFTDATATYPE_HWSUBMODULE        151
+#define S7COMMP_SOFTDATATYPE_HWHSC              152
+#define S7COMMP_SOFTDATATYPE_HWPWM              153
+#define S7COMMP_SOFTDATATYPE_HWPTO              154
+#define S7COMMP_SOFTDATATYPE_HWINTERFACE        155
+#define S7COMMP_SOFTDATATYPE_OBANY              160
+#define S7COMMP_SOFTDATATYPE_OBDELAY            161
+#define S7COMMP_SOFTDATATYPE_OBTOD              162
+#define S7COMMP_SOFTDATATYPE_OBCYCLIC           163
+#define S7COMMP_SOFTDATATYPE_OBATT              164
+#define S7COMMP_SOFTDATATYPE_CONNANY            168
+#define S7COMMP_SOFTDATATYPE_CONNPRG            169
+#define S7COMMP_SOFTDATATYPE_CONNOUC            170
+#define S7COMMP_SOFTDATATYPE_HWNR               172
+#define S7COMMP_SOFTDATATYPE_PORT               173
+#define S7COMMP_SOFTDATATYPE_RTM                174
+#define S7COMMP_SOFTDATATYPE_CALARM             176
+#define S7COMMP_SOFTDATATYPE_CALARMS            177
+#define S7COMMP_SOFTDATATYPE_CALARM8            178
+#define S7COMMP_SOFTDATATYPE_CALARM8P           179
+#define S7COMMP_SOFTDATATYPE_CALARMT            180
+#define S7COMMP_SOFTDATATYPE_CARSEND            181
+#define S7COMMP_SOFTDATATYPE_CNOTIFY            182
+#define S7COMMP_SOFTDATATYPE_CNOTIFY8P          183
+#define S7COMMP_SOFTDATATYPE_OBPCYCLE           192
+#define S7COMMP_SOFTDATATYPE_OBHWINT            193
+#define S7COMMP_SOFTDATATYPE_OBCOMM             194
+#define S7COMMP_SOFTDATATYPE_OBDIAG             195
+#define S7COMMP_SOFTDATATYPE_OBTIMEERROR        196
+#define S7COMMP_SOFTDATATYPE_OBSTARTUP          197
+#define S7COMMP_SOFTDATATYPE_PARA               253
+#define S7COMMP_SOFTDATATYPE_LABEL              254
+#define S7COMMP_SOFTDATATYPE_UDEFINED           255
+#define S7COMMP_SOFTDATATYPE_NOTCHOSEN          256
+
 static const value_string tagdescr_softdatatype_names[] = {
-    { 0,        "Void" },
-    { 1,        "Bool" },
-    { 2,        "Byte" },
-    { 3,        "Char" },
-    { 4,        "Word" },
-    { 5,        "Int" },
-    { 6,        "DWord" },
-    { 7,        "DInt" },
-    { 8,        "Real" },
-    { 9,        "Date" },
-    { 10,       "Time_Of_Day" },
-    { 11,       "Time" },
-    { 12,       "S5Time" },
-    { 13,       "S5Count" },
-    { 14,       "Date_And_Time" },
-    { 15,       "Internet_Time" },
-    { 16,       "Array" },
-    { 17,       "Struct" },
-    { 18,       "Endstruct" },
-    { 19,       "String" },
-    { 20,       "Pointer" },
-    { 21,       "Multi_FB" },
-    { 22,       "Any" },
-    { 23,       "Block_FB" },
-    { 24,       "Block_FC" },
-    { 25,       "Block_DB" },
-    { 26,       "Block_SDB" },
-    { 27,       "Multi_SFB" },
-    { 28,       "Counter" },
-    { 29,       "Timer" },
-    { 30,       "IEC_Counter" },
-    { 31,       "IEC_Timer" },
-    { 32,       "Block_SFB" },
-    { 33,       "Block_SFC" },
-    { 34,       "Block_CB" },
-    { 35,       "Block_SCB" },
-    { 36,       "Block_OB" },
-    { 37,       "Block_UDT" },
-    { 38,       "Offset" },
-    { 39,       "Block_SDT" },
-    { 40,       "BBOOL" },
-    { 41,       "BLOCK_EXT" },
-    { 48,       "LReal" },
-    { 49,       "ULInt" },
-    { 50,       "LInt" },
-    { 51,       "LWord" },
-    { 52,       "USInt" },
-    { 53,       "UInt" },
-    { 54,       "UDInt" },
-    { 55,       "SInt" },
-    { 56,       "Bcd8" },
-    { 57,       "Bcd16" },
-    { 58,       "Bcd32" },
-    { 59,       "Bcd64" },
-    { 60,       "ARef" },
-    { 61,       "WChar" },
-    { 62,       "WString" },
-    { 63,       "Variant" },
-    { 64,       "LTime" },
-    { 65,       "LTOD" },
-    { 66,       "LDT" },
-    { 67,       "DTL" },
-    { 68,       "IEC_LTimer" },
-    { 69,       "SCounter" },
-    { 70,       "DCounter" },
-    { 71,       "LCounter" },
-    { 72,       "UCounter" },
-    { 73,       "USCounter" },
-    { 74,       "UDCounter" },
-    { 75,       "ULCounter" },
-    { 96,       "REMOTE" },
-    { 97,       "Error_Struct" },
-    { 98,       "NREF" },
-    { 99,       "VREF" },
-    { 100,      "FBTREF" },
-    { 101,      "CREF" },
-    { 102,      "VAREF" },
-    { 128,      "AOM_IDENT" },
-    { 129,      "EVENT_ANY" },
-    { 130,      "EVENT_ATT" },
-    { 131,      "EVENT_HWINT" },
-    { 132,      "FOLDER" },
-    { 133,      "AOM_AID" },
-    { 134,      "AOM_LINK" },
-    { 144,      "HW_ANY" },
-    { 145,      "HW_IOSYSTEM" },
-    { 146,      "HW_DPMASTER" },
-    { 147,      "HW_DEVICE" },
-    { 148,      "HW_DPSLAVE" },
-    { 149,      "HW_IO" },
-    { 150,      "HW_MODULE" },
-    { 151,      "HW_SUBMODULE" },
-    { 152,      "HW_HSC" },
-    { 153,      "HW_PWM" },
-    { 154,      "HW_PTO" },
-    { 155,      "HW_INTERFACE" },
-    { 160,      "OB_ANY" },
-    { 161,      "OB_DELAY" },
-    { 162,      "OB_TOD" },
-    { 163,      "OB_CYCLIC" },
-    { 164,      "OB_ATT" },
-    { 168,      "CONN_ANY" },
-    { 169,      "CONN_PRG" },
-    { 170,      "CONN_OUC" },
-    { 172,      "HW_NR" },
-    { 173,      "PORT" },
-    { 174,      "RTM" },
-    { 176,      "C_ALARM" },
-    { 177,      "C_ALARM_S" },
-    { 178,      "C_ALARM_8" },
-    { 179,      "C_ALARM_8P" },
-    { 180,      "C_ALARM_T" },
-    { 181,      "C_AR_SEND" },
-    { 182,      "C_NOTIFY" },
-    { 183,      "C_NOTIFY_8P" },
-    { 192,      "OB_PCYCLE" },
-    { 193,      "OB_HWINT" },
-    { 194,      "OB_COMM" },
-    { 195,      "OB_DIAG" },
-    { 196,      "OB_TIMEERROR" },
-    { 197,      "OB_STARTUP" },
-    { 253,      "Para" },
-    { 254,      "Label" },
-    { 255,      "Undefined" },
-    { 256,      "NotChosen" },
-    { 0,         NULL }
+    { S7COMMP_SOFTDATATYPE_VOID,                "Void" },
+    { S7COMMP_SOFTDATATYPE_BOOL,                "Bool" },
+    { S7COMMP_SOFTDATATYPE_BYTE,                "Byte" },
+    { S7COMMP_SOFTDATATYPE_CHAR,                "Char" },
+    { S7COMMP_SOFTDATATYPE_WORD,                "Word" },
+    { S7COMMP_SOFTDATATYPE_INT,                 "Int" },
+    { S7COMMP_SOFTDATATYPE_DWORD,               "DWord" },
+    { S7COMMP_SOFTDATATYPE_DINT,                "DInt" },
+    { S7COMMP_SOFTDATATYPE_REAL,                "Real" },
+    { S7COMMP_SOFTDATATYPE_DATE,                "Date" },
+    { S7COMMP_SOFTDATATYPE_TIMEOFDAY,           "Time_Of_Day" },
+    { S7COMMP_SOFTDATATYPE_TIME,                "Time" },
+    { S7COMMP_SOFTDATATYPE_S5TIME,              "S5Time" },
+    { S7COMMP_SOFTDATATYPE_S5COUNT,             "S5Count" },
+    { S7COMMP_SOFTDATATYPE_DATEANDTIME,         "Date_And_Time" },
+    { S7COMMP_SOFTDATATYPE_INTERNETTIME,        "Internet_Time" },
+    { S7COMMP_SOFTDATATYPE_ARRAY,               "Array" },
+    { S7COMMP_SOFTDATATYPE_STRUCT,              "Struct" },
+    { S7COMMP_SOFTDATATYPE_ENDSTRUCT,           "Endstruct" },
+    { S7COMMP_SOFTDATATYPE_STRING,              "String" },
+    { S7COMMP_SOFTDATATYPE_POINTER,             "Pointer" },
+    { S7COMMP_SOFTDATATYPE_MULTIFB,             "Multi_FB" },
+    { S7COMMP_SOFTDATATYPE_ANY,                 "Any" },
+    { S7COMMP_SOFTDATATYPE_BLOCKFB,             "Block_FB" },
+    { S7COMMP_SOFTDATATYPE_BLOCKFC,             "Block_FC" },
+    { S7COMMP_SOFTDATATYPE_BLOCKDB,             "Block_DB" },
+    { S7COMMP_SOFTDATATYPE_BLOCKSDB,            "Block_SDB" },
+    { S7COMMP_SOFTDATATYPE_MULTISFB,            "Multi_SFB" },
+    { S7COMMP_SOFTDATATYPE_COUNTER,             "Counter" },
+    { S7COMMP_SOFTDATATYPE_TIMER,               "Timer" },
+    { S7COMMP_SOFTDATATYPE_IECCOUNTER,          "IEC_Counter" },
+    { S7COMMP_SOFTDATATYPE_IECTIMER,            "IEC_Timer" },
+    { S7COMMP_SOFTDATATYPE_BLOCKSFB,            "Block_SFB" },
+    { S7COMMP_SOFTDATATYPE_BLOCKSFC,            "Block_SFC" },
+    { S7COMMP_SOFTDATATYPE_BLOCKCB,             "Block_CB" },
+    { S7COMMP_SOFTDATATYPE_BLOCKSCB,            "Block_SCB" },
+    { S7COMMP_SOFTDATATYPE_BLOCKOB,             "Block_OB" },
+    { S7COMMP_SOFTDATATYPE_BLOCKUDT,            "Block_UDT" },
+    { S7COMMP_SOFTDATATYPE_OFFSET,              "Offset" },
+    { S7COMMP_SOFTDATATYPE_BLOCKSDT,            "Block_SDT" },
+    { S7COMMP_SOFTDATATYPE_BBOOL,               "BBOOL" },
+    { S7COMMP_SOFTDATATYPE_BLOCKEXT,            "BLOCK_EXT" },
+    { S7COMMP_SOFTDATATYPE_LREAL,               "LReal" },
+    { S7COMMP_SOFTDATATYPE_ULINT,               "ULInt" },
+    { S7COMMP_SOFTDATATYPE_LINT,                "LInt" },
+    { S7COMMP_SOFTDATATYPE_LWORD,               "LWord" },
+    { S7COMMP_SOFTDATATYPE_USINT,               "USInt" },
+    { S7COMMP_SOFTDATATYPE_UINT,                "UInt" },
+    { S7COMMP_SOFTDATATYPE_UDINT,               "UDInt" },
+    { S7COMMP_SOFTDATATYPE_SINT,                "SInt" },
+    { S7COMMP_SOFTDATATYPE_BCD8,                "Bcd8" },
+    { S7COMMP_SOFTDATATYPE_BCD16,               "Bcd16" },
+    { S7COMMP_SOFTDATATYPE_BCD32,               "Bcd32" },
+    { S7COMMP_SOFTDATATYPE_BCD64,               "Bcd64" },
+    { S7COMMP_SOFTDATATYPE_AREF,                "ARef" },
+    { S7COMMP_SOFTDATATYPE_WCHAR,               "WChar" },
+    { S7COMMP_SOFTDATATYPE_WSTRING,             "WString" },
+    { S7COMMP_SOFTDATATYPE_VARIANT,             "Variant" },
+    { S7COMMP_SOFTDATATYPE_LTIME,               "LTime" },
+    { S7COMMP_SOFTDATATYPE_LTOD,                "LTOD" },
+    { S7COMMP_SOFTDATATYPE_LDT,                 "LDT" },
+    { S7COMMP_SOFTDATATYPE_DTL,                 "DTL" },
+    { S7COMMP_SOFTDATATYPE_IECLTIMER,           "IEC_LTimer" },
+    { S7COMMP_SOFTDATATYPE_SCOUNTER,            "SCounter" },
+    { S7COMMP_SOFTDATATYPE_DCOUNTER,            "DCounter" },
+    { S7COMMP_SOFTDATATYPE_LCOUNTER,            "LCounter" },
+    { S7COMMP_SOFTDATATYPE_UCOUNTER,            "UCounter" },
+    { S7COMMP_SOFTDATATYPE_USCOUNTER,           "USCounter" },
+    { S7COMMP_SOFTDATATYPE_UDCOUNTER,           "UDCounter" },
+    { S7COMMP_SOFTDATATYPE_ULCOUNTER,           "ULCounter" },
+    { S7COMMP_SOFTDATATYPE_REMOTE,              "REMOTE" },
+    { S7COMMP_SOFTDATATYPE_ERRORSTRUCT,         "Error_Struct" },
+    { S7COMMP_SOFTDATATYPE_NREF,                "NREF" },
+    { S7COMMP_SOFTDATATYPE_VREF,                "VREF" },
+    { S7COMMP_SOFTDATATYPE_FBTREF,              "FBTREF" },
+    { S7COMMP_SOFTDATATYPE_CREF,                "CREF" },
+    { S7COMMP_SOFTDATATYPE_VAREF,               "VAREF" },
+    { S7COMMP_SOFTDATATYPE_AOMIDENT,            "AOM_IDENT" },
+    { S7COMMP_SOFTDATATYPE_EVENTANY,            "EVENT_ANY" },
+    { S7COMMP_SOFTDATATYPE_EVENTATT,            "EVENT_ATT" },
+    { S7COMMP_SOFTDATATYPE_EVENTHWINT,          "EVENT_HWINT" },
+    { S7COMMP_SOFTDATATYPE_FOLDER,              "FOLDER" },
+    { S7COMMP_SOFTDATATYPE_AOMAID,              "AOM_AID" },
+    { S7COMMP_SOFTDATATYPE_AOMLINK,             "AOM_LINK" },
+    { S7COMMP_SOFTDATATYPE_HWANY,               "HW_ANY" },
+    { S7COMMP_SOFTDATATYPE_HWIOSYSTEM,          "HW_IOSYSTEM" },
+    { S7COMMP_SOFTDATATYPE_HWDPMASTER,          "HW_DPMASTER" },
+    { S7COMMP_SOFTDATATYPE_HWDEVICE,            "HW_DEVICE" },
+    { S7COMMP_SOFTDATATYPE_HWDPSLAVE,           "HW_DPSLAVE" },
+    { S7COMMP_SOFTDATATYPE_HWIO,                "HW_IO" },
+    { S7COMMP_SOFTDATATYPE_HWMODULE,            "HW_MODULE" },
+    { S7COMMP_SOFTDATATYPE_HWSUBMODULE,         "HW_SUBMODULE" },
+    { S7COMMP_SOFTDATATYPE_HWHSC,               "HW_HSC" },
+    { S7COMMP_SOFTDATATYPE_HWPWM,               "HW_PWM" },
+    { S7COMMP_SOFTDATATYPE_HWPTO,               "HW_PTO" },
+    { S7COMMP_SOFTDATATYPE_HWINTERFACE,         "HW_INTERFACE" },
+    { S7COMMP_SOFTDATATYPE_OBANY,               "OB_ANY" },
+    { S7COMMP_SOFTDATATYPE_OBDELAY,             "OB_DELAY" },
+    { S7COMMP_SOFTDATATYPE_OBTOD,               "OB_TOD" },
+    { S7COMMP_SOFTDATATYPE_OBCYCLIC,            "OB_CYCLIC" },
+    { S7COMMP_SOFTDATATYPE_OBATT,               "OB_ATT" },
+    { S7COMMP_SOFTDATATYPE_CONNANY,             "CONN_ANY" },
+    { S7COMMP_SOFTDATATYPE_CONNPRG,             "CONN_PRG" },
+    { S7COMMP_SOFTDATATYPE_CONNOUC,             "CONN_OUC" },
+    { S7COMMP_SOFTDATATYPE_HWNR,                "HW_NR" },
+    { S7COMMP_SOFTDATATYPE_PORT,                "PORT" },
+    { S7COMMP_SOFTDATATYPE_RTM,                 "RTM" },
+    { S7COMMP_SOFTDATATYPE_CALARM,              "C_ALARM" },
+    { S7COMMP_SOFTDATATYPE_CALARMS,             "C_ALARM_S" },
+    { S7COMMP_SOFTDATATYPE_CALARM8,             "C_ALARM_8" },
+    { S7COMMP_SOFTDATATYPE_CALARM8P,            "C_ALARM_8P" },
+    { S7COMMP_SOFTDATATYPE_CALARMT,             "C_ALARM_T" },
+    { S7COMMP_SOFTDATATYPE_CARSEND,             "C_AR_SEND" },
+    { S7COMMP_SOFTDATATYPE_CNOTIFY,             "C_NOTIFY" },
+    { S7COMMP_SOFTDATATYPE_CNOTIFY8P,           "C_NOTIFY_8P" },
+    { S7COMMP_SOFTDATATYPE_OBPCYCLE,            "OB_PCYCLE" },
+    { S7COMMP_SOFTDATATYPE_OBHWINT,             "OB_HWINT" },
+    { S7COMMP_SOFTDATATYPE_OBCOMM,              "OB_COMM" },
+    { S7COMMP_SOFTDATATYPE_OBDIAG,              "OB_DIAG" },
+    { S7COMMP_SOFTDATATYPE_OBTIMEERROR,         "OB_TIMEERROR" },
+    { S7COMMP_SOFTDATATYPE_OBSTARTUP,           "OB_STARTUP" },
+    { S7COMMP_SOFTDATATYPE_PARA,                "Para" },
+    { S7COMMP_SOFTDATATYPE_LABEL,               "Label" },
+    { S7COMMP_SOFTDATATYPE_UDEFINED,            "Undefined" },
+    { S7COMMP_SOFTDATATYPE_NOTCHOSEN,           "NotChosen" },
+    { 0,                                         NULL }
 };
 static value_string_ext tagdescr_softdatatype_names_ext = VALUE_STRING_EXT_INIT(tagdescr_softdatatype_names);
 

@@ -1973,17 +1973,16 @@ proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, co
 * otherwise only the id.
 *******************************************************************************************************/
 static void
-s7commp_proto_item_append_idname(proto_tree *tree, guint32 id_number)
+s7commp_proto_item_append_idname(proto_tree *tree, guint32 id_number, gchar *str_prefix)
 {
     const guint8 *str_id_name;
 
     if ((str_id_name = try_val_to_str_ext(id_number, &id_number_names_ext))) {
-        proto_item_append_text(tree, " [%s (%u)]:", str_id_name, id_number);
+        proto_item_append_text(tree, "%s%s", str_prefix, str_id_name);
     } else {
-        proto_item_append_text(tree, " [%u]:", id_number);
+        proto_item_append_text(tree, "%s%u", str_prefix, id_number);
     }
 }
-
 /*******************************************************************************************************
 * Helper function for adding the id-name to the given pinfo column.
 * If the given id is known in the id_number_names_ext list, then text+id is added,
@@ -2647,7 +2646,7 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
             data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
             data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
             proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
-            s7commp_proto_item_append_idname(data_item_tree, id_number);
+            s7commp_proto_item_append_idname(data_item_tree, id_number, ": ID=");
             offset += octet_count;
             struct_level = 0;
             offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
@@ -3378,6 +3377,7 @@ s7commp_decode_object(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     guint32 start_offset;
     guint32 uint32_value;
+    guint32 uint32_value_clsid;
     guint8 octet_count = 0;
     guint8 element_id;
     gboolean terminate = FALSE;
@@ -3394,11 +3394,13 @@ s7commp_decode_object(tvbuff_t *tvb,
                 uint32_value = tvb_get_ntohl(tvb, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_object_relid, tvb, offset, 4, uint32_value);
                 offset += 4;
-                uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_object_classid, tvb, offset, octet_count, uint32_value);
+                uint32_value_clsid = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_object_classid, tvb, offset, octet_count, uint32_value_clsid);
                 if (pinfo != NULL) {
-                    s7commp_pinfo_append_idname(pinfo, uint32_value);
+                    s7commp_pinfo_append_idname(pinfo, uint32_value_clsid);
                 }
+                s7commp_proto_item_append_idname(data_item_tree, uint32_value_clsid, ": ClsId=");
+                s7commp_proto_item_append_idname(data_item_tree, uint32_value, ", RelId=");
                 offset += octet_count;
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_object_classidflags, tvb, offset, octet_count, uint32_value);
@@ -3503,7 +3505,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
     id_number = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
-    s7commp_proto_item_append_idname(data_item_tree, id_number);
+    s7commp_proto_item_append_idname(data_item_tree, id_number, ": ID=");
     s7commp_pinfo_append_idname(pinfo, id_number);
     offset += 4;
     offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);

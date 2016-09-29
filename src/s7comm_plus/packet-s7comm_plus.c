@@ -120,7 +120,7 @@ static const value_string opcode_names_short[] = {
 #define S7COMMP_FUNCTIONCODE_CREATEOBJECT       0x04ca
 #define S7COMMP_FUNCTIONCODE_DELETEOBJECT       0x04d4
 #define S7COMMP_FUNCTIONCODE_SETVARIABLE        0x04f2
-#define S7COMMP_FUNCTIONCODE_GETVARIABLE        0x04fc      /* not decoded yet, only in old 1200 FW? */
+#define S7COMMP_FUNCTIONCODE_GETVARIABLE        0x04fc      /* only in old 1200 FW? */
 #define S7COMMP_FUNCTIONCODE_ADDLINK            0x0506      /* not decoded yet */
 #define S7COMMP_FUNCTIONCODE_REMOVELINK         0x051a      /* not decoded yet */
 #define S7COMMP_FUNCTIONCODE_GETLINK            0x0524
@@ -4230,6 +4230,37 @@ s7commp_decode_notification(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Notification, used only in Protocol Version 1
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_notification_v1(tvbuff_t *tvb,
+                               packet_info *pinfo,
+                               proto_tree *tree,
+                               guint32 offset)
+{
+    guint32 subscr_object_id;
+
+    /* 4 Bytes Subscription Object Id -> scheint hier nicht der Fall zu sein? */
+    subscr_object_id = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_notification_subscrobjectid, tvb, offset, 4, subscr_object_id);
+    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", subscr_object_id);
+    offset += 4;
+
+    proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));
+    offset += 4;
+    proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 3: 0x%08x", tvb_get_ntohl(tvb, offset));
+    offset += 4;
+    proto_tree_add_text(tree, tvb, offset, 2, "Notification v1, Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+    proto_tree_add_text(tree, tvb, offset, 1, "Notification v1, Unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
+    offset += 1;
+    offset = s7commp_decode_object(tvb, NULL, tree, offset);
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Request SetVariable
  *
  *******************************************************************************************************/
@@ -4967,7 +4998,11 @@ s7commp_decode_data(tvbuff_t *tvb,
         item = proto_tree_add_item(tree, hf_s7commp_notification_set, tvb, offset, -1, FALSE);
         item_tree = proto_item_add_subtree(item, ett_s7commp_notification_set);
         offset_save = offset;
-        offset = s7commp_decode_notification(tvb, pinfo, item_tree, offset);
+        if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
+            offset = s7commp_decode_notification_v1(tvb, pinfo, item_tree, offset);
+        } else {
+            offset = s7commp_decode_notification(tvb, pinfo, item_tree, offset);
+        }
         proto_item_set_len(item_tree, offset - offset_save);
         dlength = dlength - (offset - offset_save);
     } else {

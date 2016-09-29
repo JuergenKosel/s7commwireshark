@@ -441,25 +441,37 @@ static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_BIT01               0x0001      /* Bit 01 */
 
 /* Offsetinfo type for tag description (S7-1500) */
-#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM     1
-#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STD            8
-#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRING         9
-#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAY1DIM      10
-#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM      11
-#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT         12
-#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM     13
-#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM     14
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD             1
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRING          2
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAY1DIM       3
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAYMDIM       4
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT          5
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT1DIM      6
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCTMDIM      7
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STD                        8
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRING                     9
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAY1DIM                  10
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM                  11
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT                     12
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM                 13
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM                 14
 
 static const value_string tagdescr_offsetinfotype2_names[] = {
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM,      "LibStructElement" },
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STD,             "Standard" },
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRING,          "String" },
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAY1DIM,       "ArrayOneDimension" },
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM,       "ArrayMultiDimension" },
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT,          "Struct" },
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM,      "StructArrayOneDimension" },
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM,      "StructArrayMultiDimension" },
-    { 0,                                                NULL }
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD,              "LibStructElem_Std" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRING,           "LibStructElem_String" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAY1DIM,        "LibStructElem_Array1Dim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAYMDIM,        "LibStructElem_ArrayMDim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT,           "LibStructElem_Struct" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT1DIM,       "LibStructElem_StructArray1Dim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCTMDIM,       "LibStructElem_StructArrayMDim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STD,                         "Std" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRING,                      "String" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAY1DIM,                   "Array1Dim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM,                   "ArrayMDim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT,                      "Struct" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM,                  "StructArray1Dim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM,                  "StructArrayMDim" },
+    { 0,                                                            NULL }
 };
 
 /* Offsetinfo type for tag description (old S7-1200 FW2) */
@@ -3109,15 +3121,13 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
             switch (offsetinfotype) {
                 /*************************************************************************/
-                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM:
-                    /* nothing special here */
-                    break;
-                /*************************************************************************/
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STD:
                     /* nothing special here */
                     break;
                 /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRING:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRING:
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "String Offsetinfo 1: %u", tvb_get_letohl(tvb, offset));
                     offset += 4;
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "String Offsetinfo 2: %u", tvb_get_letohl(tvb, offset));
@@ -3125,6 +3135,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     break;
                 /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAY1DIM:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAY1DIM:
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "Array Info 1, Startaddress 1: %u", tvb_get_letohl(tvb, offset));
                     offset += 4;
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "Array Info 2, Startaddress 2: %u", tvb_get_letohl(tvb, offset));
@@ -3139,6 +3150,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     break;
                 /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAYMDIM:
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "MdimArray Info 1, Startaddress 1: %u", tvb_get_letohl(tvb, offset));
                     offset += 4;
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "MdimArray Info 2, Startaddress 2: %u", tvb_get_letohl(tvb, offset));
@@ -3178,6 +3190,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     break;
                 /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT:
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 1: %u", tvb_get_letohl(tvb, offset));
                     offset += 4;
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 2: %u", tvb_get_letohl(tvb, offset));
@@ -3197,6 +3210,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     break;
                 /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT1DIM:
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "StructArr Info 1: %u", tvb_get_letohl(tvb, offset));
                     offset += 4;
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "StructArr Info 2: %u", tvb_get_letohl(tvb, offset));
@@ -3233,6 +3247,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     break;
                 /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCTMDIM:
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "StructMdimArray Info 1, Startaddress 1: %u", tvb_get_letohl(tvb, offset));
                     offset += 4;
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "StructMdimArray Info 2, Startaddress 2: %u", tvb_get_letohl(tvb, offset));

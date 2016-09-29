@@ -120,26 +120,38 @@ static const value_string opcode_names_short[] = {
 #define S7COMMP_FUNCTIONCODE_CREATEOBJECT       0x04ca
 #define S7COMMP_FUNCTIONCODE_DELETEOBJECT       0x04d4
 #define S7COMMP_FUNCTIONCODE_SETVARIABLE        0x04f2
+#define S7COMMP_FUNCTIONCODE_GETVARIABLE        0x04fc      /* not decoded yet, only in old 1200 FW? */
+#define S7COMMP_FUNCTIONCODE_ADDLINK            0x0506      /* not decoded yet */
+#define S7COMMP_FUNCTIONCODE_REMOVELINK         0x051a      /* not decoded yet */
 #define S7COMMP_FUNCTIONCODE_GETLINK            0x0524
 #define S7COMMP_FUNCTIONCODE_SETMULTIVAR        0x0542
 #define S7COMMP_FUNCTIONCODE_GETMULTIVAR        0x054c
 #define S7COMMP_FUNCTIONCODE_BEGINSEQUENCE      0x0556
 #define S7COMMP_FUNCTIONCODE_ENDSEQUENCE        0x0560
 #define S7COMMP_FUNCTIONCODE_INVOKE             0x056b
+#define S7COMMP_FUNCTIONCODE_SETVARSUBSTR       0x057c      /* not decoded yet */
 #define S7COMMP_FUNCTIONCODE_GETVARSUBSTR       0x0586
+#define S7COMMP_FUNCTIONCODE_GETVARIABLESADDR   0x0590      /* not decoded yet */
+#define S7COMMP_FUNCTIONCODE_ABORT              0x059a      /* not decoded yet */
 
 static const value_string data_functioncode_names[] = {
     { S7COMMP_FUNCTIONCODE_EXPLORE,             "Explore" },
     { S7COMMP_FUNCTIONCODE_CREATEOBJECT,        "CreateObject" },
     { S7COMMP_FUNCTIONCODE_DELETEOBJECT,        "DeleteObject" },
     { S7COMMP_FUNCTIONCODE_SETVARIABLE,         "SetVariable" },
+    { S7COMMP_FUNCTIONCODE_GETVARIABLE,         "GetVariable" },
+    { S7COMMP_FUNCTIONCODE_ADDLINK,             "AddLink" },
+    { S7COMMP_FUNCTIONCODE_REMOVELINK,          "RemoveLink" },
     { S7COMMP_FUNCTIONCODE_GETLINK,             "GetLink" },
     { S7COMMP_FUNCTIONCODE_SETMULTIVAR,         "SetMultiVariables" },
     { S7COMMP_FUNCTIONCODE_GETMULTIVAR,         "GetMultiVariables" },
     { S7COMMP_FUNCTIONCODE_BEGINSEQUENCE,       "BeginSequence" },
     { S7COMMP_FUNCTIONCODE_ENDSEQUENCE,         "EndSequence" },
     { S7COMMP_FUNCTIONCODE_INVOKE,              "Invoke" },
+    { S7COMMP_FUNCTIONCODE_SETVARSUBSTR,        "SetVarSubStreamed" },
     { S7COMMP_FUNCTIONCODE_GETVARSUBSTR,        "GetVarSubStreamed" },
+    { S7COMMP_FUNCTIONCODE_GETVARIABLESADDR,    "GetVariablesAddress" },
+    { S7COMMP_FUNCTIONCODE_ABORT,               "Abort" },
     { 0,                                        NULL }
 };
 /**************************************************************************

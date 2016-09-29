@@ -75,18 +75,18 @@ static int proto_s7commp = -1;
 static gboolean dissect_s7commp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data);
 
 /**************************************************************************
- * PDU types
+ * Protocol Version/type
  */
-#define S7COMMP_PDUTYPE_CONNECT                 0x01
-#define S7COMMP_PDUTYPE_DATA                    0x02
-#define S7COMMP_PDUTYPE_DATAFW1_5               0x03
-#define S7COMMP_PDUTYPE_KEEPALIVE               0xff
+#define S7COMMP_PROTOCOLVERSION_1               0x01
+#define S7COMMP_PROTOCOLVERSION_2               0x02
+#define S7COMMP_PROTOCOLVERSION_3               0x03
+#define S7COMMP_PROTOCOLVERSION_255             0xff
 
-static const value_string pdutype_names[] = {
-    { S7COMMP_PDUTYPE_CONNECT,                  "Connect" },
-    { S7COMMP_PDUTYPE_DATA,                     "Data" },
-    { S7COMMP_PDUTYPE_DATAFW1_5,                "DataFW1_5" },
-    { S7COMMP_PDUTYPE_KEEPALIVE,                "Keep Alive" },
+static const value_string protocolversion_names[] = {
+    { S7COMMP_PROTOCOLVERSION_1,                "V1" },
+    { S7COMMP_PROTOCOLVERSION_2,                "V2" },
+    { S7COMMP_PROTOCOLVERSION_3,                "V3" },
+    { S7COMMP_PROTOCOLVERSION_255,              "Keep Alive" },
     { 0,                                        NULL }
 };
 
@@ -800,7 +800,7 @@ static const value_string lid_access_aid_names[] = {
 /* Header Block */
 static gint hf_s7commp_header = -1;
 static gint hf_s7commp_header_protid = -1;              /* Header Byte  0 */
-static gint hf_s7commp_header_pdutype = -1;             /* Header Bytes 1 */
+static gint hf_s7commp_header_protocolversion = -1;     /* Header Bytes 1 */
 static gint hf_s7commp_header_datlg = -1;               /* Header Bytes 2, 3*/
 static gint hf_s7commp_header_keepaliveseqnum = -1;     /* Sequence number in keep alive telegrams */
 
@@ -826,7 +826,7 @@ static gint ett_s7commp_addresslist = -1;
 
 static gint hf_s7commp_trailer = -1;
 static gint hf_s7commp_trailer_protid = -1;
-static gint hf_s7commp_trailer_pdutype = -1;
+static gint hf_s7commp_trailer_protocolversion = -1;
 static gint hf_s7commp_trailer_datlg = -1;
 
 /* Read Response */
@@ -1221,9 +1221,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_header_protid,
           { "Protocol Id", "s7comm-plus.header.protid", FT_UINT8, BASE_HEX, NULL, 0x0,
             "Protocol Identification", HFILL }},
-        { &hf_s7commp_header_pdutype,
-          { "PDU-Type", "s7comm-plus.header.pdutype", FT_UINT8, BASE_HEX, VALS(pdutype_names), 0x0,
-            "Type of packet", HFILL }},
+        { &hf_s7commp_header_protocolversion,
+          { "Protocol version", "s7comm-plus.header.protocolversion", FT_UINT8, BASE_HEX, VALS(protocolversion_names), 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_header_datlg,
           { "Data length", "s7comm-plus.header.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Specifies the entire length of the data block in bytes", HFILL }},
@@ -1853,9 +1853,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_trailer_protid,
           { "Protocol Id", "s7comm-plus.trailer.protid", FT_UINT8, BASE_HEX, NULL, 0x0,
             "Protocol Identification", HFILL }},
-        { &hf_s7commp_trailer_pdutype,
-          { "PDU-Type", "s7comm-plus.trailer.pdutype", FT_UINT8, BASE_HEX, VALS(pdutype_names), 0x0,
-            "Type of packet", HFILL }},
+        { &hf_s7commp_trailer_protocolversion,
+          { "Protocol version", "s7comm-plus.trailer.protocolversion", FT_UINT8, BASE_HEX, VALS(protocolversion_names), 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_trailer_datlg,
           { "Data length", "s7comm-plus.trailer.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Specifies the entire length of the data block in bytes", HFILL }},
@@ -3489,7 +3489,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
                                     packet_info *pinfo,
                                     proto_tree *tree,
                                     guint32 offset,
-                                    guint8 pdutype)
+                                    guint8 protocolversion)
 {
     int struct_level = 1;
     guint32 start_offset;
@@ -3520,7 +3520,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
      * Das eingeschobene Byte ist aber definitiv nur bei Data-Telegrammen vorhanden.
      */
     next_byte = tvb_get_guint8(tvb, offset);
-    if (((pdutype == S7COMMP_PDUTYPE_DATA) || (pdutype == S7COMMP_PDUTYPE_DATAFW1_5)) && next_byte != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
+    if (((protocolversion == S7COMMP_PROTOCOLVERSION_2) || (protocolversion == S7COMMP_PROTOCOLVERSION_3)) && next_byte != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
         value = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-CreateObject: %u", value);
         offset += octet_count;
@@ -3537,7 +3537,7 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
                                      packet_info *pinfo,
                                      proto_tree *tree,
                                      guint32 offset,
-                                     guint8 pdutype)
+                                     guint8 protocolversion)
 {
     guint8 object_id_count = 0;
     guint8 octet_count = 0;
@@ -3562,7 +3562,7 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
         }
     }
     /* Ein Daten-Objekt gibt es nur beim Connect */
-    if (pdutype == S7COMMP_PDUTYPE_CONNECT) {
+    if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
         offset = s7commp_decode_object(tvb, NULL, tree, offset);
     }
     return offset;
@@ -4852,7 +4852,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     proto_tree *tree,
                     gint dlength,
                     guint32 offset,
-                    guint8 pdutype)
+                    guint8 protocolversion)
 {
     proto_item *item = NULL;
     proto_tree *item_tree = NULL;
@@ -4933,7 +4933,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
-                    offset = s7commp_decode_request_createobject(tvb, pinfo, item_tree, offset, pdutype);
+                    offset = s7commp_decode_request_createobject(tvb, pinfo, item_tree, offset, protocolversion);
                     break;
                 case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
                     offset = s7commp_decode_request_deleteobject(tvb, pinfo, item_tree, offset);
@@ -4981,7 +4981,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_response_setvariable(tvb, pinfo, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
-                    offset = s7commp_decode_response_createobject(tvb, pinfo, item_tree, offset, pdutype);
+                    offset = s7commp_decode_response_createobject(tvb, pinfo, item_tree, offset, protocolversion);
                     break;
                 case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
                     offset = s7commp_decode_response_deleteobject(tvb, pinfo, item_tree, offset, &has_integrity_id);
@@ -5032,7 +5032,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         }
     }
 
-    if (pdutype == S7COMMP_PDUTYPE_DATAFW1_5) {
+    if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
         /* Pakete mit neuerer Firmware haben den Wert / id am Ende, der bei anderen FW vor der Integrität kommt.
          * Dieser ist aber nicht bei jedem Typ vorhanden. Wenn nicht, dann sind 4 Null-Bytes am Ende.
          */
@@ -5093,7 +5093,7 @@ dissect_s7commp(tvbuff_t *tvb,
     guint32 offset = 0;
     guint32 offset_save = 0;
 
-    guint8 pdutype = 0;
+    guint8 protocolversion = 0;
     gint dlength = 0;
     guint8 keepaliveseqnum = 0;
 
@@ -5125,13 +5125,13 @@ dissect_s7commp(tvbuff_t *tvb,
     col_set_str(pinfo->cinfo, COL_PROTOCOL, PROTO_TAG_S7COMM_PLUS);
     col_clear(pinfo->cinfo, COL_INFO);
 
-    pdutype = tvb_get_guint8(tvb, 1);                       /* Get the type byte */
+    protocolversion = tvb_get_guint8(tvb, 1);                       /* Get the type byte */
 
     /* display some infos in info-column of wireshark */
     if (pinfo->srcport == 102) {
-        col_add_fstr(pinfo->cinfo, COL_INFO, "%s%u PDU-Type:[%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport, val_to_str(pdutype, pdutype_names, "PDU-Type:0x%02x"));
+        col_add_fstr(pinfo->cinfo, COL_INFO, "%s%u Version:[%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
     } else {
-        col_add_fstr(pinfo->cinfo, COL_INFO, "%s%u PDU-Type:[%s]", UTF8_LEFTWARDS_ARROW, pinfo->srcport, val_to_str(pdutype, pdutype_names, "PDU-Type:0x%02x"));
+        col_add_fstr(pinfo->cinfo, COL_INFO, "%s%u Version:[%s]", UTF8_LEFTWARDS_ARROW, pinfo->srcport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
     }
     s7commp_item = proto_tree_add_item(tree, proto_s7commp, tvb, 0, -1, FALSE);
     s7commp_tree = proto_item_add_subtree(s7commp_item, ett_s7commp);
@@ -5141,16 +5141,16 @@ dissect_s7commp(tvbuff_t *tvb,
      ******************************************************/
     s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_header, tvb, offset, S7COMMP_HEADER_LEN, FALSE );
     s7commp_header_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_header);
-    proto_item_append_text(s7commp_header_tree, " PDU-Type: %s", val_to_str(pdutype, pdutype_names, " PDU-Type: 0x%02x"));
+    proto_item_append_text(s7commp_header_tree, ": Protocol version=%s", val_to_str(protocolversion, protocolversion_names, "0x%02x"));
     proto_tree_add_item(s7commp_header_tree, hf_s7commp_header_protid, tvb, offset, 1, FALSE);
     offset += 1;
-    proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_pdutype, tvb, offset, 1, pdutype);
+    proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_protocolversion, tvb, offset, 1, protocolversion);
     offset += 1;
 
     /* Typ FF Pakete scheinen eine Art Keep-Alive Telegramme zu sein, welche nur 4 Bytes lang sind.
      * 1. Protocol-id, 2.PDU Typ und dann 3. eine Art Sequenz-Nummer, und das 4. Byte bisher immer 0.
      */
-    if (pdutype == S7COMMP_PDUTYPE_KEEPALIVE) {
+    if (protocolversion == S7COMMP_PROTOCOLVERSION_255) {
         keepaliveseqnum = tvb_get_guint8(tvb, offset);
         proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_keepaliveseqnum, tvb, offset, 1, keepaliveseqnum);
         col_append_fstr(pinfo->cinfo, COL_INFO, " KeepAliveSeq=%d", keepaliveseqnum);
@@ -5175,7 +5175,7 @@ dissect_s7commp(tvbuff_t *tvb,
          * dieser beim Reassemblieren innerhalb der Datenteile liegen würde.
          * Leider wird damit der Zweig nicht unter dem Datenteil, sondern als eigener separater Zweig eingefügt.
          */
-        if (pdutype == S7COMMP_PDUTYPE_DATAFW1_5) {
+        if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
             offset_save = offset;
             offset = s7commp_decode_integrity(tvb, pinfo, s7commp_tree, FALSE, offset);
             dlength -= (offset - offset_save);
@@ -5368,7 +5368,7 @@ dissect_s7commp(tvbuff_t *tvb,
             if (last_fragment) {
                 col_append_str(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS reassembled)");
             }
-            offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, pdutype);
+            offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, protocolversion);
         }
         /******************************************************
          * Trailer
@@ -5378,8 +5378,8 @@ dissect_s7commp(tvbuff_t *tvb,
             s7commp_trailer_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_trailer);
             proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, next_tvb, offset, 1, FALSE);
             offset += 1;
-            proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_pdutype, next_tvb, offset, 1, tvb_get_guint8(next_tvb, offset));
-            proto_item_append_text(s7commp_trailer_tree, " PDU-Type: %s", val_to_str(tvb_get_guint8(next_tvb, offset), pdutype_names, " PDU-Type: 0x%02x"));
+            proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_protocolversion, next_tvb, offset, 1, tvb_get_guint8(next_tvb, offset));
+            proto_item_append_text(s7commp_trailer_tree, ": Protocol version=%s", val_to_str(tvb_get_guint8(next_tvb, offset), protocolversion_names, "0x%02x"));
             offset += 1;
             proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_datlg, next_tvb, offset, 2, tvb_get_ntohs(next_tvb, offset));
             offset += 2;

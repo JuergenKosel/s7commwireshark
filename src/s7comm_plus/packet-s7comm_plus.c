@@ -1086,10 +1086,11 @@ static gint hf_s7commp_setvar_objectid = -1;
 static gint hf_s7commp_setvar_itemcount = -1;
 static gint hf_s7commp_setvar_itemaddrcount = -1;
 
-/* Getmultivar */
+/* Getmultivar/Getvariable */
 static gint hf_s7commp_getmultivar_unknown1 = -1;
 static gint hf_s7commp_getmultivar_linkid = -1;
 static gint hf_s7commp_getmultivar_itemaddrcount = -1;
+static gint hf_s7commp_getvar_itemcount = -1;
 
 /* Notification */
 static gint hf_s7commp_notification_vl_retval = -1;
@@ -1731,7 +1732,7 @@ proto_register_s7commp (void)
           { "Item address count", "s7comm-plus.setvar.itemaddrcount", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ: Item address count", HFILL }},
 
-        /* GetMultiVariables */
+        /* GetMultiVariables/GetVariable */
         { &hf_s7commp_getmultivar_unknown1,
           { "Unknown", "s7comm-plus.getmultivar.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -1741,6 +1742,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_getmultivar_itemaddrcount,
           { "Item address count", "s7comm-plus.getmultivar.itemaddrcount", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ: Item address count", HFILL }},
+        { &hf_s7commp_getvar_itemcount,
+          { "Item count", "s7comm-plus.getvar.itemcount", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
 
         /* Notification */
         { &hf_s7commp_notification_vl_retval,
@@ -4275,6 +4279,74 @@ s7commp_decode_response_setvariable(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Request GetVariable
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_request_getvariable(tvbuff_t *tvb,
+                                   packet_info *pinfo,
+                                   proto_tree *tree,
+                                   guint32 offset)
+{
+    guint32 relid;
+    guint32 id_number;
+    guint8 octet_count;
+    guint32 item_count;
+    guint32 i;
+    proto_item *list_item = NULL;
+    proto_tree *list_item_tree = NULL;
+    guint32 list_start_offset;
+
+    relid = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_object_relid, tvb, offset, 4, relid);
+    s7commp_pinfo_append_idname(pinfo, relid);
+    offset += 4;
+    /* Ob es wirklich möglich ist hier auch mehrere Variablen zu lesen ist
+     * nicht bekannt, denn dazu gibt es eigentlich eine eigene Funktion.
+     */
+    item_count = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(tree, hf_s7commp_getvar_itemcount, tvb, offset, octet_count, item_count);
+    offset += octet_count;
+    list_start_offset = offset;
+    list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
+    list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
+    for (i = 1; i <= item_count; i++) {
+        id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_uint(list_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+        s7commp_pinfo_append_idname(pinfo, id_number);
+        offset += octet_count;
+    }
+    proto_item_set_len(list_item_tree, offset - list_start_offset);
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Response GetVariable
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_getvariable(tvbuff_t *tvb,
+                                    packet_info *pinfo,
+                                    proto_tree *tree,
+                                    guint32 offset)
+{
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+    guint32 start_offset;
+    int struct_level = 0;
+
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, NULL);
+    data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+    data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+    start_offset = offset;
+    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+    proto_item_set_len(data_item_tree, offset - start_offset);
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Request GetVarSubStreamed
  *
  *******************************************************************************************************/
@@ -4880,11 +4952,16 @@ s7commp_decode_data(tvbuff_t *tvb,
 
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
-    proto_item_append_text(tree, " Op: %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
+    proto_item_append_text(tree, ": %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
     proto_tree_add_uint(tree, hf_s7commp_data_opcode, tvb, offset, 1, opcode);
     col_append_fstr(pinfo->cinfo, COL_INFO, " Op:[%s]", val_to_str(opcode, opcode_names_short, "Unknown Opcode: 0x%02x"));
     offset += 1;
     dlength -= 1;
+
+    /* Bei Protokollversion 1 gibt es nur bei der 1500 und Deleteobject eine ID, und auch da nicht immer! */
+    if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
+        has_integrity_id = FALSE;
+    }
 
     if (opcode == S7COMMP_OPCODE_NOTIFICATION) {
         item = proto_tree_add_item(tree, hf_s7commp_notification_set, tvb, offset, -1, FALSE);
@@ -4917,6 +4994,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         /* add some infos to info column */
         col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u Function:[%s]",
             seqnum, val_to_str(functioncode, data_functioncode_names, "?"));
+        proto_item_append_text(tree, " %s", val_to_str(functioncode, data_functioncode_names, "?"));
 
         if (opcode == S7COMMP_OPCODE_REQ) {
             proto_tree_add_uint(tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
@@ -4942,6 +5020,10 @@ s7commp_decode_data(tvbuff_t *tvb,
                     break;
                 case S7COMMP_FUNCTIONCODE_SETVARIABLE:
                     offset = s7commp_decode_request_setvariable(tvb, pinfo, item_tree, offset);
+                    has_objectqualifier = TRUE;
+                    break;
+                case S7COMMP_FUNCTIONCODE_GETVARIABLE:
+                    offset = s7commp_decode_request_getvariable(tvb, pinfo, item_tree, offset);
                     has_objectqualifier = TRUE;
                     break;
                 case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
@@ -4991,6 +5073,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                     break;
                 case S7COMMP_FUNCTIONCODE_SETVARIABLE:
                     offset = s7commp_decode_response_setvariable(tvb, pinfo, item_tree, offset);
+                    break;
+                case S7COMMP_FUNCTIONCODE_GETVARIABLE:
+                    offset = s7commp_decode_response_getvariable(tvb, pinfo, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
                     offset = s7commp_decode_response_createobject(tvb, pinfo, item_tree, offset, protocolversion);

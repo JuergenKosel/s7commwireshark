@@ -4037,6 +4037,7 @@ s7commp_decode_response_setmultivar(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_notification_value_list(tvbuff_t *tvb,
+                                       packet_info *pinfo,
                                        proto_tree *tree,
                                        guint32 offset,
                                        gboolean looping)
@@ -4048,15 +4049,17 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
     guint8 octet_count;
     guint8 item_return_value;
     int struct_level;
+    int n_access_errors = 0;
     /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
      * Aufbau aus den anderen Telegrammen.
      * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte übertragen. Dann ist Datatype=NULL
      * Folgende Rückgabewerte wurden gesichtet:
      *  0x03 -> Fehler bei einer Adresse (S7-1500 - Plcsim)
-     *  0x13 -> Fehler bei einer Adresse (S7-1200)
+     *  0x13 -> Fehler bei einer Adresse (S7-1200) und 1500-Plcsim
      *  0x92 -> Erfolg (S7-1200)
+     *  0x9b -> Bei 1500 und 1200 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
      *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
-     *  0x9b -> Bei 1500 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
+     *  => Bit 15 = true bei Erfolg?
      * Danach können noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
      */
     do {
@@ -4065,6 +4068,9 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
         if (item_return_value == 0) {
             proto_tree_add_item(tree, hf_s7commp_listitem_terminator, tvb, offset, 1, FALSE);
             offset += 1;
+            if (n_access_errors > 0) {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " <Access errors: %d>", n_access_errors);
+            }
             return offset;
         } else {
             start_offset = offset;
@@ -4095,17 +4101,19 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_refnumber, tvb, offset, 4, item_number);
                 proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
                 offset += 4;
+                n_access_errors++;
             } else {
                 proto_item_append_text(data_item_tree, " Don't know how to decode the values with return code 0x%02x, stop decoding", item_return_value);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
             }
             if (struct_level > 0) {
-                offset = s7commp_decode_notification_value_list(tvb, data_item_tree, offset, TRUE);
+                offset = s7commp_decode_notification_value_list(tvb, pinfo, data_item_tree, offset, TRUE);
             }
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
     } while (looping);
+
     return offset;
 }
 /*******************************************************************************************************
@@ -4159,9 +4167,9 @@ s7commp_decode_notification(tvbuff_t *tvb,
          *
          * Bei der Sequenznummer scheint es einen Unterschied zwischen 1200 und 1500 zu geben.
          * Bei der 1200 ist diese immer nur 1 Byte, bei der 1500 ist es ein VLQ!
-         * Es scheint abhängig von der ersten ID zu sein. Ist diese größer 0x7000000 dann ist es ein VLQ und zusätzlich
-         * gibt es noch drei eingeschobene Bytes am Ende.
+         * Es scheint abhängig von der ersten ID zu sein. Ist diese größer 0x7000000 dann ist es ein VLQ.
          * Es scheint generell so, dass eine 1200 IDs beginnend mit 0x1.. und eine 1500 mit 0x7.. verwendet.
+         * Eine 1200 mit FW4 verwendet ebenfall > 0x700000. An der Protokollversion kann es nicht festgemacht werden.
          */
         credit_tick = tvb_get_guint8(tvb, offset);
         proto_tree_add_uint(tree, hf_s7commp_notification_credittick, tvb, offset, 1, credit_tick);
@@ -4186,7 +4194,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
          * 0xffffffff abwärts gezählt werden.
          * Hier besteht auf jeden Fall noch Analysebedarf.
          */
-        if (item_return_value != 0x00 && (tvb_get_guint8(tvb, offset + 1) != 0xff)) {
+        if ((subscr_object_id > 0x70000000) && (item_return_value != 0x00 && (tvb_get_guint8(tvb, offset + 1) != 0xff))) {
             proto_tree_add_uint(tree, hf_s7commp_notification_unknown5, tvb, offset, 1, item_return_value);
             offset += 1;
         }
@@ -4194,7 +4202,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
         list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
         list_start_offset = offset;
-        offset = s7commp_decode_notification_value_list(tvb, list_item_tree, offset, TRUE);
+        offset = s7commp_decode_notification_value_list(tvb, pinfo, list_item_tree, offset, TRUE);
         proto_item_set_len(list_item_tree, offset - list_start_offset);
         if (offset - list_start_offset > 1) {
             add_data_info_column = TRUE;
@@ -4215,14 +4223,16 @@ s7commp_decode_notification(tvbuff_t *tvb,
                 }
             }
         }
-        /* Nur wenn die id > 0x70000000 dann folgen noch 3 Bytes, die bisher immer null waren. */
+        /* Nur wenn die id > 0x70000000 dann folgen noch 3 Bytes, die bisher immer null waren.
+         * Das ist hier weiterhin notwendig, da ansonsten ein ggf. vorhandener Integritätsteil nicht erkannt würde.
+         */
         if (subscr_object_id > 0x70000000) {
             /* Unknown additional 3 bytes, because 1st Object ID > 0x70000000 */
             proto_tree_add_item(tree, hf_s7commp_notification_unknown3b, tvb, offset, 3, ENC_BIG_ENDIAN);
             offset += 3;
         }
         if (add_data_info_column) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " <With data>");
+            col_append_fstr(pinfo->cinfo, COL_INFO, " <Contains values>");
         }
     }
 

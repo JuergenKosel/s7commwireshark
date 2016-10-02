@@ -467,6 +467,7 @@ static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT                     12
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM                 13
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM                 14
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM               15
 
 static const value_string tagdescr_offsetinfotype2_names[] = {
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD,              "LibStructElem_Std" },
@@ -483,6 +484,7 @@ static const value_string tagdescr_offsetinfotype2_names[] = {
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT,                      "Struct" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM,                  "StructArray1Dim" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM,                  "StructArrayMDim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM,                "ProgramAlarm" },
     { 0,                                                            NULL }
 };
 
@@ -3318,6 +3320,27 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     offset += 2;
                     proto_tree_add_text(tag_tree, tvb, offset, 2, "StructMdimArray Info 13: %u", tvb_get_letohs(tvb, offset));
                     offset += 2;
+                    break;
+                /*************************************************************************/
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM:
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 1: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 2: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Relation-Id: 0x%08x", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 4: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 5: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 6: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 7: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 8: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 9: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
                     break;
             }
             proto_item_set_len(tag_tree, offset - tag_start_offset);

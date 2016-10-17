@@ -957,7 +957,7 @@ static gint hf_s7commp_explore_objectcount = -1;
 static gint hf_s7commp_explore_addresscount = -1;
 static gint hf_s7commp_explore_structvalue = -1;
 static gint hf_s7commp_explore_subidcount = -1;
-static gint hf_s7commp_explore_resunknown1 = -1;
+static gint hf_s7commp_explore_resseqinteg = -1;
 
 /* Explore result, variable (tag) description */
 static gint hf_s7commp_tagdescr_offsetinfo = -1;
@@ -1471,9 +1471,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_explore_subidcount,
           { "Number of following Sub-Ids", "s7comm-plus.explore.subidcount", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_explore_resunknown1,
-          { "Explore response unknown 1", "s7comm-plus.explore.resunknown1", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Explore request unknown 1", HFILL }},
+        { &hf_s7commp_explore_resseqinteg,
+          { "Explore Seq+IntegrId from Request", "s7comm-plus.explore.resseqinteg", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "Can be calculated by adding Sequencenumber + IntegrityId from corresponding request", HFILL }},
 
          /* Explore result, variable (tag) description */
         { &hf_s7commp_tagdescr_offsetinfo,
@@ -4861,7 +4861,8 @@ static guint32
 s7commp_decode_response_explore(tvbuff_t *tvb,
                                 packet_info *pinfo,
                                 proto_tree *tree,
-                                guint32 offset)
+                                guint32 offset,
+                                gboolean has_integrity_id)
 {
     guint32 id_number;
     gint16 errorcode = 0;
@@ -4874,15 +4875,14 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
     s7commp_pinfo_append_idname(pinfo, id_number);
     offset += 4;
     if (errorcode == 0) {    /* alternativ auf id_number > 0 prüfen? */
-        /* Es kann sein dass hier noch ein Wert VLQ, wenn nicht ein STARTOBJECT (0xa1) folgt.
-         * Welche Logik dahinterstecken mag. Das macht auch nur die 1500.
+        /* Der folgende Wert berechnet sich so wie es aussieht aus (SequenceNumber + IntegrityId) des
+         * zugehörigen Requests. Darum ist das Feld bei der alten 1200 ohne Integritätsteil auch nicht
+         * vorhanden. Ist in der Response keine Integritäts-ID, dann war es das auch nicht beim Request.
+         * Was dadurch geprüft werden kann/soll ist unklar.
          */
-        if (tvb_get_guint8(tvb, offset) != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-            /* Unbekannt wozu dieses Feld ist. Bei aufeinanderfolgenden Abfragen erhöht sich der Wert
-             * pro Telegramm um 2.
-             */
+        if (has_integrity_id) {
             id_number = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_uint(tree, hf_s7commp_explore_resunknown1, tvb, offset, octet_count, id_number);
+            proto_tree_add_uint(tree, hf_s7commp_explore_resseqinteg, tvb, offset, octet_count, id_number);
             offset += octet_count;
         }
         /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst würde ein Null-Byte
@@ -5155,7 +5155,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_response_getvarsubstr(tvb, pinfo, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
-                    offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, offset);
+                    offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, offset, has_integrity_id);
                     break;
                 case S7COMMP_FUNCTIONCODE_GETLINK:
                     offset = s7commp_decode_response_getlink(tvb, pinfo, item_tree, offset);

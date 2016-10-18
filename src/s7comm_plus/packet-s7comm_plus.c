@@ -4862,11 +4862,13 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
                                 packet_info *pinfo,
                                 proto_tree *tree,
                                 guint32 offset,
-                                gboolean has_integrity_id)
+                                guint8 protocolversion)
 {
     guint32 id_number;
     gint16 errorcode = 0;
     guint8 octet_count = 0;
+    guint32 resseqinteg;
+    guint8 nextb;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
 
@@ -4874,23 +4876,29 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
     s7commp_pinfo_append_idname(pinfo, id_number);
     offset += 4;
-    if (errorcode == 0) {    /* alternativ auf id_number > 0 prüfen? */
-        /* Der folgende Wert berechnet sich so wie es aussieht aus (SequenceNumber + IntegrityId) des
-         * zugehörigen Requests. Darum ist das Feld bei der alten 1200 ohne Integritätsteil auch nicht
-         * vorhanden. Ist in der Response keine Integritäts-ID, dann war es das auch nicht beim Request.
-         * Was dadurch geprüft werden kann/soll ist unklar.
-         */
-        if (has_integrity_id) {
-            id_number = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_uint(tree, hf_s7commp_explore_resseqinteg, tvb, offset, octet_count, id_number);
-            offset += octet_count;
-        }
-        /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst würde ein Null-Byte
-         * zur Terminierung der Liste eingefügt werden.
-         */
-        if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-            offset = s7commp_decode_object(tvb, NULL, tree, offset);
-        }
+
+    /* Der folgende Wert berechnet sich so wie es aussieht aus (SequenceNumber + IntegrityId) des
+     * zugehörigen Requests. Darum ist das Feld bei der alten 1200 ohne Integritätsteil auch nicht
+     * vorhanden. Ist in der Response keine Integritäts-ID, dann war es das auch nicht beim Request.
+     * Was dadurch geprüft werden kann/soll ist unklar.
+     * Leider gibt es bei der alten 1200 bei einem einzelnen Paket keine Möglichkeit, BEVOR das ganze Paket
+     * verarbeitet wurde, festzustellen, ob es diese Integritätst-Id gibt oder nicht. Protokollversion
+     * V3 besitzt so wie es aussieht IMMER eine, V1 NIE, bei V2 nur bei der 1500.
+     * Die hier realisierte Prüfung funktioniert nur, falls nicht zufällig der Wert von resseqinteg mit 0xa1 beginnt!
+     */
+    nextb = tvb_get_guint8(tvb, offset);
+    if ( (protocolversion == S7COMMP_PROTOCOLVERSION_3) ||
+        ((protocolversion == S7COMMP_PROTOCOLVERSION_2) &&
+         (nextb != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) && (nextb != 0)) ) {
+        resseqinteg = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_uint(tree, hf_s7commp_explore_resseqinteg, tvb, offset, octet_count, resseqinteg);
+        offset += octet_count;
+    }
+    /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst würde ein Null-Byte
+     * zur Terminierung der Liste eingefügt werden.
+     */
+    if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
+        offset = s7commp_decode_object(tvb, NULL, tree, offset);
     }
     return offset;
 }
@@ -5155,7 +5163,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_response_getvarsubstr(tvb, pinfo, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
-                    offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, offset, has_integrity_id);
+                    offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, offset, protocolversion);
                     break;
                 case S7COMMP_FUNCTIONCODE_GETLINK:
                     offset = s7commp_decode_response_getlink(tvb, pinfo, item_tree, offset);

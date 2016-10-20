@@ -410,6 +410,11 @@ static const value_string explore_class_lib_names[] = {
     { 0,                                        NULL }
 };
 
+static const value_string no_yes_names[] = {
+    { 0,                                        "No" },
+    { 1,                                        "Yes" },
+    { 0,                                        NULL }
+};
 
 static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
@@ -949,10 +954,10 @@ static gint hf_s7commp_explore_req_area_class_iqmct = -1;
 static gint hf_s7commp_explore_req_area_class_lib = -1;
 static gint hf_s7commp_explore_req_area_structindex = -1;
 static gint hf_s7commp_explore_req_area_section = -1;
-static gint hf_s7commp_explore_requnknown1 = -1;
-static gint hf_s7commp_explore_requnknown2 = -1;
+static gint hf_s7commp_explore_req_id = -1;
+static gint hf_s7commp_explore_req_childsrec = -1;
 static gint hf_s7commp_explore_requnknown3 = -1;
-static gint hf_s7commp_explore_requnknown4 = -1;
+static gint hf_s7commp_explore_req_parents = -1;
 static gint hf_s7commp_explore_objectcount = -1;
 static gint hf_s7commp_explore_addresscount = -1;
 static gint hf_s7commp_explore_structvalue = -1;
@@ -1447,18 +1452,18 @@ proto_register_s7commp (void)
         { &hf_s7commp_explore_req_area_structindex,
           { "Struct index", "s7comm-plus.explore.req_area.structindex", FT_UINT32, BASE_DEC, NULL, 0x00ff0000,
             NULL, HFILL }},
-        { &hf_s7commp_explore_requnknown1,
-          { "Explore request unknown 1 (ID?)", "s7comm-plus.explore.requnknown1", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Explore request unknown 1 (ID?)", HFILL }},
-        { &hf_s7commp_explore_requnknown2,
-          { "Explore request unknown 2", "s7comm-plus.explore.requnknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { &hf_s7commp_explore_req_id,
+          { "Explore request ID (Root/Link-ID?)", "s7comm-plus.explore.req_id", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_explore_req_childsrec,
+          { "Explore childs recursive", "s7comm-plus.explore.req_childsrecursive", FT_UINT8, BASE_DEC, VALS(no_yes_names), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_explore_requnknown3,
           { "Explore request unknown 3", "s7comm-plus.explore.requnknown3", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_explore_requnknown4,
-          { "Explore request unknown 4", "s7comm-plus.explore.requnknown4", FT_UINT8, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
+        { &hf_s7commp_explore_req_parents,
+          { "Explore parents", "s7comm-plus.explore.req_parents", FT_UINT8, BASE_DEC, VALS(no_yes_names), 0x0,
+            "Explore parents up to root", HFILL }},
         { &hf_s7commp_explore_objectcount,
           { "Number of following Objects", "s7comm-plus.explore.objectcount", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
@@ -4791,13 +4796,13 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
      * wenn die ersten beiden Bytes zu Begin Null sind, dann werden Objekte gelesen.
      */
     uint32value = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_uint(tree, hf_s7commp_explore_requnknown1, tvb, offset, octet_count, uint32value);
+    proto_tree_add_uint(tree, hf_s7commp_explore_req_id, tvb, offset, octet_count, uint32value);
     offset += octet_count;
-    proto_tree_add_item(tree, hf_s7commp_explore_requnknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_item(tree, hf_s7commp_explore_req_childsrec, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
     proto_tree_add_item(tree, hf_s7commp_explore_requnknown3, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
-    proto_tree_add_item(tree, hf_s7commp_explore_requnknown4, tvb, offset, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_item(tree, hf_s7commp_explore_req_parents, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
     number_of_objects = tvb_get_guint8(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_explore_objectcount, tvb, offset, 1, number_of_objects);

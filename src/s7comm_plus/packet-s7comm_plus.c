@@ -359,7 +359,7 @@ static const value_string var_item_area1_names[] = {
 #define S7COMMP_EXPLORE_CLASS_FBT               0x96
 #define S7COMMP_EXPLORE_CLASS_LIB               0x02
 static const value_string explore_class_names[] = {
-    { S7COMMP_EXPLORE_CLASS_ASALARMS,           "AS Alarms" },
+    { S7COMMP_EXPLORE_CLASS_ASALARMS,           "AS-Alarms" },
     { S7COMMP_EXPLORE_CLASS_IQMCT,              "IQMCT" },
     { S7COMMP_EXPLORE_CLASS_UDT,                "UDT" },
     { S7COMMP_EXPLORE_CLASS_DB,                 "DB" },
@@ -377,12 +377,12 @@ static const value_string explore_class_names[] = {
 #define S7COMMP_EXPLORE_CLASS_IQMCT_TIMER       0x05
 #define S7COMMP_EXPLORE_CLASS_IQMCT_COUNTER     0x06
 static const value_string explore_class_iqmct_names[] = {
-    { S7COMMP_EXPLORE_CLASS_IQMCT_INPUT,        "Input area" },
-    { S7COMMP_EXPLORE_CLASS_IQMCT_OUTPUT,       "Output area" },
-    { S7COMMP_EXPLORE_CLASS_IQMCT_BITMEM,       "M Bit memory" },
-    { S7COMMP_EXPLORE_CLASS_IQMCT_04,           "Unknown area 04" },
-    { S7COMMP_EXPLORE_CLASS_IQMCT_TIMER,        "S7-Timer" },
-    { S7COMMP_EXPLORE_CLASS_IQMCT_COUNTER,      "S7-Counter" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_INPUT,        "IArea" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_OUTPUT,       "QArea" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_BITMEM,       "MArea" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_04,           "UnknownArea04" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_TIMER,        "S7Timers" },
+    { S7COMMP_EXPLORE_CLASS_IQMCT_COUNTER,      "S7Counters" },
     { 0,                                        NULL }
 };
 
@@ -1229,7 +1229,88 @@ proto_reg_handoff_s7commp(void)
         initialized = TRUE;
     }
 }
+/*******************************************************************************************************
+* Callback function for id-name decoding
+* In der globalen ID-Liste sind nur die statischen Werte vorhanden.
+* Dynamische Werte sind z.B. DB-Nummern, Bibliotheksbaustein-Nummern, usw.
+* Diese Funktion kann als BASE_CUSTOM in den header-fields verwendet werden.
+* val_to_str() darf in der Callback function nicht verwendet werden, da es intern für die
+* Strings Speicher aus dem Scope wmem_packet_scope verwendet, und dieser zum Zeitpunkt
+* des Aufrufs über die Callback Funktion nicht gültig ist.
+*******************************************************************************************************/
+static void
+s7commp_idname_fmt(gchar *result, guint32 id_number)
+{
+    const guint8 *str;
+    guint32 cls, section, index;
 
+    if ((str = try_val_to_str_ext(id_number, &id_number_names_ext))) {
+        g_snprintf(result, ITEM_LABEL_LENGTH, "%s", str);
+    } else {
+        cls = ((id_number & 0xff000000) >> 24);
+        index = ((id_number & 0x00ff0000) >> 16);
+        section = (id_number & 0xffff);
+
+        if (id_number >= 0x70000000 && id_number <= 0x7fffffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "DebugObject.%u.%u", index, section);
+        } else if (id_number >= 0x89fd0000 && id_number <= 0x89fdffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "UDT.%u", section);
+        } else if (id_number >= 0x8a0e0000 && id_number <= 0x8a0effff) {    /* Datenbaustein mit Nummer, 8a0e.... wird aber auch als AlarmID verwendet */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "DB.%u", section);
+        } else if (id_number >= 0x8a110000 && id_number <= 0x8a11ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "UserConstants.%u", section);
+        } else if (id_number >= 0x8a120000 && id_number <= 0x8a12ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "FB.%u", section);
+        } else if (id_number >= 0x8a130000 && id_number <= 0x8a13ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "FC.%u", section);
+        } else if (id_number >= 0x8a200000 && id_number <= 0x8a20ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "S_FB.%u", section);
+        } else if (id_number >= 0x8a240000 && id_number <= 0x8a24ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "S_UDT.%u", section);
+        } else if (id_number >= 0x8a320000 && id_number <= 0x8a32ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "OB.%u", section);
+        } else if (id_number >= 0x8a360000 && id_number <= 0x8a36ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "AlarmTextList.%u", section);
+        } else if (id_number >= 0x8a370000 && id_number <= 0x8a37ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TextList.%u", section);
+        } else if (id_number >= 0x8a380000 && id_number <= 0x8a38ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TextContainer.%u", section);
+        } else if (id_number >= 0x8a7e0000 && id_number <= 0x8a7effff) {    /* AS Alarms */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "ASAlarms.%u", section);
+        } else if (id_number >= 0x90000000 && id_number <= 0x90ffffff) {    /* Explore Bereich IQMCT, wofür hier section steht ist nicht bekannt, bisher immer 0 gesehen. */
+            str = try_val_to_str(index, explore_class_iqmct_names);
+            if (str) {
+                g_snprintf(result, ITEM_LABEL_LENGTH, "Explore%s.%u", str, section);
+            } else {
+                g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreIQMCT.unknown.%u.%u", index, section);
+            }
+        } else if (id_number >= 0x91000000 && id_number <= 0x91ffffff) {    /* Explore Bereich im UDT */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreUDT.%u.%u", section, index);
+        } else if (id_number >= 0x92000000 && id_number <= 0x92ffffff) {    /* Explore Bereich im DB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreDB.%u.%u", section, index);
+        } else if (id_number >= 0x93000000 && id_number <= 0x93ffffff) {    /* Explore Bereich im FB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreFB.%u.%u", section, index);
+        } else if (id_number >= 0x94000000 && id_number <= 0x94ffffff) {    /* Explore Bereich im FC */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreFC.%u.%u", section, index);
+        } else if (id_number >= 0x95000000 && id_number <= 0x95ffffff) {    /* Explore Bereich im OB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreOB.%u.%u", section, index);
+        } else if (id_number >= 0x96000000 && id_number <= 0x96ffffff) {    /* Explore Bereich im FBT */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreFBT.%u.%u", section, index);
+        } else if (id_number >= 0x9eae0000 && id_number <= 0x9eaeffff) {    /* Hängt auch mit dem Alarmsystem zusammen??? TODO */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "?UnknownAlarms?.%u", section);
+        } else if (id_number >= 0x02000000 && id_number <= 0x02ffffff) {    /* Explore Bereich LIB */
+            str = try_val_to_str(index, explore_class_lib_names);
+            if (str) {
+                g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreLIB.%s.%u", str, section);
+            } else {
+                g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreUnknown.%u.%u", index, section);
+            }
+        } else {                                                            /* Komplett unbekannt */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "Unknown (%u)", id_number);
+        }
+    }
+}
+/*******************************************************************************************************/
 void
 proto_register_s7commp (void)
 {
@@ -1328,7 +1409,7 @@ proto_register_s7commp (void)
             "This is a set of data in a notification data telegram", HFILL }},
 
         { &hf_s7commp_data_id_number,
-          { "ID Number", "s7comm-plus.data.id_number", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
+          { "ID Number", "s7comm-plus.data.id_number", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "varuint32: ID Number for function", HFILL }},
         /* Lists */
         { &hf_s7commp_valuelist,
@@ -1360,10 +1441,10 @@ proto_register_s7commp (void)
           { "DB number", "s7comm-plus.item.addr.dbnumber", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_itemaddr_area_base,
-          { "Access base-area", "s7comm-plus.item.addr.area_base", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
+          { "Access base-area", "s7comm-plus.item.addr.area_base", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "This is the base area for all following IDs", HFILL }},
         { &hf_s7commp_itemaddr_area_sub,
-          { "Access sub-area", "s7comm-plus.item.addr.area_sub", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
+          { "Access sub-area", "s7comm-plus.item.addr.area_sub", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "This is the sub area for all following IDs", HFILL }},
         { &hf_s7commp_itemaddr_lid_value,
           { "LID Value", "s7comm-plus.item.addr.lid_value", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -1453,7 +1534,7 @@ proto_register_s7commp (void)
           { "Struct index", "s7comm-plus.explore.req_area.structindex", FT_UINT32, BASE_DEC, NULL, 0x00ff0000,
             NULL, HFILL }},
         { &hf_s7commp_explore_req_id,
-          { "Explore request ID (Root/Link-ID?)", "s7comm-plus.explore.req_id", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
+          { "Explore request ID (Root/Link-ID?)", "s7comm-plus.explore.req_id", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_explore_req_childsrec,
           { "Explore childs recursive", "s7comm-plus.explore.req_childsrecursive", FT_UINT8, BASE_DEC, VALS(no_yes_names), 0x0,
@@ -1691,16 +1772,16 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         /* Object */
         { &hf_s7commp_object_relid,
-          { "Relation Id", "s7comm-plus.object.relid", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
+          { "Relation Id", "s7comm-plus.object.relid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_object_classid,
-          { "Class Id", "s7comm-plus.object.classid", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
+          { "Class Id", "s7comm-plus.object.classid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "varuint32: Class Id", HFILL }},
         { &hf_s7commp_object_classidflags,
           { "Class Id Flags", "s7comm-plus.object.classidflags", FT_UINT32, BASE_HEX, NULL, 0x0,
             "varuint32: Class Id Flags", HFILL }},
         { &hf_s7commp_object_attributeid,
-          { "Attribute Id", "s7comm-plus.object.attributeid", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &id_number_names_ext, 0x0,
+          { "Attribute Id", "s7comm-plus.object.attributeid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "varuint32: Attribute Id", HFILL }},
         { &hf_s7commp_object_attributeidflags,
           { "Attribute Id Flags", "s7comm-plus.object.attributeidflags", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -1998,12 +2079,14 @@ proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, co
 static void
 s7commp_proto_item_append_idname(proto_tree *tree, guint32 id_number, gchar *str_prefix)
 {
-    const guint8 *str_id_name;
+    gchar *result;
 
-    if ((str_id_name = try_val_to_str_ext(id_number, &id_number_names_ext))) {
-        proto_item_append_text(tree, "%s%s", str_prefix, str_id_name);
+    result = (gchar *)wmem_alloc(wmem_packet_scope(), ITEM_LABEL_LENGTH);
+    s7commp_idname_fmt(result, id_number);
+    if (str_prefix) {
+        proto_item_append_text(tree, "%s%s", str_prefix, result);
     } else {
-        proto_item_append_text(tree, "%s%u", str_prefix, id_number);
+        proto_item_append_text(tree, "%s", result);
     }
 }
 /*******************************************************************************************************
@@ -2012,14 +2095,16 @@ s7commp_proto_item_append_idname(proto_tree *tree, guint32 id_number, gchar *str
 * otherwise only the id.
 *******************************************************************************************************/
 static void
-s7commp_pinfo_append_idname(packet_info *pinfo, guint32 id_number)
+s7commp_pinfo_append_idname(packet_info *pinfo, guint32 id_number, gchar *str_prefix)
 {
-    const guint8 *str_id_name;
+    gchar *result;
 
-    if ((str_id_name = try_val_to_str_ext(id_number, &id_number_names_ext))) {
-        col_append_fstr(pinfo->cinfo, COL_INFO, " %s", str_id_name);
+    result = (gchar *)wmem_alloc(wmem_packet_scope(), ITEM_LABEL_LENGTH);
+    s7commp_idname_fmt(result, id_number);
+    if (str_prefix) {
+        col_append_fstr(pinfo->cinfo, COL_INFO, "%s%s", str_prefix, result);
     } else {
-        col_append_fstr(pinfo->cinfo, COL_INFO, " (%u)", id_number);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " %s", result);
     }
 }
 /*******************************************************************************************************
@@ -3441,7 +3526,8 @@ s7commp_decode_object(tvbuff_t *tvb,
                 uint32_value_clsid = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_object_classid, tvb, offset, octet_count, uint32_value_clsid);
                 if (pinfo != NULL) {
-                    s7commp_pinfo_append_idname(pinfo, uint32_value_clsid);
+                    s7commp_pinfo_append_idname(pinfo, uint32_value_clsid, NULL);
+                    s7commp_pinfo_append_idname(pinfo, uint32_value, " / ");
                 }
                 s7commp_proto_item_append_idname(data_item_tree, uint32_value_clsid, ": ClsId=");
                 s7commp_proto_item_append_idname(data_item_tree, uint32_value, ", RelId=");
@@ -3550,7 +3636,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
     id_number = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
     s7commp_proto_item_append_idname(data_item_tree, id_number, ": ID=");
-    s7commp_pinfo_append_idname(pinfo, id_number);
+    s7commp_pinfo_append_idname(pinfo, id_number, NULL);
     offset += 4;
     offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
     proto_item_set_len(data_item_tree, offset - start_offset);
@@ -4368,7 +4454,7 @@ s7commp_decode_request_getvariable(tvbuff_t *tvb,
 
     relid = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_object_relid, tvb, offset, 4, relid);
-    s7commp_pinfo_append_idname(pinfo, relid);
+    s7commp_pinfo_append_idname(pinfo, relid, NULL);
     offset += 4;
     /* Ob es wirklich möglich ist hier auch mehrere Variablen zu lesen ist
      * nicht bekannt, denn dazu gibt es eigentlich eine eigene Funktion.
@@ -4382,7 +4468,7 @@ s7commp_decode_request_getvariable(tvbuff_t *tvb,
     for (i = 1; i <= item_count; i++) {
         id_number = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint(list_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
-        s7commp_pinfo_append_idname(pinfo, id_number);
+        s7commp_pinfo_append_idname(pinfo, id_number, NULL);
         offset += octet_count;
     }
     proto_item_set_len(list_item_tree, offset - list_start_offset);
@@ -4507,7 +4593,7 @@ s7commp_decode_request_getlink(tvbuff_t *tvb,
 
     item_number = tvb_get_varuint32(tvb, &octet_count, offset);
     proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, octet_count, item_number);
-    s7commp_pinfo_append_idname(pinfo, item_number);
+    s7commp_pinfo_append_idname(pinfo, item_number, NULL);
     offset += octet_count;
 
     proto_tree_add_item(tree, hf_s7commp_getlink_requnknown2, tvb, offset, 2, ENC_BIG_ENDIAN);
@@ -4791,12 +4877,21 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
 
-    offset = s7commp_decode_explore_area(tvb, pinfo, tree, offset);
+    id_number = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_item(tree, hf_s7commp_data_id_number, tvb, offset, 4, ENC_BIG_ENDIAN);
+    s7commp_proto_item_append_idname(tree, id_number, ": Area: ");
+    s7commp_pinfo_append_idname(pinfo, id_number, " Area=");
+    offset += 4;
+
     /* 4 oder 5 weitere Bytes unbekannter Funktion
      * wenn die ersten beiden Bytes zu Begin Null sind, dann werden Objekte gelesen.
      */
     uint32value = tvb_get_varuint32(tvb, &octet_count, offset);
     proto_tree_add_uint(tree, hf_s7commp_explore_req_id, tvb, offset, octet_count, uint32value);
+    if (uint32value > 0) {
+        s7commp_proto_item_append_idname(tree, uint32value, " / ");
+        s7commp_pinfo_append_idname(pinfo, uint32value, " / ");
+    }
     offset += octet_count;
     proto_tree_add_item(tree, hf_s7commp_explore_req_childsrec, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
@@ -4879,7 +4974,7 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
 
     id_number = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
-    s7commp_pinfo_append_idname(pinfo, id_number);
+    s7commp_pinfo_append_idname(pinfo, id_number, NULL);
     offset += 4;
 
     /* Der folgende Wert berechnet sich so wie es aussieht aus (SequenceNumber + IntegrityId) des

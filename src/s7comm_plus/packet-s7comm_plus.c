@@ -1235,12 +1235,12 @@ static void
 s7commp_idname_fmt(gchar *result, guint32 id_number)
 {
     const guint8 *str;
-    guint32 cls, section, index;
+    guint32 section, index;
 
     if ((str = try_val_to_str_ext(id_number, &id_number_names_ext))) {
         g_snprintf(result, ITEM_LABEL_LENGTH, "%s", str);
     } else {
-        cls = ((id_number & 0xff000000) >> 24);
+        /*cls = ((id_number & 0xff000000) >> 24);*/
         index = ((id_number & 0x00ff0000) >> 16);
         section = (id_number & 0xffff);
 
@@ -3769,7 +3769,7 @@ s7commp_decode_item_address(tvbuff_t *tvb,
             /* 1. LID: Zugriffsart */
             first_lid = tvb_get_varuint32(tvb, &octet_count, offset);
             proto_tree_add_text(adr_item_tree, tvb, offset, octet_count, "LID-access Aid: %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
-            proto_item_append_text(adr_item_tree, ", %s", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
+            proto_item_append_text(adr_item_tree, ", %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
             offset += octet_count;
             lid_cnt += 1;
             *number_of_fields += 1;

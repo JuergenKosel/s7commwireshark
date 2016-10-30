@@ -1119,12 +1119,10 @@ static gint hf_s7commp_getlink_linkidcount = -1;
 static gint hf_s7commp_getlink_linkid = -1;
 
 /* BeginSequence */
-static gint hf_s7commp_beginseq_requnknown1 = -1;
-static gint hf_s7commp_beginseq_requnknown2 = -1;
+static gint hf_s7commp_beginseq_transactiontype = -1;
+static gint hf_s7commp_beginseq_valtype = -1;
 static gint hf_s7commp_beginseq_requnknown3 = -1;
-static gint hf_s7commp_beginseq_requnknown4 = -1;
-static gint hf_s7commp_beginseq_resunknown1 = -1;
-static gint hf_s7commp_beginseq_resunknown2 = -1;
+static gint hf_s7commp_beginseq_requestid = -1;
 
 /* EndSequence */
 static gint hf_s7commp_endseq_requnknown1 = -1;
@@ -1875,23 +1873,17 @@ proto_register_s7commp (void)
             NULL, HFILL }},
 
         /* BeginSequence */
-        { &hf_s7commp_beginseq_requnknown1,
-          { "Request unknown 1", "s7comm-plus.beginseq.requnknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
+        { &hf_s7commp_beginseq_transactiontype,
+          { "Transaction Type", "s7comm-plus.beginseq.transactiontype", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_beginseq_requnknown2,
-          { "Request unknown 2", "s7comm-plus.beginseq.requnknown2", FT_UINT16, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
+        { &hf_s7commp_beginseq_valtype,
+          { "Unknown / Type of value", "s7comm-plus.beginseq.valtype", FT_UINT16, BASE_DEC, NULL, 0x0,
+            "Following value: When 1 then object, when 18 then Id", HFILL }},
         { &hf_s7commp_beginseq_requnknown3,
-          { "Request unknown 3", "s7comm-plus.beginseq.requnknown3", FT_UINT8, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_beginseq_requnknown4,
-          { "Request unknown 4", "s7comm-plus.beginseq.requnknown4", FT_UINT16, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_beginseq_resunknown1,
-          { "Response unknown 1", "s7comm-plus.beginseq.resunknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_beginseq_resunknown2,
-          { "Response unknown 2", "s7comm-plus.beginseq.resunknown2", FT_UINT32, BASE_HEX, NULL, 0x0,
+          { "Request unknown 3", "s7comm-plus.beginseq.requnknown3", FT_UINT16, BASE_HEX, NULL, 0x0,
+            "Not always 2 bytes, sometimes only 1 byte", HFILL }},
+        { &hf_s7commp_beginseq_requestid,
+          { "Request Id", "s7comm-plus.beginseq.requestid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
 
         /* EndSequence */
@@ -4455,26 +4447,42 @@ s7commp_decode_response_getlink(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_request_beginsequence(tvbuff_t *tvb,
+                                     packet_info *pinfo,
                                      proto_tree *tree,
                                      gint16 dlength _U_,
                                      guint32 offset)
 {
-    proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown1, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
-    proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown2, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
-    proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 1, ENC_BIG_ENDIAN);
-    offset += 1;
+    guint8 type;
+    guint16 valtype;
+    guint32 id;
 
-    /* Es gibt zwei Formate. Die ersten 5 Bytes scheinen zumindest fix zu sein. Wie man daran erkennen kann ob
-     * wie die nachfolgenden Bytes interpretiert werden sollen ist unklar. So wird erstmal geprüft ob eine entsprechende
-     * Object-Start-ID folgt. Das funktioniert zumindest soweit, dass es für weitere Analysen verwendet werden kann.
+    type = tvb_get_guint8(tvb, offset);
+    proto_tree_add_uint(tree, hf_s7commp_beginseq_transactiontype, tvb, offset, 1, type);
+    offset += 1;
+    valtype = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
+    offset += 2;
+
+    /* Ob ein Objekt oder anderer weiterer Wert folgt, scheint abhängig vom 2./3. Byte zu sein.
+     * Wenn 1 dann Objekt, wenn 18 dann ID. Andere Werte als 1 und 18 bisher noch nicht gesichtet.
      */
-    if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-        offset = s7commp_decode_object(tvb, NULL, tree, offset);
+    if (valtype == 1) {
+        /* Die 1200 mit V2 lässt hier gelegentlich 1 Byte aus. Die Antwort zeigt aber keine
+         * Fehlermeldung, d.h. dies scheint toleriert zu werden.
+         */
+        if (tvb_get_guint8(tvb, offset + 1) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
+            proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 1, ENC_BIG_ENDIAN);
+            offset += 1;
+        } else {
+            proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 2, ENC_BIG_ENDIAN);
+            offset += 2;
+        }
+        offset = s7commp_decode_object(tvb, pinfo, tree, offset);
     } else {
-        proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown4, tvb, offset, 2, ENC_BIG_ENDIAN);
-        offset += 2;
+        id = tvb_get_ntohl(tvb, offset);
+        s7commp_pinfo_append_idname(pinfo, id, " Id=");
+        proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
+        offset += 4;
     }
 
     return offset;
@@ -4493,9 +4501,9 @@ s7commp_decode_response_beginsequence(tvbuff_t *tvb,
     guint16 errorcode;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
-    proto_tree_add_item(tree, hf_s7commp_beginseq_resunknown1, tvb, offset, 2, ENC_BIG_ENDIAN);
+    proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset += 2;
-    proto_tree_add_item(tree, hf_s7commp_beginseq_resunknown2, tvb, offset, 4, ENC_BIG_ENDIAN);
+    proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
     offset += 4;
 
     return offset;
@@ -4938,7 +4946,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_request_getlink(tvb, pinfo, item_tree, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
-                    offset = s7commp_decode_request_beginsequence(tvb, item_tree, dlength, offset);
+                    offset = s7commp_decode_request_beginsequence(tvb, pinfo, item_tree, dlength, offset);
                     break;
                 case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
                     offset = s7commp_decode_request_endsequence(tvb, item_tree, offset);

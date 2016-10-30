@@ -950,7 +950,7 @@ static gint hf_s7commp_data_retval_genericerrorcode = -1;
 static gint hf_s7commp_data_retval_servererror = -1;
 static gint hf_s7commp_data_retval_debuginfo = -1;
 static gint hf_s7commp_data_retval_errorextension = -1;
-/* Z.Zt. nicht verwendet, da 64 Bit Feld nicht vernünftig unterstützt wird.
+/* Z.Zt. nicht verwendet, da 64 Bit Feld nicht vernünftig unterstützt wird. */
 static const int *s7commp_data_returnvalue_fields[] = {
     &hf_s7commp_data_retval_errorcode,
     &hf_s7commp_data_retval_omsline,
@@ -958,9 +958,10 @@ static const int *s7commp_data_returnvalue_fields[] = {
     &hf_s7commp_data_retval_genericerrorcode,
     &hf_s7commp_data_retval_servererror,
     &hf_s7commp_data_retval_debuginfo,
+    &hf_s7commp_data_retval_errorextension,
     NULL
 };
-*/
+
 /* These are the ids of the subtrees that we are creating */
 static gint ett_s7commp = -1;                           /* S7 communication tree, parent of all other subtree */
 static gint ett_s7commp_header = -1;                    /* Subtree for header block */
@@ -1404,29 +1405,30 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_returnvalue,
           { "Return value", "s7comm-plus.returnvalue", FT_UINT64, BASE_HEX, NULL, 0x0,
             "varuint64: Return value", HFILL }},
-        /* The extension for 64 bit Bitmasks was implemented on Oct 2014, so don't use it yet to support older Wireshark versions.
-         * 01.03.2016: Using Bitmask does not work, as it does not allow to pass our own length and value
+        /* Eigentlich ist "Error code" ein 16 Bit Integer mit Vorzeichen, da in der Liste mit den Errorcode-Namen
+         * negative und positive Werte vorhanden sind. Das ist mit der Bitmask-Funktion in Wireshark jedoch nicht möglich.
+         * Darum wird der Wert hier nur als Hex angezeigt, der Name zum Fehlercode wird dann separat geholt und angezeigt.
          */
         { &hf_s7commp_data_retval_errorcode,
-          { "Bitmask 0x000000000000ffff - Error code", "s7comm-plus.returnvalue.errorcode", FT_INT16, BASE_DEC, VALS(errorcode_names), 0x0, /* 0x000000000000ffff, */
-            NULL, HFILL }},
+          { "Error code", "s7comm-plus.returnvalue.errorcode", FT_UINT64, BASE_HEX, NULL, 0x000000000000ffff, /* VALS(errorcode_names) */
+            "Error code: This must be interpreted as signed integer of 16 bit, but bitmask doesn't allow this", HFILL }},
         { &hf_s7commp_data_retval_omsline,
-          { "Bitmask 0x00000000ffff0000 - OMS line", "s7comm-plus.returnvalue.omsline", FT_UINT16, BASE_DEC, NULL, 0x0, /* 0x00000000ffff0000, */
+          { "OMS line", "s7comm-plus.returnvalue.omsline", FT_UINT64, BASE_DEC, NULL, 0x00000000ffff0000,
             NULL, HFILL }},
         { &hf_s7commp_data_retval_errorsource,
-          { "Bitmask 0x000000ff00000000 - Error source", "s7comm-plus.returnvalue.errorsource", FT_UINT8, BASE_HEX, NULL, 0x0, /* 0x000000ff00000000, */
+          { "Error source", "s7comm-plus.returnvalue.errorsource", FT_UINT64, BASE_HEX, NULL, 0x000000ff00000000,
             NULL, HFILL }},
         { &hf_s7commp_data_retval_genericerrorcode,
-          { "Bitmask 0x0000ef0000000000 - Generic error code", "s7comm-plus.returnvalue.genericerrorcode", FT_UINT8, BASE_HEX, NULL, 0x0, /* 0x0000ef0000000000, */
+          { "Generic error code", "s7comm-plus.returnvalue.genericerrorcode", FT_UINT64, BASE_HEX, NULL, 0x00007f0000000000,
             NULL, HFILL }},
         { &hf_s7commp_data_retval_servererror,
-          { "Bitmask 0x0000800000000000 - Server error", "s7comm-plus.returnvalue.servererror", FT_BOOLEAN, BASE_NONE, NULL, 0x0, /* 0x0000800000000000, */
+          { "Server error", "s7comm-plus.returnvalue.servererror", FT_BOOLEAN, 64, NULL, 0x0000800000000000,
             NULL, HFILL }},
         { &hf_s7commp_data_retval_debuginfo,
-          { "Bitmask 0x3fff000000000000 - Debug info", "s7comm-plus.returnvalue.debuginfo", FT_UINT16, BASE_DEC, NULL, 0x0, /* 0x3fff000000000000, */
+          { "Debug info", "s7comm-plus.returnvalue.debuginfo", FT_UINT64, BASE_HEX, NULL, 0x3fff000000000000,
             NULL, HFILL }},
         { &hf_s7commp_data_retval_errorextension,
-          { "Bitmask 0x4000000000000000 - Error extension", "s7comm-plus.returnvalue.errorextension", FT_BOOLEAN, BASE_NONE, NULL, 0x0, /* 0x4000000000000000, */
+          { "Error extension", "s7comm-plus.returnvalue.errorextension", FT_BOOLEAN, 64, NULL, 0x4000000000000000,
             NULL, HFILL }},
 
         { &hf_s7commp_data_opcode,
@@ -2166,7 +2168,7 @@ proto_register_s7commp (void)
         &ett_s7commp_integrity,
         &ett_s7commp_fragments,
         &ett_s7commp_fragment,
-        &ett_s7commp_object_classflags
+        &ett_s7commp_object_classflags,
     };
 
     proto_s7commp = proto_register_protocol (
@@ -2411,22 +2413,13 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
     guint8 octet_count = 0;
     gint16 errorcode;
     proto_item *ret_item = NULL;
-    proto_tree *ret_tree = NULL;
 
     return_value = tvb_get_varuint64(tvb, &octet_count, offset);
     errorcode = (gint16)return_value;
-    ret_item = proto_tree_add_uint64(tree, hf_s7commp_data_returnvalue, tvb, offset, octet_count, return_value);
-    /* add errorcode to main item */
+    ret_item = proto_tree_add_bitmask_value(tree, tvb, offset, hf_s7commp_data_returnvalue,
+        ett_s7commp_data_returnvalue, s7commp_data_returnvalue_fields, return_value);
+    proto_item_set_len(ret_item, octet_count);
     proto_item_append_text(ret_item, " - Error code: %s (%d)", val_to_str(errorcode, errorcode_names, "%d"), errorcode);
-    ret_tree = proto_item_add_subtree(ret_item, ett_s7commp_data_returnvalue);
-    proto_tree_add_int(ret_tree, hf_s7commp_data_retval_errorcode, tvb, offset, octet_count, errorcode);
-    proto_tree_add_uint(ret_tree, hf_s7commp_data_retval_omsline, tvb, offset, octet_count, (guint16)(return_value >> 16));
-    proto_tree_add_uint(ret_tree, hf_s7commp_data_retval_errorsource, tvb, offset, octet_count, (guint8)(return_value >> 32));
-    proto_tree_add_uint(ret_tree, hf_s7commp_data_retval_genericerrorcode, tvb, offset, octet_count, (guint8)(return_value >> 40) & 0xef);
-    proto_tree_add_boolean(ret_tree, hf_s7commp_data_retval_servererror, tvb, offset, octet_count, (gboolean)(return_value & 0x0000800000000000));
-    proto_tree_add_uint(ret_tree, hf_s7commp_data_retval_debuginfo, tvb, offset, octet_count, (guint16)(return_value >> 48) & 0x3fff);
-    proto_tree_add_boolean(ret_tree, hf_s7commp_data_retval_errorextension, tvb, offset, octet_count, (gboolean)(return_value & 0x4000000000000000));
-
     offset += octet_count;
     if (errorcode_out != NULL) {        /* return errorcode if needed outside */
         *errorcode_out = errorcode;
@@ -3481,6 +3474,7 @@ s7commp_decode_object(tvbuff_t *tvb,
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
+    proto_item *pi = NULL;
     guint32 start_offset;
     guint32 uint32_value;
     guint32 uint32_value_clsid;
@@ -3510,9 +3504,9 @@ s7commp_decode_object(tvbuff_t *tvb,
                 s7commp_proto_item_append_idname(data_item_tree, uint32_value, ", RelId=");
                 offset += octet_count;
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                //proto_tree_add_uint(data_item_tree, hf_s7commp_object_classflags, tvb, offset, octet_count, uint32_value);
-                proto_tree_add_bitmask_value(data_item_tree, tvb, offset, hf_s7commp_object_classflags,
+                pi = proto_tree_add_bitmask_value(data_item_tree, tvb, offset, hf_s7commp_object_classflags,
                     ett_s7commp_object_classflags, s7commp_object_classflags_fields, uint32_value);
+                proto_item_set_len(pi, octet_count);
                 offset += octet_count;
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_object_attributeid, tvb, offset, octet_count, uint32_value);

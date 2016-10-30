@@ -418,6 +418,77 @@ static const value_string no_yes_names[] = {
 
 static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
+/* Class Id flags. 32 Bits, just as a starting point for analysis */
+static gint s7commp_object_classflags_bit00 = -1;
+static gint s7commp_object_classflags_bit01 = -1;
+static gint s7commp_object_classflags_bit02 = -1;
+static gint s7commp_object_classflags_bit03 = -1;
+static gint s7commp_object_classflags_bit04 = -1;
+static gint s7commp_object_classflags_bit05 = -1;
+static gint s7commp_object_classflags_bit06 = -1;
+static gint s7commp_object_classflags_bit07 = -1;
+static gint s7commp_object_classflags_bit08 = -1;
+static gint s7commp_object_classflags_bit09 = -1;
+static gint s7commp_object_classflags_bit10 = -1;
+static gint s7commp_object_classflags_bit11 = -1;
+static gint s7commp_object_classflags_bit12 = -1;
+static gint s7commp_object_classflags_bit13 = -1;
+static gint s7commp_object_classflags_bit14 = -1;
+static gint s7commp_object_classflags_bit15 = -1;
+static gint s7commp_object_classflags_bit16 = -1;
+static gint s7commp_object_classflags_bit17 = -1;
+static gint s7commp_object_classflags_bit18 = -1;
+static gint s7commp_object_classflags_bit19 = -1;
+static gint s7commp_object_classflags_bit20 = -1;
+static gint s7commp_object_classflags_bit21 = -1;
+static gint s7commp_object_classflags_bit22 = -1;
+static gint s7commp_object_classflags_bit23 = -1;
+static gint s7commp_object_classflags_bit24 = -1;
+static gint s7commp_object_classflags_bit25 = -1;
+static gint s7commp_object_classflags_bit26 = -1;
+static gint s7commp_object_classflags_bit27 = -1;
+static gint s7commp_object_classflags_bit28 = -1;
+static gint s7commp_object_classflags_bit29 = -1;
+static gint s7commp_object_classflags_bit30 = -1;
+static gint s7commp_object_classflags_bit31 = -1;
+
+static gint ett_s7commp_object_classflags = -1;
+static const int *s7commp_object_classflags_fields[] = {
+    &s7commp_object_classflags_bit00,
+    &s7commp_object_classflags_bit01,
+    &s7commp_object_classflags_bit02,
+    &s7commp_object_classflags_bit03,
+    &s7commp_object_classflags_bit04,
+    &s7commp_object_classflags_bit05,
+    &s7commp_object_classflags_bit06,
+    &s7commp_object_classflags_bit07,
+    &s7commp_object_classflags_bit08,
+    &s7commp_object_classflags_bit09,
+    &s7commp_object_classflags_bit10,
+    &s7commp_object_classflags_bit11,
+    &s7commp_object_classflags_bit12,
+    &s7commp_object_classflags_bit13,
+    &s7commp_object_classflags_bit14,
+    &s7commp_object_classflags_bit15,
+    &s7commp_object_classflags_bit16,
+    &s7commp_object_classflags_bit17,
+    &s7commp_object_classflags_bit18,
+    &s7commp_object_classflags_bit19,
+    &s7commp_object_classflags_bit20,
+    &s7commp_object_classflags_bit21,
+    &s7commp_object_classflags_bit22,
+    &s7commp_object_classflags_bit23,
+    &s7commp_object_classflags_bit24,
+    &s7commp_object_classflags_bit25,
+    &s7commp_object_classflags_bit26,
+    &s7commp_object_classflags_bit27,
+    &s7commp_object_classflags_bit28,
+    &s7commp_object_classflags_bit29,
+    &s7commp_object_classflags_bit30,
+    &s7commp_object_classflags_bit31,
+    NULL
+};
+
 /* Attribute flags in tag description (old S7-1200 FW2) */
 #define S7COMMP_TAGDESCR_ATTRIBUTE_HOSTRELEVANT         0x08000000
 #define S7COMMP_TAGDESCR_ATTRIBUTE_PLAINMEMBERRETAIN    0x02000000
@@ -1072,7 +1143,7 @@ static gint hf_s7commp_tagdescr_numarraydimensions = -1;
 /* Object */
 static gint hf_s7commp_object_relid = -1;
 static gint hf_s7commp_object_classid = -1;
-static gint hf_s7commp_object_classidflags = -1;
+static gint hf_s7commp_object_classflags = -1;
 static gint hf_s7commp_object_attributeid = -1;
 static gint hf_s7commp_object_attributeidflags = -1;
 static gint hf_s7commp_object_relunknown1 = -1;
@@ -1752,9 +1823,106 @@ proto_register_s7commp (void)
         { &hf_s7commp_object_classid,
           { "Class Id", "s7comm-plus.object.classid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "varuint32: Class Id", HFILL }},
-        { &hf_s7commp_object_classidflags,
-          { "Class Id Flags", "s7comm-plus.object.classidflags", FT_UINT32, BASE_HEX, NULL, 0x0,
-            "varuint32: Class Id Flags", HFILL }},
+        { &hf_s7commp_object_classflags,
+          { "Class Flags", "s7comm-plus.object.classflags", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit00,
+          { "User1", "s7comm-plus.object.classflags.user1", FT_BOOLEAN, 32, NULL, 0x00000001,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit01,
+          { "User2", "s7comm-plus.object.classflags.user2", FT_BOOLEAN, 32, NULL, 0x00000002,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit02,
+          { "User3", "s7comm-plus.object.classflags.user3", FT_BOOLEAN, 32, NULL, 0x00000004,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit03,
+          { "User4", "s7comm-plus.object.classflags.user4", FT_BOOLEAN, 32, NULL, 0x00000008,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit04,
+          { "NativeFixed", "s7comm-plus.object.classflags.nativefixed", FT_BOOLEAN, 32, NULL, 0x00000010,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit05,
+          { "Persistent", "s7comm-plus.object.classflags.persistent", FT_BOOLEAN, 32, NULL, 0x00000020,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit06,
+          { "Bit06", "s7comm-plus.object.classflags.bit06", FT_BOOLEAN, 32, NULL, 0x00000040,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit07,
+          { "Bit07", "s7comm-plus.object.classflags.bit07", FT_BOOLEAN, 32, NULL, 0x00000080,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit08,
+          { "TryAquireWriteLocked", "s7comm-plus.object.classflags.tryaquirewritelocked", FT_BOOLEAN, 32, NULL, 0x00000100,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit09,
+          { "ChildDeleted", "s7comm-plus.object.classflags.childdeleted", FT_BOOLEAN, 32, NULL, 0x00000200,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit10,
+          { "ExclusiveLocked", "s7comm-plus.object.classflags.exclusivelocked", FT_BOOLEAN, 32, NULL, 0x00000400,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit11,
+          { "TreeWriteLocked", "s7comm-plus.object.classflags.treewritelocked", FT_BOOLEAN, 32, NULL, 0x00000800,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit12,
+          { "Bit12", "s7comm-plus.object.classflags.bit12", FT_BOOLEAN, 32, NULL, 0x00001000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit13,
+          { "NativePlugged", "s7comm-plus.object.classflags.nativeplugged", FT_BOOLEAN, 32, NULL, 0x00002000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit14,
+          { "Bit14", "s7comm-plus.object.classflags.bit14", FT_BOOLEAN, 32, NULL, 0x00004000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit15,
+          { "Bit15", "s7comm-plus.object.classflags.bit15", FT_BOOLEAN, 32, NULL, 0x00008000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit16,
+          { "ClientOnly", "s7comm-plus.object.classflags.clientonly", FT_BOOLEAN, 32, NULL, 0x00010000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit17,
+          { "Bit17", "s7comm-plus.object.classflags.bit17", FT_BOOLEAN, 32, NULL, 0x00020000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit18,
+          { "Bit18", "s7comm-plus.object.classflags.bit18", FT_BOOLEAN, 32, NULL, 0x00040000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit19,
+          { "Bit19", "s7comm-plus.object.classflags.bit19", FT_BOOLEAN, 32, NULL, 0x00080000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit20,
+          { "Bit20", "s7comm-plus.object.classflags.bit20", FT_BOOLEAN, 32, NULL, 0x00100000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit21,
+          { "SeparateFile", "s7comm-plus.object.classflags.separatefile", FT_BOOLEAN, 32, NULL, 0x00200000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit22,
+          { "Bit22", "s7comm-plus.object.classflags.bit22", FT_BOOLEAN, 32, NULL, 0x00400000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit23,
+          { "Bit23", "s7comm-plus.object.classflags.bit23", FT_BOOLEAN, 32, NULL, 0x00800000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit24,
+          { "Distributed", "s7comm-plus.object.classflags.bit24", FT_BOOLEAN, 32, NULL, 0x01000000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit25,
+          { "DistributedRoot", "s7comm-plus.object.classflags.bit25", FT_BOOLEAN, 32, NULL, 0x02000000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit26,
+          { "Bit26", "s7comm-plus.object.classflags.bit26", FT_BOOLEAN, 32, NULL, 0x04000000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit27,
+          { "Bit27", "s7comm-plus.object.classflags.bit27", FT_BOOLEAN, 32, NULL, 0x08000000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit28,
+          { "Bit28", "s7comm-plus.object.classflags.bit28", FT_BOOLEAN, 32, NULL, 0x10000000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit29,
+          { "Bit29", "s7comm-plus.object.classflags.bit29", FT_BOOLEAN, 32, NULL, 0x20000000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit30,
+          { "Bit30", "s7comm-plus.object.classflags.bit30", FT_BOOLEAN, 32, NULL, 0x40000000,
+            NULL, HFILL }},
+        { &s7commp_object_classflags_bit31,
+          { "Bit31", "s7comm-plus.object.classflags.bit31", FT_BOOLEAN, 32, NULL, 0x80000000,
+            NULL, HFILL }},
+
         { &hf_s7commp_object_attributeid,
           { "Attribute Id", "s7comm-plus.object.attributeid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "varuint32: Attribute Id", HFILL }},
@@ -1997,7 +2165,8 @@ proto_register_s7commp (void)
         &ett_s7commp_objectqualifier,
         &ett_s7commp_integrity,
         &ett_s7commp_fragments,
-        &ett_s7commp_fragment
+        &ett_s7commp_fragment,
+        &ett_s7commp_object_classflags
     };
 
     proto_s7commp = proto_register_protocol (
@@ -3341,7 +3510,9 @@ s7commp_decode_object(tvbuff_t *tvb,
                 s7commp_proto_item_append_idname(data_item_tree, uint32_value, ", RelId=");
                 offset += octet_count;
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_object_classidflags, tvb, offset, octet_count, uint32_value);
+                //proto_tree_add_uint(data_item_tree, hf_s7commp_object_classflags, tvb, offset, octet_count, uint32_value);
+                proto_tree_add_bitmask_value(data_item_tree, tvb, offset, hf_s7commp_object_classflags,
+                    ett_s7commp_object_classflags, s7commp_object_classflags_fields, uint32_value);
                 offset += octet_count;
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_object_attributeid, tvb, offset, octet_count, uint32_value);

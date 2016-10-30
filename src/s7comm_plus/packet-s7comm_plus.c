@@ -5023,7 +5023,6 @@ s7commp_decode_data(tvbuff_t *tvb,
     /* 1: Opcode */
     proto_item_append_text(tree, ": %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
     proto_tree_add_uint(tree, hf_s7commp_data_opcode, tvb, offset, 1, opcode);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " Op:[%s]", val_to_str(opcode, opcode_names_short, "Unknown Opcode: 0x%02x"));
     offset += 1;
     dlength -= 1;
 
@@ -5033,6 +5032,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     }
 
     if (opcode == S7COMMP_OPCODE_NOTIFICATION) {
+        col_append_fstr(pinfo->cinfo, COL_INFO, " [%s]", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
         item = proto_tree_add_item(tree, hf_s7commp_notification_set, tvb, offset, -1, FALSE);
         item_tree = proto_item_add_subtree(item, ett_s7commp_notification_set);
         offset_save = offset;
@@ -5065,8 +5065,10 @@ s7commp_decode_data(tvbuff_t *tvb,
         dlength -= 2;
 
         /* add some infos to info column */
-        col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u Function:[%s]",
-            seqnum, val_to_str(functioncode, data_functioncode_names, "?"));
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u [%s %s]",
+            seqnum,
+            val_to_str(opcode, opcode_names_short, "Unknown Opcode: 0x%02x"),
+            val_to_str(functioncode, data_functioncode_names, "?"));
         proto_item_append_text(tree, " %s", val_to_str(functioncode, data_functioncode_names, "?"));
 
         if (opcode == S7COMMP_OPCODE_REQ) {

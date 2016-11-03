@@ -326,7 +326,7 @@ static value_string_ext id_number_names_ext = VALUE_STRING_EXT_INIT(id_number_na
 #ifdef USE_INTERNALS
     #include "internals/packet-s7comm_plus-errorcodes.h"
 #else
-static const value_string errorcode_names[] = {
+static const val64_string errorcode_names[] = {
     { 0,                                        "OK" },
     { 17,                                       "Message Session Pre-Legitimated" },
     { 19,                                       "Warning Service Executed With Partial Error" },
@@ -338,6 +338,88 @@ static const value_string errorcode_names[] = {
     { 0,                                        NULL }
 };
 #endif
+
+static const val64_string genericerrorcode_names[] = {
+    { 0,        "Ok" },
+    { 1,        "General" },
+    { 2,        "ApplicationError" },
+    { 3,        "AccessDenied" },
+    { 4,        "CantActivate" },
+    { 5,        "CardinalityOverflow" },
+    { 6,        "CardinalityUnderflow" },
+    { 7,        "ClassNotAllowed" },
+    { 8,        "InvalidAttributeIdentifier" },
+    { 9,        "InvalidDatatype" },
+    { 10,       "InvalidObjectIdentifier" },
+    { 11,       "InvalidPlacement" },
+    { 12,       "InvalidQualifier" },
+    { 13,       "InvalidRange" },
+    { 14,       "InvalidSession" },
+    { 15,       "NotLinked" },
+    { 16,       "ServiceTimeout" },
+    { 17,       "Disconnected" },
+    { 18,       "FailedToDisconnect" },
+    { 19,       "InvalidAddress" },
+    { 20,       "ServiceNotAllowed" },
+    { 21,       "ServiceNotConnected" },
+    { 22,       "NotOwner" },
+    { 23,       "TooManyRequests" },
+    { 24,       "TooManySessions" },
+    { 25,       "SessionDelegitimated" },
+    { 26,       "UnknownService" },
+    { 27,       "InvalidStorageFormat" },
+    { 28,       "InvalidComFormat" },
+    { 29,       "NotChangableInRun" },
+    { 30,       "WrongNrOfArgumentsOfInvoke" },
+    { 31,       "WrongArgumentFormatOfInvoke" },
+    { 32,       "InvokeFailed" },
+    { 33,       "ObjectCannotBeStoredTwoTimesInParallel" },
+    { 34,       "ObjectIsLocked" },
+    { 35,       "StoreInactive" },
+    { 36,       "HierarchyOverflow" },
+    { 37,       "ObjectOrAttributeAlreadyExist" },
+    { 38,       "NotEnoughMemoryAvailable" },
+    { 39,       "NoMemoryOnStorage" },
+    { 40,       "NoStorageDetected" },
+    { 41,       "InvalidTimestampInTypesafeBlob" },
+    { 42,       "InvalidFileName" },
+    { 43,       "InvalidArgumentValue" },
+    { 44,       "StoreDirectoryAlreadyUsed" },
+    { 45,       "GeneralStoreError" },
+    { 46,       "InvalidObjectReference" },
+    { 47,       "GeneralCreate" },
+    { 48,       "GeneralAddObject" },
+    { 49,       "GeneralDeleteObject" },
+    { 50,       "GeneralGetVariable" },
+    { 51,       "GeneralSetVariable" },
+    { 52,       "GeneralGetVariableSubrange" },
+    { 53,       "GeneralSetVariableSubrange" },
+    { 54,       "GeneralGetMultiVariables" },
+    { 55,       "GeneralSetMultiVariables" },
+    { 56,       "GeneralAddLink" },
+    { 57,       "GeneralRemoveLink" },
+    { 58,       "InvalidID" },
+    { 59,       "GeneralComError" },
+    { 60,       "NotChangableInErrorState" },
+    { 61,       "MultiESNotSupported" },
+    { 62,       "ServiceAborted" },
+    { 63,       "SourceFileNotExisting" },
+    { 64,       "InvalidVersion" },
+    { 65,       "CommFormatDiffersFromStoreFormat" },
+    { 66,       "GeneralTransaction" },
+    { 67,       "Distribution" },
+    { 68,       "GeneralPathNotFound" },
+    { 69,       "GeneralEndOfFile" },
+    { 70,       "GeneralFSWriteProtected" },
+    { 71,       "GeneralFSDiskFull" },
+    { 72,       "GeneralFSInvalidPathName" },
+    { 73,       "WSTRING_not_supported" },
+    { 74,       "TransactionAborted" },
+    { 75,       "StoreForceStore" },
+    { 76,       "GeneralIntegrity" },
+    { 0,        NULL }
+};
+/*static value_string_ext genericerrorcode_names_ext = VALUE_STRING_EXT_INIT(genericerrorcode_names);*/
 
 /* Item access area */
 /* Bei der aktuellen Struktur der Adresse ist nur noch ein Bereich bekannt */
@@ -1405,30 +1487,26 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_returnvalue,
           { "Return value", "s7comm-plus.returnvalue", FT_UINT64, BASE_HEX, NULL, 0x0,
             "varuint64: Return value", HFILL }},
-        /* Eigentlich ist "Error code" ein 16 Bit Integer mit Vorzeichen, da in der Liste mit den Errorcode-Namen
-         * negative und positive Werte vorhanden sind. Das ist mit der Bitmask-Funktion in Wireshark jedoch nicht möglich.
-         * Darum wird der Wert hier nur als Hex angezeigt, der Name zum Fehlercode wird dann separat geholt und angezeigt.
-         */
         { &hf_s7commp_data_retval_errorcode,
-          { "Error code", "s7comm-plus.returnvalue.errorcode", FT_UINT64, BASE_HEX, NULL, 0x000000000000ffff, /* VALS(errorcode_names) */
-            "Error code: This must be interpreted as signed integer of 16 bit, but bitmask doesn't allow this", HFILL }},
+          { "Error code", "s7comm-plus.returnvalue.errorcode", FT_INT64, BASE_DEC|BASE_VAL64_STRING, VALS64(errorcode_names), G_GUINT64_CONSTANT(0x000000000000ffff),
+            NULL, HFILL }},
         { &hf_s7commp_data_retval_omsline,
-          { "OMS line", "s7comm-plus.returnvalue.omsline", FT_UINT64, BASE_DEC, NULL, 0x00000000ffff0000,
+          { "OMS line", "s7comm-plus.returnvalue.omsline", FT_UINT64, BASE_DEC, NULL, G_GUINT64_CONSTANT(0x00000000ffff0000),
             NULL, HFILL }},
         { &hf_s7commp_data_retval_errorsource,
-          { "Error source", "s7comm-plus.returnvalue.errorsource", FT_UINT64, BASE_HEX, NULL, 0x000000ff00000000,
+          { "Error source", "s7comm-plus.returnvalue.errorsource", FT_UINT64, BASE_HEX, NULL, G_GUINT64_CONSTANT(0x000000ff00000000),
             NULL, HFILL }},
         { &hf_s7commp_data_retval_genericerrorcode,
-          { "Generic error code", "s7comm-plus.returnvalue.genericerrorcode", FT_UINT64, BASE_HEX, NULL, 0x00007f0000000000,
+          { "Generic error code", "s7comm-plus.returnvalue.genericerrorcode", FT_UINT64, BASE_DEC|BASE_VAL64_STRING, VALS64(genericerrorcode_names), G_GUINT64_CONSTANT(0x00007f0000000000),
             NULL, HFILL }},
         { &hf_s7commp_data_retval_servererror,
-          { "Server error", "s7comm-plus.returnvalue.servererror", FT_BOOLEAN, 64, NULL, 0x0000800000000000,
+          { "Server error", "s7comm-plus.returnvalue.servererror", FT_BOOLEAN, 64, NULL, G_GUINT64_CONSTANT(0x0000800000000000),
             NULL, HFILL }},
         { &hf_s7commp_data_retval_debuginfo,
-          { "Debug info", "s7comm-plus.returnvalue.debuginfo", FT_UINT64, BASE_HEX, NULL, 0x3fff000000000000,
+          { "Debug info", "s7comm-plus.returnvalue.debuginfo", FT_UINT64, BASE_HEX, NULL, G_GUINT64_CONSTANT(0x3fff000000000000),
             NULL, HFILL }},
         { &hf_s7commp_data_retval_errorextension,
-          { "Error extension", "s7comm-plus.returnvalue.errorextension", FT_BOOLEAN, 64, NULL, 0x4000000000000000,
+          { "Error extension", "s7comm-plus.returnvalue.errorextension", FT_BOOLEAN, 64, NULL, G_GUINT64_CONSTANT(0x4000000000000000),
             NULL, HFILL }},
 
         { &hf_s7commp_data_opcode,
@@ -2419,15 +2497,14 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
     ret_item = proto_tree_add_bitmask_value(tree, tvb, offset, hf_s7commp_data_returnvalue,
         ett_s7commp_data_returnvalue, s7commp_data_returnvalue_fields, return_value);
     proto_item_set_len(ret_item, octet_count);
-    proto_item_append_text(ret_item, " - Error code: %s (%d)", val_to_str(errorcode, errorcode_names, "%d"), errorcode);
     offset += octet_count;
-    if (errorcode_out != NULL) {        /* return errorcode if needed outside */
+    if (errorcode_out) {        /* return errorcode if needed outside */
         *errorcode_out = errorcode;
     }
 
     /* add info about return value to info column */
-    if (pinfo != NULL) {
-        col_append_fstr(pinfo->cinfo, COL_INFO, " Retval=%s", val_to_str(errorcode, errorcode_names, "%d"));
+    if (pinfo) {
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Retval=%s", val64_to_str_const(errorcode, errorcode_names, "Unknown"));
     }
 
     return offset;
@@ -2919,7 +2996,7 @@ s7commp_decode_itemnumber_errorvalue_list(tvbuff_t *tvb,
             proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_itemnumber, tvb, offset, octet_count, item_number);
             offset += octet_count;
             offset = s7commp_decode_returnvalue(tvb, NULL, data_item_tree, offset, &errorcode);
-            proto_item_append_text(data_item_tree, " [%u]: Error code: %s (%d)", item_number, val_to_str(errorcode, errorcode_names, "%d"), errorcode);
+            proto_item_append_text(data_item_tree, " [%u]: Error code: %s (%d)", item_number, val64_to_str_const(errorcode, errorcode_names, "Unknown"), errorcode);
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
     } while (item_number != 0);

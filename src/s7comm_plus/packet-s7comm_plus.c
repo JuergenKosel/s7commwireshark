@@ -1622,7 +1622,7 @@ proto_register_s7commp (void)
             "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
 
         { &hf_s7commp_itemval_sparsearray_term,
-          { "Sparsearray key terminating Null", "s7comm-plus.item.val.sparsearray_term", FT_UINT32, BASE_HEX, NULL, 0x0,
+          { "Sparsearray key terminating Null", "s7comm-plus.item.val.sparsearray_term", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_itemval_sparsearray_varianttypeid,
           { "Sparsearray Variant Type-ID", "s7comm-plus.item.val.sparsearray_varianttypeid", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -2611,8 +2611,9 @@ s7commp_decode_value(tvbuff_t *tvb,
         if (is_sparsearray) {
             sparsearray_key = tvb_get_varuint32(tvb, &octet_count, offset);
             if (sparsearray_key == 0) {
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_sparsearray_term, tvb, offset, octet_count, sparsearray_key);
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_sparsearray_term, tvb, offset, octet_count, FALSE);
                 offset += octet_count;
+                g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
                 break;
             } else {
                 if (datatype == S7COMMP_ITEM_DATATYPE_VARIANT) {
@@ -2626,13 +2627,12 @@ s7commp_decode_value(tvbuff_t *tvb,
 
         switch (datatype) {
             case S7COMMP_ITEM_DATATYPE_NULL:
-                /* No value following */
-                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "<NO VALUE>");
+                g_strlcpy(str_val, "<Null>", S7COMMP_ITEMVAL_STR_VAL_MAX);
                 length_of_value = 0;
                 break;
             case S7COMMP_ITEM_DATATYPE_BOOL:
                 length_of_value = 1;
-                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%02x", tvb_get_guint8(tvb, offset));
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", tvb_get_guint8(tvb, offset) ? "True" : "False");
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_USINT:
@@ -2762,7 +2762,11 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, octet_count, length_of_value);
                 offset += octet_count;
-                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
+                if (length_of_value > 0) {
+                    g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
+                } else {
+                    g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
+                }
                 offset += length_of_value;
                 break;
             default:
@@ -2776,6 +2780,10 @@ s7commp_decode_value(tvbuff_t *tvb,
         }
 
         if (is_array || is_address_array || is_sparsearray) {
+            /* Leere Werte mit <Empty> kennzeichnen */
+            if (strlen(str_val) == 0) {
+                g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
+            }
             /* Build a string of all array values. Maximum number of 10 values */
             if (array_index < S7COMMP_ITEMVAL_ARR_MAX_DISPLAY) {
                 if (array_index > 1 && array_size > 1) {
@@ -2797,6 +2805,9 @@ s7commp_decode_value(tvbuff_t *tvb,
         }
     } /* for */
 
+    if (strlen(str_arrval) == 0) {
+        g_strlcpy(str_arrval, "<Empty>", S7COMMP_ITEMVAL_STR_ARRVAL_MAX);
+    }
     if (is_array || is_address_array) {
         proto_item_append_text(array_item_tree, " %s[%u] = %s", str_arr_prefix, array_size, str_arrval);
         proto_item_set_len(array_item_tree, offset - start_offset);

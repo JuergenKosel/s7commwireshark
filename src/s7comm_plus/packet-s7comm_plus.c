@@ -80,12 +80,14 @@ static gboolean dissect_s7commp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *t
 #define S7COMMP_PROTOCOLVERSION_1               0x01
 #define S7COMMP_PROTOCOLVERSION_2               0x02
 #define S7COMMP_PROTOCOLVERSION_3               0x03
+#define S7COMMP_PROTOCOLVERSION_254             0xfe
 #define S7COMMP_PROTOCOLVERSION_255             0xff
 
 static const value_string protocolversion_names[] = {
     { S7COMMP_PROTOCOLVERSION_1,                "V1" },
     { S7COMMP_PROTOCOLVERSION_2,                "V2" },
     { S7COMMP_PROTOCOLVERSION_3,                "V3" },
+    { S7COMMP_PROTOCOLVERSION_254,              "Ext. Keep Alive" },    /* Extended Keep Alive? */
     { S7COMMP_PROTOCOLVERSION_255,              "Keep Alive" },
     { 0,                                        NULL }
 };
@@ -1003,6 +1005,13 @@ static gint hf_s7commp_trailer_protid = -1;
 static gint hf_s7commp_trailer_protocolversion = -1;
 static gint hf_s7commp_trailer_datlg = -1;
 
+/* Extended Keep alive */
+static gint hf_s7commp_extkeepalive_reserved1 = -1;
+static gint hf_s7commp_extkeepalive_confirmedbytes = -1;
+static gint hf_s7commp_extkeepalive_reserved2 = -1;
+static gint hf_s7commp_extkeepalive_reserved3 = -1;
+static gint hf_s7commp_extkeepalive_message = -1;
+
 /* Read Response */
 static gint hf_s7commp_data_req_set = -1;
 static gint hf_s7commp_data_res_set = -1;
@@ -1901,6 +1910,24 @@ proto_register_s7commp (void)
         { &hf_s7commp_objectqualifier,
           { "ObjectQualifier", "s7comm-plus.objectqualifier", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
+
+        /* Extended Keep alive */
+        { &hf_s7commp_extkeepalive_reserved1,
+          { "Reseved 1", "s7comm-plus.extkeepalive.reserved1", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+         { &hf_s7commp_extkeepalive_confirmedbytes,
+          { "Confirmed bytes", "s7comm-plus.extkeepalive.confirmedbytes", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "Number of confirmed bytes, calculated from header length", HFILL }},
+        { &hf_s7commp_extkeepalive_reserved2,
+          { "Reseved 2", "s7comm-plus.extkeepalive.reserved2", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_extkeepalive_reserved3,
+          { "Reseved 3", "s7comm-plus.extkeepalive.reserved3", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_extkeepalive_message,
+          { "Message", "s7comm-plus.extkeepalive.message", FT_STRING, STR_ASCII, NULL, 0x0,
+            NULL, HFILL }},
+
         /* Object */
         { &hf_s7commp_object_relid,
           { "Relation Id", "s7comm-plus.object.relid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
@@ -5149,6 +5176,59 @@ s7commp_decode_integrity(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Extended Keep Alive telegrams
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_extkeepalive(tvbuff_t *tvb,
+                            packet_info *pinfo,
+                            proto_tree *tree,
+                            gint dlength,
+                            guint32 offset)
+{
+    proto_item *data_item = NULL;
+    proto_tree *data_item_tree = NULL;
+    gint str_len;
+    const guint8 *str_name;
+    guint32 confirmed_bytes;
+
+    /* Evtl. ist das hier eine Art erweiteres Keep Alive. Das habe ich erst mit V14 das erste mal gesehen.
+     * Die Telegramme werden dabei von der SPS oder einem Siemens Panel verschickt.
+     * Es gibt eine Version mit 16 Bytes und eine mit 22 Bytes.
+     * Bei der 22 Byte Version folgt noch ein String wie "LOGOUT", dieses aber nur
+     * nach einem DeleteObject.
+     */
+    data_item = proto_tree_add_item(tree, hf_s7commp_data, tvb, offset, dlength, FALSE);
+    data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data);
+
+    /* 4 Bytes immer Null (bisher zumindest) */
+    proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved1, tvb, offset, 4, FALSE);
+    offset += 4;
+    /* Es folgt die Anzahl der Bytes die seit dem letzten Keep Alive oder seit Start empfangen wurden.
+     * Es werden dazu die Längenangaben aus dem Header verwendet und aufsummiert.
+     */
+    confirmed_bytes = tvb_get_ntohl(tvb, offset);
+    proto_tree_add_uint(data_item_tree, hf_s7commp_extkeepalive_confirmedbytes, tvb, offset, 4, confirmed_bytes);
+    offset += 4;
+    /* Insgesamt 2*4 Bytes die bisher immer Null waren */
+    proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved2, tvb, offset, 4, FALSE);
+    offset += 4;
+    proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved3, tvb, offset, 4, FALSE);
+    offset += 4;
+
+    col_append_fstr(pinfo->cinfo, COL_INFO, " ConfirmedBytes=%u", confirmed_bytes);
+
+    str_len = dlength - 16;
+    if (str_len > 0) {
+        proto_tree_add_item_ret_string(data_item_tree, hf_s7commp_extkeepalive_message, tvb, offset, str_len, ENC_ASCII|ENC_NA, wmem_packet_scope(), &str_name);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Message=%s", str_name);
+        offset += str_len;
+    }
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decodes the data part
  *
  *******************************************************************************************************/
@@ -5492,6 +5572,11 @@ dissect_s7commp(tvbuff_t *tvb,
         /* dann noch ein Byte, noch nicht klar wozu */
         proto_tree_add_text(s7commp_header_tree, tvb, offset, 1, "Reserved? : 0x%02x", tvb_get_guint8(tvb, offset));
         offset += 1;
+    } else if (protocolversion == S7COMMP_PROTOCOLVERSION_254) {
+        dlength = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_datlg, tvb, offset, 2, dlength);
+        offset += 2;
+        offset = s7commp_decode_extkeepalive(tvb, pinfo, s7commp_tree, dlength, offset);
     } else {
         /* 3/4: Data length */
         dlength = tvb_get_ntohs(tvb, offset);

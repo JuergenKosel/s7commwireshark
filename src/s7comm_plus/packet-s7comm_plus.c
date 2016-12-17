@@ -27,6 +27,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <epan/packet.h>
+#include <epan/prefs.h>
 #include <epan/reassemble.h>
 #include <epan/conversation.h>
 #include <epan/proto_data.h>
@@ -1363,6 +1364,9 @@ typedef struct {
     guint32 start_frame;
 } conv_state_t;
 
+/* options */
+static gboolean s7commp_reassemble = TRUE;
+
 /*
  * reassembly of S7COMMP
  */
@@ -2287,6 +2291,8 @@ proto_register_s7commp (void)
         &ett_s7commp_streamdata
     };
 
+    module_t *s7commp_module;
+
     proto_s7commp = proto_register_protocol (
         "S7 Communication Plus",            /* name */
         "S7COMM-PLUS",                      /* short name */
@@ -2296,6 +2302,15 @@ proto_register_s7commp (void)
     proto_register_field_array(proto_s7commp, hf, array_length (hf));
 
     proto_register_subtree_array(ett, array_length (ett));
+
+    s7commp_module = prefs_register_protocol(proto_s7commp, NULL);
+
+    prefs_register_bool_preference(s7commp_module, "reassemble",
+                                   "Reassemble segmented S7COMM-PLUS telegrams",
+                                   "Whether segmented S7COMM-PLUS telegrams should be "
+                                   "reassembled.",
+                                   &s7commp_reassemble);
+
     /* Register the init routine. */
     register_init_routine(s7commp_defragment_init);
 }
@@ -5257,230 +5272,239 @@ s7commp_decode_data(tvbuff_t *tvb,
     guint32 integrity_id;
     gboolean has_integrity_id = TRUE;
     gboolean has_objectqualifier = FALSE;
+    const guint8 *str_opcode;
 
     opcode = tvb_get_guint8(tvb, offset);
     /* 1: Opcode */
-    proto_item_append_text(tree, ": %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
-    proto_tree_add_uint(tree, hf_s7commp_data_opcode, tvb, offset, 1, opcode);
-    offset += 1;
-    dlength -= 1;
+    str_opcode = try_val_to_str(opcode, opcode_names);
+    /* If opcode is unknown, stop decoding and show data as undecoded */
+    if (str_opcode) {
+        proto_item_append_text(tree, ": %s", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
+        proto_tree_add_uint(tree, hf_s7commp_data_opcode, tvb, offset, 1, opcode);
+        offset += 1;
+        dlength -= 1;
 
-    /* Bei Protokollversion 1 gibt es nur bei der 1500 und Deleteobject eine ID, und auch da nicht immer! */
-    if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
-        has_integrity_id = FALSE;
-    }
-
-    if (opcode == S7COMMP_OPCODE_NOTIFICATION) {
-        col_append_fstr(pinfo->cinfo, COL_INFO, " [%s]", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
-        item = proto_tree_add_item(tree, hf_s7commp_notification_set, tvb, offset, -1, FALSE);
-        item_tree = proto_item_add_subtree(item, ett_s7commp_notification_set);
-        offset_save = offset;
+        /* Bei Protokollversion 1 gibt es nur bei der 1500 und Deleteobject eine ID, und auch da nicht immer! */
         if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
-            offset = s7commp_decode_notification_v1(tvb, pinfo, item_tree, offset);
+            has_integrity_id = FALSE;
+        }
+
+        if (opcode == S7COMMP_OPCODE_NOTIFICATION) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " [%s]", val_to_str(opcode, opcode_names, "Unknown Opcode: 0x%02x"));
+            item = proto_tree_add_item(tree, hf_s7commp_notification_set, tvb, offset, -1, FALSE);
+            item_tree = proto_item_add_subtree(item, ett_s7commp_notification_set);
+            offset_save = offset;
+            if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
+                offset = s7commp_decode_notification_v1(tvb, pinfo, item_tree, offset);
+            } else {
+                offset = s7commp_decode_notification(tvb, pinfo, item_tree, offset);
+            }
+            proto_item_set_len(item_tree, offset - offset_save);
+            dlength = dlength - (offset - offset_save);
         } else {
-            offset = s7commp_decode_notification(tvb, pinfo, item_tree, offset);
-        }
-        proto_item_set_len(item_tree, offset - offset_save);
-        dlength = dlength - (offset - offset_save);
-    } else {
-        proto_tree_add_uint(tree, hf_s7commp_data_reserved1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
-        offset += 2;
-        dlength -= 2;
-
-        /* 4/5: Functioncode */
-        functioncode = tvb_get_ntohs(tvb, offset);
-        proto_tree_add_uint(tree, hf_s7commp_data_function, tvb, offset, 2, functioncode);
-        offset += 2;
-        dlength -= 2;
-
-        proto_tree_add_uint(tree, hf_s7commp_data_reserved2, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
-        offset += 2;
-        dlength -= 2;
-
-        /* 8/9: Sequence number */
-        seqnum = tvb_get_ntohs(tvb, offset);
-        proto_tree_add_uint(tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
-        offset += 2;
-        dlength -= 2;
-
-        /* add some infos to info column */
-        col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u [%s %s]",
-            seqnum,
-            val_to_str(opcode, opcode_names_short, "Unknown Opcode: 0x%02x"),
-            val_to_str(functioncode, data_functioncode_names, "?"));
-        proto_item_append_text(tree, " %s", val_to_str(functioncode, data_functioncode_names, "?"));
-
-        if (opcode == S7COMMP_OPCODE_REQ) {
-            proto_tree_add_uint(tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
-            offset += 4;
-            dlength -= 4;
-
-            proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
-            offset += 1;
-            dlength -= 1;
-
-            item = proto_tree_add_item(tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
-            item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
-            offset_save = offset;
-
-            switch (functioncode) {
-                case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
-                    offset = s7commp_decode_request_getmultivar(tvb, item_tree, offset);
-                    has_objectqualifier = TRUE;
-                    break;
-                case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
-                    offset = s7commp_decode_request_setmultivar(tvb, pinfo, item_tree, dlength, offset);
-                    has_objectqualifier = TRUE;
-                    break;
-                case S7COMMP_FUNCTIONCODE_SETVARIABLE:
-                    offset = s7commp_decode_request_setvariable(tvb, pinfo, item_tree, offset);
-                    has_objectqualifier = TRUE;
-                    break;
-                case S7COMMP_FUNCTIONCODE_GETVARIABLE:
-                    offset = s7commp_decode_request_getvariable(tvb, pinfo, item_tree, offset);
-                    has_objectqualifier = TRUE;
-                    break;
-                case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
-                    offset = s7commp_decode_request_createobject(tvb, pinfo, item_tree, offset, protocolversion);
-                    break;
-                case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
-                    offset = s7commp_decode_request_deleteobject(tvb, pinfo, item_tree, offset);
-                    has_objectqualifier = TRUE;
-                    break;
-                case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
-                    offset = s7commp_decode_request_getvarsubstr(tvb, item_tree, offset);
-                    has_objectqualifier = TRUE;
-                    break;
-                case S7COMMP_FUNCTIONCODE_SETVARSUBSTR:
-                    offset = s7commp_decode_request_setvarsubstr(tvb, item_tree, offset);
-                    has_objectqualifier = TRUE;
-                    break;
-                case S7COMMP_FUNCTIONCODE_EXPLORE:
-                    offset = s7commp_decode_request_explore(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_GETLINK:
-                    offset = s7commp_decode_request_getlink(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
-                    offset = s7commp_decode_request_beginsequence(tvb, pinfo, item_tree, dlength, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
-                    offset = s7commp_decode_request_endsequence(tvb, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_INVOKE:
-                    offset = s7commp_decode_request_invoke(tvb, item_tree, offset);
-                    break;
-            }
-            proto_item_set_len(item_tree, offset - offset_save);
-            dlength = dlength - (offset - offset_save);
-        } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {
-            proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
-            offset += 1;
-            dlength -= 1;
-
-            item = proto_tree_add_item(tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
-            item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
-            offset_save = offset;
-
-            switch (functioncode) {
-                case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
-                    offset = s7commp_decode_response_getmultivar(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
-                    offset = s7commp_decode_response_setmultivar(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_SETVARIABLE:
-                    offset = s7commp_decode_response_setvariable(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_GETVARIABLE:
-                    offset = s7commp_decode_response_getvariable(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
-                    offset = s7commp_decode_response_createobject(tvb, pinfo, item_tree, offset, protocolversion);
-                    break;
-                case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
-                    offset = s7commp_decode_response_deleteobject(tvb, pinfo, item_tree, offset, &has_integrity_id);
-                    break;
-                case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
-                    offset = s7commp_decode_response_getvarsubstr(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_SETVARSUBSTR:
-                    offset = s7commp_decode_response_setvarsubstr(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_EXPLORE:
-                    offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, offset, protocolversion);
-                    break;
-                case S7COMMP_FUNCTIONCODE_GETLINK:
-                    offset = s7commp_decode_response_getlink(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
-                    offset = s7commp_decode_response_beginsequence(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
-                    offset = s7commp_decode_response_endsequence(tvb, pinfo, item_tree, offset);
-                    break;
-                case S7COMMP_FUNCTIONCODE_INVOKE:
-                    offset = s7commp_decode_response_invoke(tvb, pinfo, item_tree, offset);
-                    break;
-            }
-            proto_item_set_len(item_tree, offset - offset_save);
-            dlength = dlength - (offset - offset_save);
-        }
-    }
-    /* Nach Object Qualifier trailer suchen.
-     * Der Objectqualifier hat die ID 1256 = 0x04e8. Dieses Objekt hat 3 Member mit jeweils einer ID.
-     * Solange wir noch nicht immer direkt auf dieser ID landen, danach suchen.
-     */
-    if (has_objectqualifier && dlength > 10) {
-        offset_save = offset;
-        offset = s7commp_decode_objectqualifier(tvb, tree, dlength, offset);
-        dlength = dlength - (offset - offset_save);
-    }
-
-    /* Additional Data */
-    if (opcode == S7COMMP_OPCODE_REQ) {
-        if (functioncode == S7COMMP_FUNCTIONCODE_GETVARSUBSTR) {
-            proto_tree_add_text(tree, tvb, offset, 2, "Request GetVarSubStreamed unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
+            proto_tree_add_uint(tree, hf_s7commp_data_reserved1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
             offset += 2;
             dlength -= 2;
-        } else if (functioncode == S7COMMP_FUNCTIONCODE_SETVARSUBSTR) {
-            offset = s7commp_decode_request_setvarsubstr_stream(tvb, tree, &dlength, offset);
-        } else if (functioncode == S7COMMP_FUNCTIONCODE_SETVARIABLE) {
-            proto_tree_add_text(tree, tvb, offset, 1, "Request SetVariable unknown Byte: 0x%02x", tvb_get_guint8(tvb, offset));
-            offset += 1;
-            dlength -= 1;
-        }
-    }
 
-    if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
-        /* Pakete mit neuerer Firmware haben den Wert / id am Ende, der bei anderen FW vor der Integrität kommt.
-         * Dieser ist aber nicht bei jedem Typ vorhanden. Wenn nicht, dann sind 4 Null-Bytes am Ende.
-         */
-        if ((dlength > 4) && has_integrity_id) {
-            integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
-            offset += octet_count;
-            dlength -= octet_count;
+            /* 4/5: Functioncode */
+            functioncode = tvb_get_ntohs(tvb, offset);
+            proto_tree_add_uint(tree, hf_s7commp_data_function, tvb, offset, 2, functioncode);
+            offset += 2;
+            dlength -= 2;
+
+            proto_tree_add_uint(tree, hf_s7commp_data_reserved2, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
+            offset += 2;
+            dlength -= 2;
+
+            /* 8/9: Sequence number */
+            seqnum = tvb_get_ntohs(tvb, offset);
+            proto_tree_add_uint(tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
+            offset += 2;
+            dlength -= 2;
+
+            /* add some infos to info column */
+            col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u [%s %s]",
+                seqnum,
+                val_to_str(opcode, opcode_names_short, "Unknown Opcode: 0x%02x"),
+                val_to_str(functioncode, data_functioncode_names, "?"));
+            proto_item_append_text(tree, " %s", val_to_str(functioncode, data_functioncode_names, "?"));
+
+            if (opcode == S7COMMP_OPCODE_REQ) {
+                proto_tree_add_uint(tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
+                offset += 4;
+                dlength -= 4;
+
+                proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
+                offset += 1;
+                dlength -= 1;
+
+                item = proto_tree_add_item(tree, hf_s7commp_data_req_set, tvb, offset, -1, FALSE);
+                item_tree = proto_item_add_subtree(item, ett_s7commp_data_req_set);
+                offset_save = offset;
+
+                switch (functioncode) {
+                    case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
+                        offset = s7commp_decode_request_getmultivar(tvb, item_tree, offset);
+                        has_objectqualifier = TRUE;
+                        break;
+                    case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
+                        offset = s7commp_decode_request_setmultivar(tvb, pinfo, item_tree, dlength, offset);
+                        has_objectqualifier = TRUE;
+                        break;
+                    case S7COMMP_FUNCTIONCODE_SETVARIABLE:
+                        offset = s7commp_decode_request_setvariable(tvb, pinfo, item_tree, offset);
+                        has_objectqualifier = TRUE;
+                        break;
+                    case S7COMMP_FUNCTIONCODE_GETVARIABLE:
+                        offset = s7commp_decode_request_getvariable(tvb, pinfo, item_tree, offset);
+                        has_objectqualifier = TRUE;
+                        break;
+                    case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
+                        offset = s7commp_decode_request_createobject(tvb, pinfo, item_tree, offset, protocolversion);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
+                        offset = s7commp_decode_request_deleteobject(tvb, pinfo, item_tree, offset);
+                        has_objectqualifier = TRUE;
+                        break;
+                    case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
+                        offset = s7commp_decode_request_getvarsubstr(tvb, item_tree, offset);
+                        has_objectqualifier = TRUE;
+                        break;
+                    case S7COMMP_FUNCTIONCODE_SETVARSUBSTR:
+                        offset = s7commp_decode_request_setvarsubstr(tvb, item_tree, offset);
+                        has_objectqualifier = TRUE;
+                        break;
+                    case S7COMMP_FUNCTIONCODE_EXPLORE:
+                        offset = s7commp_decode_request_explore(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_GETLINK:
+                        offset = s7commp_decode_request_getlink(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
+                        offset = s7commp_decode_request_beginsequence(tvb, pinfo, item_tree, dlength, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
+                        offset = s7commp_decode_request_endsequence(tvb, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_INVOKE:
+                        offset = s7commp_decode_request_invoke(tvb, item_tree, offset);
+                        break;
+                }
+                proto_item_set_len(item_tree, offset - offset_save);
+                dlength = dlength - (offset - offset_save);
+            } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {
+                proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
+                offset += 1;
+                dlength -= 1;
+
+                item = proto_tree_add_item(tree, hf_s7commp_data_res_set, tvb, offset, -1, FALSE);
+                item_tree = proto_item_add_subtree(item, ett_s7commp_data_res_set);
+                offset_save = offset;
+
+                switch (functioncode) {
+                    case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
+                        offset = s7commp_decode_response_getmultivar(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_SETMULTIVAR:
+                        offset = s7commp_decode_response_setmultivar(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_SETVARIABLE:
+                        offset = s7commp_decode_response_setvariable(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_GETVARIABLE:
+                        offset = s7commp_decode_response_getvariable(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_CREATEOBJECT:
+                        offset = s7commp_decode_response_createobject(tvb, pinfo, item_tree, offset, protocolversion);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_DELETEOBJECT:
+                        offset = s7commp_decode_response_deleteobject(tvb, pinfo, item_tree, offset, &has_integrity_id);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
+                        offset = s7commp_decode_response_getvarsubstr(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_SETVARSUBSTR:
+                        offset = s7commp_decode_response_setvarsubstr(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_EXPLORE:
+                        offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, offset, protocolversion);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_GETLINK:
+                        offset = s7commp_decode_response_getlink(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
+                        offset = s7commp_decode_response_beginsequence(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
+                        offset = s7commp_decode_response_endsequence(tvb, pinfo, item_tree, offset);
+                        break;
+                    case S7COMMP_FUNCTIONCODE_INVOKE:
+                        offset = s7commp_decode_response_invoke(tvb, pinfo, item_tree, offset);
+                        break;
+                }
+                proto_item_set_len(item_tree, offset - offset_save);
+                dlength = dlength - (offset - offset_save);
+            }
         }
-    } else {
-        if (dlength > 4 && dlength < 32 && has_integrity_id) {
-            /* Plcsim für die 1500 verwendet keine Integrität, dafür gibt es aber am Endeblock (vor den üblichen 4 Nullbytes)
-             * eine fortlaufende Nummer.
-             * Vermutlich ist das trotzdem die Id, aber der andere Teil fehlt dann. Wenn die vorige Response ebenfalls eine
-             * Id hatte, dann wird die für den nächsten Request wieder aus der letzten Id+Seqnum berechnet, d.h. so wie auch
-             * bei der Id wenn es einen kompletten Integritätsteil gibt.
-             * War dort keine vorhanden, dann wird immer um 1 erhöht.
-             * Unklar was für eine Funktion das haben soll.
-             */
-            integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
-            offset += octet_count;
-            dlength -= octet_count;
-        } else if (dlength >= 32) {
+        /* Nach Object Qualifier trailer suchen.
+         * Der Objectqualifier hat die ID 1256 = 0x04e8. Dieses Objekt hat 3 Member mit jeweils einer ID.
+         * Solange wir noch nicht immer direkt auf dieser ID landen, danach suchen.
+         */
+        if (has_objectqualifier && dlength > 10) {
             offset_save = offset;
-            offset = s7commp_decode_integrity(tvb, pinfo, tree, has_integrity_id, offset);
+            offset = s7commp_decode_objectqualifier(tvb, tree, dlength, offset);
             dlength = dlength - (offset - offset_save);
         }
+
+        /* Additional Data */
+        if (opcode == S7COMMP_OPCODE_REQ) {
+            if (functioncode == S7COMMP_FUNCTIONCODE_GETVARSUBSTR) {
+                proto_tree_add_text(tree, tvb, offset, 2, "Request GetVarSubStreamed unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
+                offset += 2;
+                dlength -= 2;
+            } else if (functioncode == S7COMMP_FUNCTIONCODE_SETVARSUBSTR) {
+                offset = s7commp_decode_request_setvarsubstr_stream(tvb, tree, &dlength, offset);
+            } else if (functioncode == S7COMMP_FUNCTIONCODE_SETVARIABLE) {
+                proto_tree_add_text(tree, tvb, offset, 1, "Request SetVariable unknown Byte: 0x%02x", tvb_get_guint8(tvb, offset));
+                offset += 1;
+                dlength -= 1;
+            }
+        }
+
+        if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
+            /* Pakete mit neuerer Firmware haben den Wert / id am Ende, der bei anderen FW vor der Integrität kommt.
+             * Dieser ist aber nicht bei jedem Typ vorhanden. Wenn nicht, dann sind 4 Null-Bytes am Ende.
+             */
+            if ((dlength > 4) && has_integrity_id) {
+                integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
+                offset += octet_count;
+                dlength -= octet_count;
+            }
+        } else {
+            if (dlength > 4 && dlength < 32 && has_integrity_id) {
+                /* Plcsim für die 1500 verwendet keine Integrität, dafür gibt es aber am Endeblock (vor den üblichen 4 Nullbytes)
+                 * eine fortlaufende Nummer.
+                 * Vermutlich ist das trotzdem die Id, aber der andere Teil fehlt dann. Wenn die vorige Response ebenfalls eine
+                 * Id hatte, dann wird die für den nächsten Request wieder aus der letzten Id+Seqnum berechnet, d.h. so wie auch
+                 * bei der Id wenn es einen kompletten Integritätsteil gibt.
+                 * War dort keine vorhanden, dann wird immer um 1 erhöht.
+                 * Unklar was für eine Funktion das haben soll.
+                 */
+                integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
+                offset += octet_count;
+                dlength -= octet_count;
+            } else if (dlength >= 32) {
+                offset_save = offset;
+                offset = s7commp_decode_integrity(tvb, pinfo, tree, has_integrity_id, offset);
+                dlength = dlength - (offset - offset_save);
+            }
+        }
+    } else {
+        /* unknown opcode */
+        proto_item_append_text(tree, ": Unknown Opcode: 0x%02x", opcode);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Unknown Opcode: 0x%02x", opcode);
     }
     /* Show remaining undecoded data as raw bytes */
     if (dlength > 0) {
@@ -5607,168 +5631,173 @@ dissect_s7commp(tvbuff_t *tvb,
         }
 
         /************************************************** START REASSEMBLING *************************************************************************/
-        /*
-         * Fragmentation check:
-         * Da es keine Kennzeichnungen über die Fragmentierung gibt, muss es in einer Zustandsmaschine abgefragt werden
-         *
-         * Istzustand   Transition                                      Aktion                                Neuer Zustand
-         * state == 0:  Paket hat einen Trailer, keine Fragmentierung   dissect_data                          state = 0
-         * state == 0:  Paket hat keinen Trailer, Start Fragmentierung  push data                             state = 1
-         * state == 1:  Paket hat keinen Trailer, weiterhin Fragment    push data                             state = 1
-         * state == 1:  Paket hat einen trailer, Ende Fragmente         push data, pop, dissect_data          state = 0
-         *
-         * Die einzige Zugehörigkeit die es gibt, ist die TCP Portnummer. Es müssen dabei BEIDE übereinstimmen.
-         *
-         * Dabei muss zusätzlich beachtet werden, dass womöglich ein capture inmitten einer solchen Serie gestartet wurde.
-         * Das kann aber nicht zuverlässig abgefangen werden, wenn zufällig in den ersten Bytes des Datenteils gültige Daten stehen.
-         *
-         */
-
-        /* Zustandsdiagramm:
-                         NEIN                Konversation    JA
-         has_trailer ---------------------mit vorigem Frame-------- Inneres Fragment
-              ?                              vorhanden?
-              |                                  |
-              | JA                               | NEIN
-              |                                  |
-           Konversation     NEIN        Neue Konversation anlegen
-        mit vorigem Frame--------+               |
-            vorhanden?           |          Erstes Fragment
-              |                  |
-              | JA        Nicht fragmentiert
-              |
-          Letztes Fragment
-        */
-
-        if (!pinfo->fd->flags.visited) {        /* first pass */
-            #ifdef DEBUG_REASSEMBLING
-            printf("Reassembling pass 1: Frame=%3d HasTrailer=%d", pinfo->fd->num, has_trailer);
-            #endif
-            /* evtl. find_or_create_conversation verwenden?
-             * conversation = find_or_create_conversation(pinfo);
-             */
-
-            conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                             pinfo->ptype, pinfo->destport,
-                                             0, NO_PORT_B);
-            if (conversation == NULL) {
-                conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                pinfo->ptype, pinfo->destport,
-                                                0, NO_PORT2);
-                #ifdef DEBUG_REASSEMBLING
-                printf(" NewConv" );
-                #endif
-            }
-            conversation_state = (conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
-            if (conversation_state == NULL) {
-                conversation_state = wmem_new(wmem_file_scope(), conv_state_t);
-                conversation_state->state = CONV_STATE_NEW;
-                conversation_state->start_frame = 0;
-                conversation_add_proto_data(conversation, proto_s7commp, conversation_state);
-                #ifdef DEBUG_REASSEMBLING
-                printf(" NewConvState" );
-                #endif
-            }
-            #ifdef DEBUG_REASSEMBLING
-            printf(" ConvState->state=%d", conversation_state->state);
-            #endif
-
-            if (has_trailer) {
-                if (conversation_state->state == CONV_STATE_NEW) {
-                    #ifdef DEBUG_REASSEMBLING
-                    printf(" no_fragment=1");
-                    #endif
-                } else {
-                    last_fragment = TRUE;
-                    /* rücksetzen */
-                    #ifdef DEBUG_REASSEMBLING
-                    col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG: A state=%d)", conversation_state->state);
-                    printf(" last_fragment=1, delete_proto_data");
-                    #endif
-                    conversation_state->state = CONV_STATE_NOFRAG;
-                    conversation_delete_proto_data(conversation, proto_s7commp);
-                }
-            } else {
-                if (conversation_state->state == CONV_STATE_NEW) {
-                    first_fragment = TRUE;
-                    conversation_state->state = CONV_STATE_FIRST;
-                    conversation_state->start_frame = pinfo->fd->num;
-                    #ifdef DEBUG_REASSEMBLING
-                    printf(" first_fragment=1, set state=%d, start_frame=%d", conversation_state->state, conversation_state->start_frame);
-                    #endif
-                } else {
-                    inner_fragment = TRUE;
-                    conversation_state->state = CONV_STATE_INNER;
-                }
-            }
-            #ifdef DEBUG_REASSEMBLING
-            printf(" => Conv->state=%d", conversation_state->state);
-            printf(" => Conv->start_frame=%3d", conversation_state->start_frame);
-            printf("\n");
-            #endif
-        }
-
-        save_fragmented = pinfo->fragmented;
-        packet_state = (frame_state_t *)p_get_proto_data(wmem_file_scope(), pinfo, proto_s7commp, 0);
-        if (!packet_state) {
-            /* First S7COMMP in frame*/
-            packet_state = wmem_new(wmem_file_scope(), frame_state_t);
-            p_add_proto_data(wmem_file_scope(), pinfo, proto_s7commp, 0, packet_state);
-            packet_state->first_fragment = first_fragment;
-            packet_state->inner_fragment = inner_fragment;
-            packet_state->last_fragment = last_fragment;
-            packet_state->start_frame = conversation_state->start_frame;
-            #ifdef DEBUG_REASSEMBLING
-            col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: INIT-packet_state)");
-            #endif
-        } else {
-            first_fragment = packet_state->first_fragment;
-            inner_fragment = packet_state->inner_fragment;
-            last_fragment = packet_state->last_fragment;
-        }
-
-        if (first_fragment || inner_fragment || last_fragment) {
-            tvbuff_t* new_tvb = NULL;
-            fragment_head *fd_head;
-            guint32 frag_data_len;
-            /* guint32 frag_number; */
-            gboolean more_frags;
-            #ifdef DEBUG_REASSEMBLING
-            col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: F=%d I=%d L=%d N=%u)", first_fragment, inner_fragment, last_fragment, packet_state->start_frame);
-            #endif
-
-            frag_id       = packet_state->start_frame;
-            frag_data_len = tvb_reported_length_remaining(tvb, offset);     /* Dieses ist der reine Data-Teil, da offset hinter dem Header steht */
-            /* frag_number   = pinfo->fd->num; */
-            more_frags    = !last_fragment;
-
-            pinfo->fragmented = TRUE;
+        if (s7commp_reassemble) {
             /*
-             * fragment_add_seq_next() geht davon aus, dass die Pakete in der richtigen Reihenfolge reinkommen.
-             * Bei fragment_add_seq_check() muss eine Sequenznummer angegeben werden, die gibt es aber nicht im Protokoll.
+             * Fragmentation check:
+             * Da es keine Kennzeichnungen über die Fragmentierung gibt, muss es in einer Zustandsmaschine abgefragt werden
+             *
+             * Istzustand   Transition                                      Aktion                                Neuer Zustand
+             * state == 0:  Paket hat einen Trailer, keine Fragmentierung   dissect_data                          state = 0
+             * state == 0:  Paket hat keinen Trailer, Start Fragmentierung  push data                             state = 1
+             * state == 1:  Paket hat keinen Trailer, weiterhin Fragment    push data                             state = 1
+             * state == 1:  Paket hat einen trailer, Ende Fragmente         push data, pop, dissect_data          state = 0
+             *
+             * Die einzige Zugehörigkeit die es gibt, ist die TCP Portnummer. Es müssen dabei BEIDE übereinstimmen.
+             *
+             * Dabei muss zusätzlich beachtet werden, dass womöglich ein capture inmitten einer solchen Serie gestartet wurde.
+             * Das kann aber nicht zuverlässig abgefangen werden, wenn zufällig in den ersten Bytes des Datenteils gültige Daten stehen.
+             *
              */
-            fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
-                                             tvb, offset, pinfo,
-                                             frag_id,               /* ID for fragments belonging together */
-                                             NULL,                  /* void *data */
-                                             frag_data_len,         /* fragment length - to the end */
-                                             more_frags);           /* More fragments? */
 
-            new_tvb = process_reassembled_data(tvb, offset, pinfo,
-                                               "Reassembled S7COMM-PLUS", fd_head, &s7commp_frag_items,
-                                               NULL, s7commp_tree);
+            /* Zustandsdiagramm:
+                             NEIN                Konversation    JA
+             has_trailer ---------------------mit vorigem Frame-------- Inneres Fragment
+                  ?                              vorhanden?
+                  |                                  |
+                  | JA                               | NEIN
+                  |                                  |
+               Konversation     NEIN        Neue Konversation anlegen
+            mit vorigem Frame--------+               |
+                vorhanden?           |          Erstes Fragment
+                  |                  |
+                  | JA        Nicht fragmentiert
+                  |
+              Letztes Fragment
+            */
 
-            if (new_tvb) { /* take it all */
-                next_tvb = new_tvb;
-                offset = 0;
-            } else { /* make a new subset */
-                next_tvb = tvb_new_subset(tvb, offset, -1, -1);
-                offset = 0;
+            if (!pinfo->fd->flags.visited) {        /* first pass */
+                #ifdef DEBUG_REASSEMBLING
+                printf("Reassembling pass 1: Frame=%3d HasTrailer=%d", pinfo->fd->num, has_trailer);
+                #endif
+                /* evtl. find_or_create_conversation verwenden?
+                 * conversation = find_or_create_conversation(pinfo);
+                 */
+
+                conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
+                                                 pinfo->ptype, pinfo->destport,
+                                                 0, NO_PORT_B);
+                if (conversation == NULL) {
+                    conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
+                                                    pinfo->ptype, pinfo->destport,
+                                                    0, NO_PORT2);
+                    #ifdef DEBUG_REASSEMBLING
+                    printf(" NewConv" );
+                    #endif
+                }
+                conversation_state = (conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
+                if (conversation_state == NULL) {
+                    conversation_state = wmem_new(wmem_file_scope(), conv_state_t);
+                    conversation_state->state = CONV_STATE_NEW;
+                    conversation_state->start_frame = 0;
+                    conversation_add_proto_data(conversation, proto_s7commp, conversation_state);
+                    #ifdef DEBUG_REASSEMBLING
+                    printf(" NewConvState" );
+                    #endif
+                }
+                #ifdef DEBUG_REASSEMBLING
+                printf(" ConvState->state=%d", conversation_state->state);
+                #endif
+
+                if (has_trailer) {
+                    if (conversation_state->state == CONV_STATE_NEW) {
+                        #ifdef DEBUG_REASSEMBLING
+                        printf(" no_fragment=1");
+                        #endif
+                    } else {
+                        last_fragment = TRUE;
+                        /* rücksetzen */
+                        #ifdef DEBUG_REASSEMBLING
+                        col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG: A state=%d)", conversation_state->state);
+                        printf(" last_fragment=1, delete_proto_data");
+                        #endif
+                        conversation_state->state = CONV_STATE_NOFRAG;
+                        conversation_delete_proto_data(conversation, proto_s7commp);
+                    }
+                } else {
+                    if (conversation_state->state == CONV_STATE_NEW) {
+                        first_fragment = TRUE;
+                        conversation_state->state = CONV_STATE_FIRST;
+                        conversation_state->start_frame = pinfo->fd->num;
+                        #ifdef DEBUG_REASSEMBLING
+                        printf(" first_fragment=1, set state=%d, start_frame=%d", conversation_state->state, conversation_state->start_frame);
+                        #endif
+                    } else {
+                        inner_fragment = TRUE;
+                        conversation_state->state = CONV_STATE_INNER;
+                    }
+                }
+                #ifdef DEBUG_REASSEMBLING
+                printf(" => Conv->state=%d", conversation_state->state);
+                printf(" => Conv->start_frame=%3d", conversation_state->start_frame);
+                printf("\n");
+                #endif
             }
-        } else {    /* nicht fragmentiert */
+
+            save_fragmented = pinfo->fragmented;
+            packet_state = (frame_state_t *)p_get_proto_data(wmem_file_scope(), pinfo, proto_s7commp, 0);
+            if (!packet_state) {
+                /* First S7COMMP in frame*/
+                packet_state = wmem_new(wmem_file_scope(), frame_state_t);
+                p_add_proto_data(wmem_file_scope(), pinfo, proto_s7commp, 0, packet_state);
+                packet_state->first_fragment = first_fragment;
+                packet_state->inner_fragment = inner_fragment;
+                packet_state->last_fragment = last_fragment;
+                packet_state->start_frame = conversation_state->start_frame;
+                #ifdef DEBUG_REASSEMBLING
+                col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: INIT-packet_state)");
+                #endif
+            } else {
+                first_fragment = packet_state->first_fragment;
+                inner_fragment = packet_state->inner_fragment;
+                last_fragment = packet_state->last_fragment;
+            }
+
+            if (first_fragment || inner_fragment || last_fragment) {
+                tvbuff_t* new_tvb = NULL;
+                fragment_head *fd_head;
+                guint32 frag_data_len;
+                /* guint32 frag_number; */
+                gboolean more_frags;
+                #ifdef DEBUG_REASSEMBLING
+                col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: F=%d I=%d L=%d N=%u)", first_fragment, inner_fragment, last_fragment, packet_state->start_frame);
+                #endif
+
+                frag_id       = packet_state->start_frame;
+                frag_data_len = tvb_reported_length_remaining(tvb, offset);     /* Dieses ist der reine Data-Teil, da offset hinter dem Header steht */
+                /* frag_number   = pinfo->fd->num; */
+                more_frags    = !last_fragment;
+
+                pinfo->fragmented = TRUE;
+                /*
+                 * fragment_add_seq_next() geht davon aus, dass die Pakete in der richtigen Reihenfolge reinkommen.
+                 * Bei fragment_add_seq_check() muss eine Sequenznummer angegeben werden, die gibt es aber nicht im Protokoll.
+                 */
+                fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
+                                                 tvb, offset, pinfo,
+                                                 frag_id,               /* ID for fragments belonging together */
+                                                 NULL,                  /* void *data */
+                                                 frag_data_len,         /* fragment length - to the end */
+                                                 more_frags);           /* More fragments? */
+
+                new_tvb = process_reassembled_data(tvb, offset, pinfo,
+                                                   "Reassembled S7COMM-PLUS", fd_head, &s7commp_frag_items,
+                                                   NULL, s7commp_tree);
+
+                if (new_tvb) { /* take it all */
+                    next_tvb = new_tvb;
+                    offset = 0;
+                } else { /* make a new subset */
+                    next_tvb = tvb_new_subset(tvb, offset, -1, -1);
+                    offset = 0;
+                }
+            } else {    /* nicht fragmentiert */
+                next_tvb = tvb;
+            }
+            pinfo->fragmented = save_fragmented;
+        } else {
+            /* Reassembling disabled */
             next_tvb = tvb;
         }
-        pinfo->fragmented = save_fragmented;
         /******************************************************* END REASSEMBLING *******************************************************************/
 
         /******************************************************

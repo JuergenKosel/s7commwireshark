@@ -129,7 +129,7 @@ static const value_string opcode_names_short[] = {
 #define S7COMMP_FUNCTIONCODE_BEGINSEQUENCE      0x0556
 #define S7COMMP_FUNCTIONCODE_ENDSEQUENCE        0x0560
 #define S7COMMP_FUNCTIONCODE_INVOKE             0x056b
-#define S7COMMP_FUNCTIONCODE_SETVARSUBSTR       0x057c      /* not decoded yet */
+#define S7COMMP_FUNCTIONCODE_SETVARSUBSTR       0x057c
 #define S7COMMP_FUNCTIONCODE_GETVARSUBSTR       0x0586
 #define S7COMMP_FUNCTIONCODE_GETVARIABLESADDR   0x0590      /* not decoded yet */
 #define S7COMMP_FUNCTIONCODE_ABORT              0x059a      /* not decoded yet */
@@ -1061,6 +1061,8 @@ static gint ett_s7commp_itemval_array = -1;             /* Subtree if item value
 static gint ett_s7commp_objectqualifier = -1;           /* Subtree for object qualifier data */
 static gint ett_s7commp_integrity = -1;                 /* Subtree for integrity block */
 
+static gint ett_s7commp_streamdata = -1;                /* Subtree for stream data in setvarsubstream */
+
 /* Item Address */
 static gint hf_s7commp_item_count = -1;
 static gint hf_s7commp_item_no_of_fields = -1;
@@ -1247,6 +1249,9 @@ static gint hf_s7commp_getmultivar_unknown1 = -1;
 static gint hf_s7commp_getmultivar_linkid = -1;
 static gint hf_s7commp_getmultivar_itemaddrcount = -1;
 static gint hf_s7commp_getvar_itemcount = -1;
+
+/* SetVarSubstreamed, stream data */
+static gint hf_s7commp_streamdata = -1;
 
 /* Notification */
 static gint hf_s7commp_notification_vl_retval = -1;
@@ -2057,6 +2062,11 @@ proto_register_s7commp (void)
           { "Item count", "s7comm-plus.getvar.itemcount", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
 
+        /* SetVarSubstreamed, stream data */
+        { &hf_s7commp_streamdata,
+          { "Stream data", "s7comm-plus.streamdata", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+
         /* Notification */
         { &hf_s7commp_notification_vl_retval,
           { "Return value", "s7comm-plus.notification.vl.retval", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -2247,6 +2257,7 @@ proto_register_s7commp (void)
         &ett_s7commp_fragments,
         &ett_s7commp_fragment,
         &ett_s7commp_object_classflags,
+        &ett_s7commp_streamdata
     };
 
     proto_s7commp = proto_register_protocol (
@@ -4632,6 +4643,66 @@ s7commp_decode_response_getvarsubstr(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Request SetVarSubStreamed
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_request_setvarsubstr(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset)
+{
+    /* Gleicher Aufbau wie Request GetVarSubstreamed */
+    offset = s7commp_decode_request_getvarsubstr(tvb, tree, offset);
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Response SetVarSubStreamed
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_setvarsubstr(tvbuff_t *tvb,
+                                     packet_info *pinfo,
+                                     proto_tree *tree,
+                                     guint32 offset)
+{
+    guint16 errorcode;
+
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Request SetVarSubStreamed, Stream data
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_request_setvarsubstr_stream(tvbuff_t *tvb,
+                                           proto_tree *tree,
+                                           gint *dlength,
+                                           guint32 offset)
+{
+    guint32 offset_save;
+    int struct_level = 0;
+    proto_item *streamdata_item = NULL;
+    proto_tree *streamdata_tree = NULL;
+
+    streamdata_item = proto_tree_add_item(tree, hf_s7commp_streamdata, tvb, offset, -1, FALSE );
+    streamdata_tree = proto_item_add_subtree(streamdata_item, ett_s7commp_streamdata);
+
+    offset_save = offset;
+    proto_tree_add_text(streamdata_tree, tvb, offset, 2, "Request SetVarSubStreamed unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
+    offset += 2;
+    offset = s7commp_decode_value(tvb, streamdata_tree, offset, &struct_level);
+    *dlength -= (offset - offset_save);
+    proto_item_set_len(streamdata_tree, offset - offset_save);
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Request GetLink
  *
  *******************************************************************************************************/
@@ -5194,6 +5265,10 @@ s7commp_decode_data(tvbuff_t *tvb,
                     offset = s7commp_decode_request_getvarsubstr(tvb, item_tree, offset);
                     has_objectqualifier = TRUE;
                     break;
+                case S7COMMP_FUNCTIONCODE_SETVARSUBSTR:
+                    offset = s7commp_decode_request_setvarsubstr(tvb, item_tree, offset);
+                    has_objectqualifier = TRUE;
+                    break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_request_explore(tvb, pinfo, item_tree, offset);
                     break;
@@ -5243,6 +5318,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                 case S7COMMP_FUNCTIONCODE_GETVARSUBSTR:
                     offset = s7commp_decode_response_getvarsubstr(tvb, pinfo, item_tree, offset);
                     break;
+                case S7COMMP_FUNCTIONCODE_SETVARSUBSTR:
+                    offset = s7commp_decode_response_setvarsubstr(tvb, pinfo, item_tree, offset);
+                    break;
                 case S7COMMP_FUNCTIONCODE_EXPLORE:
                     offset = s7commp_decode_response_explore(tvb, pinfo, item_tree, offset, protocolversion);
                     break;
@@ -5273,12 +5351,14 @@ s7commp_decode_data(tvbuff_t *tvb,
         dlength = dlength - (offset - offset_save);
     }
 
-    /* Request GetVarSubStreamed has two bytes of unknown meaning, request SetVariable session one single byte */
+    /* Additional Data */
     if (opcode == S7COMMP_OPCODE_REQ) {
         if (functioncode == S7COMMP_FUNCTIONCODE_GETVARSUBSTR) {
             proto_tree_add_text(tree, tvb, offset, 2, "Request GetVarSubStreamed unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
             offset += 2;
             dlength -= 2;
+        } else if (functioncode == S7COMMP_FUNCTIONCODE_SETVARSUBSTR) {
+            offset = s7commp_decode_request_setvarsubstr_stream(tvb, tree, &dlength, offset);
         } else if (functioncode == S7COMMP_FUNCTIONCODE_SETVARIABLE) {
             proto_tree_add_text(tree, tvb, offset, 1, "Request SetVariable unknown Byte: 0x%02x", tvb_get_guint8(tvb, offset));
             offset += 1;

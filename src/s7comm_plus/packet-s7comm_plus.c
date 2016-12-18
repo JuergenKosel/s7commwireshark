@@ -1262,6 +1262,8 @@ static gint hf_s7commp_getvar_itemcount = -1;
 
 /* SetVarSubstreamed, stream data */
 static gint hf_s7commp_streamdata = -1;
+static gint hf_s7commp_streamdata_frag_data_len = -1;
+static gint hf_s7commp_streamdata_frag_data = -1;
 
 /* Notification */
 static gint hf_s7commp_notification_vl_retval = -1;
@@ -1352,6 +1354,8 @@ typedef struct {
     gboolean inner_fragment;
     gboolean last_fragment;
     guint32 start_frame;
+    guint8 start_opcode;
+    guint16 start_function;
 } frame_state_t;
 
 #define CONV_STATE_NEW         -1
@@ -1362,6 +1366,8 @@ typedef struct {
 typedef struct {
     int state;
     guint32 start_frame;
+    guint8 start_opcode;
+    guint16 start_function;
 } conv_state_t;
 
 /* options */
@@ -2097,6 +2103,12 @@ proto_register_s7commp (void)
         { &hf_s7commp_streamdata,
           { "Stream data", "s7comm-plus.streamdata", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
+        { &hf_s7commp_streamdata_frag_data_len,
+          { "Stream data (fragment) Length", "s7comm-plus.streamdata.data_length", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_streamdata_frag_data,
+          { "Stream data (fragment)", "s7comm-plus.streamdata.data", FT_BYTES, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
 
         /* Notification */
         { &hf_s7commp_notification_vl_retval,
@@ -2526,6 +2538,108 @@ s7commp_get_timestring_from_uint64(guint64 timestamp, char *str, gint max)
             mt->tm_year + 1900, mt->tm_hour, mt->tm_min, mt->tm_sec,
             millisec, microsec, nanosec);
     }
+}
+/*******************************************************************************************************
+ *
+ * Decode the integrity part
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_integrity(tvbuff_t *tvb,
+                         packet_info *pinfo,
+                         proto_tree *tree,
+                         gboolean has_integrity_id,
+                         guint32 offset)
+{
+    guint32 offset_save;
+    guint32 integrity_id = 0;
+    guint8 integrity_len = 0;
+    guint8 octet_count = 0;
+
+    proto_item *integrity_item = NULL;
+    proto_tree *integrity_tree = NULL;
+
+    offset_save = offset;
+    integrity_item = proto_tree_add_item(tree, hf_s7commp_integrity, tvb, offset, -1, FALSE );
+    integrity_tree = proto_item_add_subtree(integrity_item, ett_s7commp_integrity);
+    /* In DeleteObject-Response, the Id is missing if the deleted id is > 0x7000000!
+     * This check is done by the decoding function for deleteobject. By default there is an Id.
+     *
+     * The integrity_id seems to be increased by one in each telegram. The integrity_id in the corresponding
+     * response is calculated by adding the sequencenumber to the integrity_id from request.
+     */
+    if (has_integrity_id) {
+        integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
+        offset += octet_count;
+    }
+
+    integrity_len = tvb_get_guint8(tvb, offset);
+    proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_digestlen, tvb, offset, 1, integrity_len);
+    offset += 1;
+    /* Length should always be 32. If not, then the previous decoding was not correct.
+     * To prevent malformed packet errors, check this.
+     */
+    if (integrity_len == 32) {
+        proto_tree_add_bytes(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, tvb_get_ptr(tvb, offset, integrity_len));
+        offset += integrity_len;
+    } else {
+        proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
+        col_append_fstr(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that something went wrong */
+    }
+    proto_item_set_len(integrity_tree, offset - offset_save);
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decode the integrity part with integrity id and integrity part (optional)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_integrity_wid(tvbuff_t *tvb,
+                             packet_info *pinfo,
+                             proto_tree *tree,
+                             gboolean has_integrity_id,
+                             guint8 protocolversion,
+                             gint *dlength,
+                             guint32 offset)
+{
+    guint32 offset_save = 0;
+    guint8 octet_count = 0;
+    guint32 integrity_id;
+
+    if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
+        /* Pakete mit neuerer Firmware haben den Wert / id am Ende, der bei anderen FW vor der Integrität kommt.
+         * Dieser ist aber nicht bei jedem Typ vorhanden. Wenn nicht, dann sind 4 Null-Bytes am Ende.
+         */
+        if ((*dlength > 4) && has_integrity_id) {
+            integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
+            offset += octet_count;
+            *dlength -= octet_count;
+        }
+    } else {
+        if (*dlength > 4 && *dlength < 32 && has_integrity_id) {
+            /* Plcsim für die 1500 verwendet keine Integrität, dafür gibt es aber am Endeblock (vor den üblichen 4 Nullbytes)
+             * eine fortlaufende Nummer.
+             * Vermutlich ist das trotzdem die Id, aber der andere Teil fehlt dann. Wenn die vorige Response ebenfalls eine
+             * Id hatte, dann wird die für den nächsten Request wieder aus der letzten Id+Seqnum berechnet, d.h. so wie auch
+             * bei der Id wenn es einen kompletten Integritätsteil gibt.
+             * War dort keine vorhanden, dann wird immer um 1 erhöht.
+             * Unklar was für eine Funktion das haben soll.
+             */
+            integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
+            offset += octet_count;
+            *dlength -= octet_count;
+        } else if (*dlength >= 32) {
+            offset_save = offset;
+            offset = s7commp_decode_integrity(tvb, pinfo, tree, has_integrity_id, offset);
+            *dlength -= (offset - offset_save);
+        }
+    }
+
+    return offset;
 }
 /*******************************************************************************************************
  *
@@ -4745,6 +4859,52 @@ s7commp_decode_request_setvarsubstr_stream(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Request SetVarSubStreamed, Stream data (fragment)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_request_setvarsubstr_stream_frag(tvbuff_t *tvb,
+                                                packet_info *pinfo,
+                                                proto_tree *tree,
+                                                guint8 protocolversion,
+                                                gint *dlength,
+                                                guint32 offset,
+                                                gboolean has_trailer)
+{
+    guint32 offset_save;
+    proto_item *streamdata_item = NULL;
+    proto_tree *streamdata_tree = NULL;
+    guint8 octet_count = 0;
+    guint32 streamlen;
+
+    streamdata_item = proto_tree_add_item(tree, hf_s7commp_streamdata, tvb, offset, -1, FALSE );
+    streamdata_tree = proto_item_add_subtree(streamdata_item, ett_s7commp_streamdata);
+
+    offset_save = offset;
+
+    streamlen = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(streamdata_tree, hf_s7commp_streamdata_frag_data_len, tvb, offset, octet_count, streamlen);
+    offset += octet_count;
+
+    if (streamlen > 0) {
+        proto_tree_add_item(streamdata_tree, hf_s7commp_streamdata_frag_data, tvb, offset, streamlen, FALSE);
+        offset += streamlen;
+    }
+    *dlength -= (offset - offset_save);
+    proto_item_set_len(streamdata_tree, offset - offset_save);
+
+    if (has_trailer) {
+        offset = s7commp_decode_integrity_wid(tvb, pinfo, tree, TRUE, protocolversion, dlength, offset);
+        if (*dlength > 0) {
+            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, *dlength, tvb_get_ptr(tvb, offset, *dlength));
+            offset += *dlength;
+        }
+    }
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Request GetLink
  *
  *******************************************************************************************************/
@@ -5146,57 +5306,6 @@ s7commp_decode_objectqualifier(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decode the integrity part
- *
- *******************************************************************************************************/
-static guint32
-s7commp_decode_integrity(tvbuff_t *tvb,
-                         packet_info *pinfo,
-                         proto_tree *tree,
-                         gboolean has_integrity_id,
-                         guint32 offset)
-{
-    guint32 offset_save;
-    guint32 integrity_id = 0;
-    guint8 integrity_len = 0;
-    guint8 octet_count = 0;
-
-    proto_item *integrity_item = NULL;
-    proto_tree *integrity_tree = NULL;
-
-    offset_save = offset;
-    integrity_item = proto_tree_add_item(tree, hf_s7commp_integrity, tvb, offset, -1, FALSE );
-    integrity_tree = proto_item_add_subtree(integrity_item, ett_s7commp_integrity);
-    /* In DeleteObject-Response, the Id is missing if the deleted id is > 0x7000000!
-     * This check is done by the decoding function for deleteobject. By default there is an Id.
-     *
-     * The integrity_id seems to be increased by one in each telegram. The integrity_id in the corresponding
-     * response is calculated by adding the sequencenumber to the integrity_id from request.
-     */
-    if (has_integrity_id) {
-        integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
-        offset += octet_count;
-    }
-
-    integrity_len = tvb_get_guint8(tvb, offset);
-    proto_tree_add_uint(integrity_tree, hf_s7commp_integrity_digestlen, tvb, offset, 1, integrity_len);
-    offset += 1;
-    /* Length should always be 32. If not, then the previous decoding was not correct.
-     * To prevent malformed packet errors, check this.
-     */
-    if (integrity_len == 32) {
-        proto_tree_add_bytes(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, tvb_get_ptr(tvb, offset, integrity_len));
-        offset += integrity_len;
-    } else {
-        proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
-        col_append_fstr(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that something went wrong */
-    }
-    proto_item_set_len(integrity_tree, offset - offset_save);
-    return offset;
-}
-/*******************************************************************************************************
- *
  * Extended Keep Alive telegrams
  *
  *******************************************************************************************************/
@@ -5268,8 +5377,6 @@ s7commp_decode_data(tvbuff_t *tvb,
     guint16 functioncode = 0;
     guint8 opcode = 0;
     guint32 offset_save = 0;
-    guint8 octet_count = 0;
-    guint32 integrity_id;
     gboolean has_integrity_id = TRUE;
     gboolean has_objectqualifier = FALSE;
     const guint8 *str_opcode;
@@ -5470,37 +5577,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                 dlength -= 1;
             }
         }
-
-        if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
-            /* Pakete mit neuerer Firmware haben den Wert / id am Ende, der bei anderen FW vor der Integrität kommt.
-             * Dieser ist aber nicht bei jedem Typ vorhanden. Wenn nicht, dann sind 4 Null-Bytes am Ende.
-             */
-            if ((dlength > 4) && has_integrity_id) {
-                integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
-                offset += octet_count;
-                dlength -= octet_count;
-            }
-        } else {
-            if (dlength > 4 && dlength < 32 && has_integrity_id) {
-                /* Plcsim für die 1500 verwendet keine Integrität, dafür gibt es aber am Endeblock (vor den üblichen 4 Nullbytes)
-                 * eine fortlaufende Nummer.
-                 * Vermutlich ist das trotzdem die Id, aber der andere Teil fehlt dann. Wenn die vorige Response ebenfalls eine
-                 * Id hatte, dann wird die für den nächsten Request wieder aus der letzten Id+Seqnum berechnet, d.h. so wie auch
-                 * bei der Id wenn es einen kompletten Integritätsteil gibt.
-                 * War dort keine vorhanden, dann wird immer um 1 erhöht.
-                 * Unklar was für eine Funktion das haben soll.
-                 */
-                integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
-                offset += octet_count;
-                dlength -= octet_count;
-            } else if (dlength >= 32) {
-                offset_save = offset;
-                offset = s7commp_decode_integrity(tvb, pinfo, tree, has_integrity_id, offset);
-                dlength = dlength - (offset - offset_save);
-            }
-        }
+        offset = s7commp_decode_integrity_wid(tvb, pinfo, tree, has_integrity_id, protocolversion, &dlength, offset);
     } else {
         /* unknown opcode */
         proto_item_append_text(tree, ": Unknown Opcode: 0x%02x", opcode);
@@ -5550,7 +5627,11 @@ dissect_s7commp(tvbuff_t *tvb,
     gboolean first_fragment = FALSE;
     gboolean inner_fragment = FALSE;
     gboolean last_fragment = FALSE;
+    gboolean reasm_standard = FALSE;
     tvbuff_t* next_tvb = NULL;
+
+    guint8 reasm_opcode = 0;
+    guint16 reasm_function = 0;
 
     guint packetlength;
 
@@ -5666,6 +5747,12 @@ dissect_s7commp(tvbuff_t *tvb,
             */
 
             if (!pinfo->fd->flags.visited) {        /* first pass */
+                /* Vorabcheck: opcode und function herausfinden
+                 * Da z.B. SetVarSubstreamed einen anderen Mechanismus verwendet!
+                 */
+                reasm_opcode = tvb_get_guint8(tvb, offset);
+                reasm_function = tvb_get_ntohs(tvb, offset + 3);
+
                 #ifdef DEBUG_REASSEMBLING
                 printf("Reassembling pass 1: Frame=%3d HasTrailer=%d", pinfo->fd->num, has_trailer);
                 #endif
@@ -5689,6 +5776,8 @@ dissect_s7commp(tvbuff_t *tvb,
                     conversation_state = wmem_new(wmem_file_scope(), conv_state_t);
                     conversation_state->state = CONV_STATE_NEW;
                     conversation_state->start_frame = 0;
+                    conversation_state->start_opcode = 0;
+                    conversation_state->start_function = 0;
                     conversation_add_proto_data(conversation, proto_s7commp, conversation_state);
                     #ifdef DEBUG_REASSEMBLING
                     printf(" NewConvState" );
@@ -5718,6 +5807,8 @@ dissect_s7commp(tvbuff_t *tvb,
                         first_fragment = TRUE;
                         conversation_state->state = CONV_STATE_FIRST;
                         conversation_state->start_frame = pinfo->fd->num;
+                        conversation_state->start_opcode = reasm_opcode;
+                        conversation_state->start_function = reasm_function;
                         #ifdef DEBUG_REASSEMBLING
                         printf(" first_fragment=1, set state=%d, start_frame=%d", conversation_state->state, conversation_state->start_frame);
                         #endif
@@ -5743,6 +5834,8 @@ dissect_s7commp(tvbuff_t *tvb,
                 packet_state->inner_fragment = inner_fragment;
                 packet_state->last_fragment = last_fragment;
                 packet_state->start_frame = conversation_state->start_frame;
+                packet_state->start_opcode = conversation_state->start_opcode;
+                packet_state->start_function = conversation_state->start_function;
                 #ifdef DEBUG_REASSEMBLING
                 col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: INIT-packet_state)");
                 #endif
@@ -5752,7 +5845,14 @@ dissect_s7commp(tvbuff_t *tvb,
                 last_fragment = packet_state->last_fragment;
             }
 
-            if (first_fragment || inner_fragment || last_fragment) {
+            if (packet_state->start_opcode == S7COMMP_OPCODE_REQ &&
+                packet_state->start_function == S7COMMP_FUNCTIONCODE_SETVARSUBSTR) {
+                reasm_standard = FALSE;
+            } else {
+                reasm_standard = TRUE;
+            }
+
+            if (reasm_standard && (first_fragment || inner_fragment || last_fragment)) {
                 tvbuff_t* new_tvb = NULL;
                 fragment_head *fd_head;
                 guint32 frag_data_len;
@@ -5790,7 +5890,7 @@ dissect_s7commp(tvbuff_t *tvb,
                     next_tvb = tvb_new_subset(tvb, offset, -1, -1);
                     offset = 0;
                 }
-            } else {    /* nicht fragmentiert */
+            } else {    /* nicht fragmentiert, oder nicht im Standardverfahren */
                 next_tvb = tvb;
             }
             pinfo->fragmented = save_fragmented;
@@ -5803,26 +5903,46 @@ dissect_s7commp(tvbuff_t *tvb,
         /******************************************************
          * Data
          ******************************************************/
-        if (last_fragment) {
-            /* when reassembled, instead of using the dlength from header, use the length of the
-             * complete reassembled packet, minus the header length.
-             */
-            dlength = tvb_reported_length_remaining(next_tvb, offset) - S7COMMP_HEADER_LEN;
-        }
-        /* insert data tree */
-        s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, next_tvb, offset, dlength, FALSE);
-        /* insert sub-items in data tree */
-        s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
-        /* main dissect data function */
-        if (first_fragment || inner_fragment) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS %s fragment)", first_fragment ? "first" : "inner" );
-            proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, tvb_get_ptr(next_tvb, offset, dlength));
-            offset += dlength;
+        /* Besondere Behandlung von SetVarSubstreamed, da hier ein völlig anderer!!! Fragmentierungsmechanismus
+         * verwendet wird. Im Ersten Paket gibt es als Datenteil einen Blob der auch abgeschlossen wird.
+         * Danach besitzt jedes Paket nochmal einen eigenen Längenheader im Datenteil.
+         */
+        if (packet_state->start_opcode == S7COMMP_OPCODE_REQ &&
+            packet_state->start_function == S7COMMP_FUNCTIONCODE_SETVARSUBSTR) {
+
+            s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, next_tvb, offset, dlength, FALSE);
+            s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
+
+            if (first_fragment) {
+                /* Das erste Paket kann im Standardverfahren behandelt werden */
+                offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, protocolversion);
+            } else {
+                offset = s7commp_decode_request_setvarsubstr_stream_frag(next_tvb, pinfo, s7commp_data_tree, protocolversion, &dlength, offset, has_trailer);
+                col_append_fstr(pinfo->cinfo, COL_INFO, " (Req SetVarSubStreamed fragment. Start in Frame %u)", packet_state->start_frame);
+                proto_item_append_text(s7commp_data_tree, ": Request SetVarSubStreamed fragment. Start in Frame %u", packet_state->start_frame);
+            }
         } else {
             if (last_fragment) {
-                col_append_str(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS reassembled)");
+                /* when reassembled, instead of using the dlength from header, use the length of the
+                 * complete reassembled packet, minus the header length.
+                 */
+                dlength = tvb_reported_length_remaining(next_tvb, offset) - S7COMMP_HEADER_LEN;
             }
-            offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, protocolversion);
+            /* insert data tree */
+            s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, next_tvb, offset, dlength, FALSE);
+            /* insert sub-items in data tree */
+            s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
+            /* main dissect data function */
+            if (first_fragment || inner_fragment) {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS %s fragment)", first_fragment ? "first" : "inner" );
+                proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, tvb_get_ptr(next_tvb, offset, dlength));
+                offset += dlength;
+            } else {
+                if (last_fragment) {
+                    col_append_str(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS reassembled)");
+                }
+                offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, protocolversion);
+            }
         }
         /******************************************************
          * Trailer

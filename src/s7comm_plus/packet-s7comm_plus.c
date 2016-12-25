@@ -1,4 +1,4 @@
-/* packet-s7comm_plus.c
+/* packet-s7onlinxfdl.c
  *
  * Author:      Thomas Wiens, 2014 <th.wiens@gmx.de>
  * Description: Wireshark dissector for S7 Communication plus
@@ -5621,7 +5621,7 @@ dissect_s7commp(tvbuff_t *tvb,
     gboolean has_trailer = FALSE;
     gboolean save_fragmented;
     guint32 frag_id;
-    frame_state_t *packet_state;
+    frame_state_t *packet_state = NULL;
     conversation_t *conversation;
     conv_state_t *conversation_state = NULL;
     gboolean first_fragment = FALSE;
@@ -5907,7 +5907,8 @@ dissect_s7commp(tvbuff_t *tvb,
          * verwendet wird. Im Ersten Paket gibt es als Datenteil einen Blob der auch abgeschlossen wird.
          * Danach besitzt jedes Paket nochmal einen eigenen Längenheader im Datenteil.
          */
-        if (packet_state->start_opcode == S7COMMP_OPCODE_REQ &&
+        if (packet_state &&
+            packet_state->start_opcode == S7COMMP_OPCODE_REQ &&
             packet_state->start_function == S7COMMP_FUNCTIONCODE_SETVARSUBSTR) {
 
             s7commp_sub_item = proto_tree_add_item(s7commp_tree, hf_s7commp_data, next_tvb, offset, dlength, FALSE);

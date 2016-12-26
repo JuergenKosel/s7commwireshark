@@ -22,6 +22,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+/*  Credits
+ * =========
+ * Thanks to all here unnamed people, for supporting with capture files,
+ * informations, inspirations, bug reports and code patches.
+ * Special thanks go to:
+ * - Contributions from Softing (www.softing.com)
+ * - Contributions from Tani GmbH (www.tanindustrie.de)
+ */
+ 
 #include "config.h"
 #include <stdio.h>
 #include <time.h>

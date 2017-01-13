@@ -429,6 +429,12 @@ static const val64_string genericerrorcode_names[] = {
     { 74,       "TransactionAborted" },
     { 75,       "StoreForceStore" },
     { 76,       "GeneralIntegrity" },
+    { 77,       "MultiESConflict" },
+    { 78,       "TemporarilyOutOfResources" },
+    { 79,       "MultiESLimitExceeded" },
+    { 80,       "MultiESIncompatibleOtherESVersion" },
+    { 81,       "ConcurrentTransactionRunning" },
+    { 82,       "SslError" },
     { 0,        NULL }
 };
 /*static value_string_ext genericerrorcode_names_ext = VALUE_STRING_EXT_INIT(genericerrorcode_names);*/

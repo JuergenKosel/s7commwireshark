@@ -667,6 +667,7 @@ static const value_string tagdescr_offsetinfotype2_names[] = {
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOL                        0x05
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAY1DIM                   0x06
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAYMDIM                   0x07
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE_SFBINSTANCE                 0x08
 
 static const value_string tagdescr_offsetinfotype_names[] = {
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE_LIBELEMENT,                   "LibraryElement" },
@@ -677,6 +678,7 @@ static const value_string tagdescr_offsetinfotype_names[] = {
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOL,                         "Bool" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAY1DIM,                    "Array1Dim" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAYMDIM,                    "ArrayMDim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE_SFBINSTANCE,                  "SFB_Instance" },
     { 0,                                                            NULL }
 };
 
@@ -3273,7 +3275,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     offsetinfo_tree = proto_item_add_subtree(offsetinfo_item, ett_s7commp_tagdescr_offsetinfo);
     start_offset = offset;
 
-    if (offsetinfotype & 0x04) {
+    if (offsetinfotype & 0x04 || offsetinfotype & 0x08) {
         vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_accessability, tvb, offset, octet_count, vlq_value);
         offset += octet_count;
@@ -3351,6 +3353,15 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
                     (array_dimension > 0) ? ", " : "]");
             }
             break;
+    }
+    /* Passt nicht ins Schema oben, unbekannt wozu die weiteren zwei Werte dienen */
+    if (offsetinfotype == 0x08) {
+        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Unknown SFB Instance Offset 1: %u", vlq_value);
+        offset += octet_count;
+        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Unknown SFB Instance Offset 2: %u", vlq_value);
+        offset += octet_count;
     }
     proto_item_set_len(offsetinfo_tree, offset - start_offset);
     return offset;
@@ -5251,7 +5262,7 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
      * vorhanden. Ist in der Response keine Integritäts-ID, dann war es das auch nicht beim Request.
      * Was dadurch geprüft werden kann/soll ist unklar.
      * Leider gibt es bei der alten 1200 bei einem einzelnen Paket keine Möglichkeit, BEVOR das ganze Paket
-     * verarbeitet wurde, festzustellen, ob es diese Integritätst-Id gibt oder nicht. Protokollversion
+     * verarbeitet wurde, festzustellen, ob es diese Integritäts-Id gibt oder nicht. Protokollversion
      * V3 besitzt so wie es aussieht IMMER eine, V1 NIE, bei V2 nur bei der 1500.
      * Die hier realisierte Prüfung funktioniert nur, falls nicht zufällig der Wert von resseqinteg mit 0xa1 beginnt!
      */

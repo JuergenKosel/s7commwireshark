@@ -5896,7 +5896,7 @@ dissect_s7commp(tvbuff_t *tvb,
                     next_tvb = new_tvb;
                     offset = 0;
                 } else { /* make a new subset */
-                    next_tvb = tvb_new_subset(tvb, offset, -1, -1);
+                    next_tvb = tvb_new_subset_length_caplen(tvb, offset, -1, -1);
                     offset = 0;
                 }
             } else {    /* nicht fragmentiert, oder nicht im Standardverfahren */

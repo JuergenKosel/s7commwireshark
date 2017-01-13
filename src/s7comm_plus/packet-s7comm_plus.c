@@ -1457,33 +1457,35 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
             g_snprintf(result, ITEM_LABEL_LENGTH, "TextContainer.%u", section);
         } else if (id_number >= 0x8a7e0000 && id_number <= 0x8a7effff) {    /* AS Alarms */
             g_snprintf(result, ITEM_LABEL_LENGTH, "ASAlarms.%u", section);
-        } else if (id_number >= 0x90000000 && id_number <= 0x90ffffff) {    /* Explore Bereich IQMCT, wofür hier section steht ist nicht bekannt, bisher immer 0 gesehen. */
+        } else if (id_number >= 0x90000000 && id_number <= 0x90ffffff) {    /* TypeInfo Bereich IQMCT, wofür hier section steht ist nicht bekannt, bisher immer 0 gesehen. */
             str = try_val_to_str(index, explore_class_iqmct_names);
             if (str) {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "Explore%s.%u", str, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_%s.%u", str, section);
             } else {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreIQMCT.unknown.%u.%u", index, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_IQMCT.unknown.%u.%u", index, section);
             }
-        } else if (id_number >= 0x91000000 && id_number <= 0x91ffffff) {    /* Explore Bereich im UDT */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreUDT.%u.%u", section, index);
-        } else if (id_number >= 0x92000000 && id_number <= 0x92ffffff) {    /* Explore Bereich im DB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreDB.%u.%u", section, index);
-        } else if (id_number >= 0x93000000 && id_number <= 0x93ffffff) {    /* Explore Bereich im FB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreFB.%u.%u", section, index);
-        } else if (id_number >= 0x94000000 && id_number <= 0x94ffffff) {    /* Explore Bereich im FC */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreFC.%u.%u", section, index);
-        } else if (id_number >= 0x95000000 && id_number <= 0x95ffffff) {    /* Explore Bereich im OB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreOB.%u.%u", section, index);
-        } else if (id_number >= 0x96000000 && id_number <= 0x96ffffff) {    /* Explore Bereich im FBT */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreFBT.%u.%u", section, index);
+        } else if (id_number >= 0x91000000 && id_number <= 0x91ffffff) {    /* TypeInfo Bereich im UDT */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_UDT.%u.%u", section, index);
+        } else if (id_number >= 0x92000000 && id_number <= 0x92ffffff) {    /* TypeInfo Bereich im DB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_DB.%u.%u", section, index);
+        } else if (id_number >= 0x93000000 && id_number <= 0x93ffffff) {    /* TypeInfo Bereich im FB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FB.%u.%u", section, index);
+        } else if (id_number >= 0x94000000 && id_number <= 0x94ffffff) {    /* TypeInfo Bereich im FC */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FC.%u.%u", section, index);
+        } else if (id_number >= 0x95000000 && id_number <= 0x95ffffff) {    /* TypeInfo Bereich im OB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_OB.%u.%u", section, index);
+        } else if (id_number >= 0x96000000 && id_number <= 0x96ffffff) {    /* TypeInfo Bereich im FBT */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FBT.%u.%u", section, index);
+        } else if (id_number >= 0x9a000000 && id_number <= 0x9affffff) {    /* Struct-Array in einem DB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_StructArrayDB.%u.%u", section, index);
         } else if (id_number >= 0x9eae0000 && id_number <= 0x9eaeffff) {    /* Hängt auch mit dem Alarmsystem zusammen??? TODO */
             g_snprintf(result, ITEM_LABEL_LENGTH, "?UnknownAlarms?.%u", section);
         } else if (id_number >= 0x02000000 && id_number <= 0x02ffffff) {    /* Explore Bereich LIB */
             str = try_val_to_str(index, explore_class_lib_names);
             if (str) {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreLIB.%s.%u", str, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_LIB.%s.%u", str, section);
             } else {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreUnknown.%u.%u", index, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_Unknown.%u.%u", index, section);
             }
         } else {                                                            /* Komplett unbekannt */
             g_snprintf(result, ITEM_LABEL_LENGTH, "Unknown (%u)", id_number);

@@ -429,6 +429,12 @@ static const val64_string genericerrorcode_names[] = {
     { 74,       "TransactionAborted" },
     { 75,       "StoreForceStore" },
     { 76,       "GeneralIntegrity" },
+    { 77,       "MultiESConflict" },
+    { 78,       "TemporarilyOutOfResources" },
+    { 79,       "MultiESLimitExceeded" },
+    { 80,       "MultiESIncompatibleOtherESVersion" },
+    { 81,       "ConcurrentTransactionRunning" },
+    { 82,       "SslError" },
     { 0,        NULL }
 };
 /*static value_string_ext genericerrorcode_names_ext = VALUE_STRING_EXT_INIT(genericerrorcode_names);*/
@@ -667,6 +673,7 @@ static const value_string tagdescr_offsetinfotype2_names[] = {
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOL                        0x05
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAY1DIM                   0x06
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAYMDIM                   0x07
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE_SFBINSTANCE                 0x08
 
 static const value_string tagdescr_offsetinfotype_names[] = {
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE_LIBELEMENT,                   "LibraryElement" },
@@ -677,6 +684,7 @@ static const value_string tagdescr_offsetinfotype_names[] = {
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE_BOOL,                         "Bool" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAY1DIM,                    "Array1Dim" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE_ARRAYMDIM,                    "ArrayMDim" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE_SFBINSTANCE,                  "SFB_Instance" },
     { 0,                                                            NULL }
 };
 
@@ -1457,33 +1465,35 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
             g_snprintf(result, ITEM_LABEL_LENGTH, "TextContainer.%u", section);
         } else if (id_number >= 0x8a7e0000 && id_number <= 0x8a7effff) {    /* AS Alarms */
             g_snprintf(result, ITEM_LABEL_LENGTH, "ASAlarms.%u", section);
-        } else if (id_number >= 0x90000000 && id_number <= 0x90ffffff) {    /* Explore Bereich IQMCT, wofür hier section steht ist nicht bekannt, bisher immer 0 gesehen. */
+        } else if (id_number >= 0x90000000 && id_number <= 0x90ffffff) {    /* TypeInfo Bereich IQMCT, wofür hier section steht ist nicht bekannt, bisher immer 0 gesehen. */
             str = try_val_to_str(index, explore_class_iqmct_names);
             if (str) {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "Explore%s.%u", str, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_%s.%u", str, section);
             } else {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreIQMCT.unknown.%u.%u", index, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_IQMCT.unknown.%u.%u", index, section);
             }
-        } else if (id_number >= 0x91000000 && id_number <= 0x91ffffff) {    /* Explore Bereich im UDT */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreUDT.%u.%u", section, index);
-        } else if (id_number >= 0x92000000 && id_number <= 0x92ffffff) {    /* Explore Bereich im DB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreDB.%u.%u", section, index);
-        } else if (id_number >= 0x93000000 && id_number <= 0x93ffffff) {    /* Explore Bereich im FB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreFB.%u.%u", section, index);
-        } else if (id_number >= 0x94000000 && id_number <= 0x94ffffff) {    /* Explore Bereich im FC */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreFC.%u.%u", section, index);
-        } else if (id_number >= 0x95000000 && id_number <= 0x95ffffff) {    /* Explore Bereich im OB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreOB.%u.%u", section, index);
-        } else if (id_number >= 0x96000000 && id_number <= 0x96ffffff) {    /* Explore Bereich im FBT */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreFBT.%u.%u", section, index);
+        } else if (id_number >= 0x91000000 && id_number <= 0x91ffffff) {    /* TypeInfo Bereich im UDT */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_UDT.%u.%u", section, index);
+        } else if (id_number >= 0x92000000 && id_number <= 0x92ffffff) {    /* TypeInfo Bereich im DB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_DB.%u.%u", section, index);
+        } else if (id_number >= 0x93000000 && id_number <= 0x93ffffff) {    /* TypeInfo Bereich im FB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FB.%u.%u", section, index);
+        } else if (id_number >= 0x94000000 && id_number <= 0x94ffffff) {    /* TypeInfo Bereich im FC */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FC.%u.%u", section, index);
+        } else if (id_number >= 0x95000000 && id_number <= 0x95ffffff) {    /* TypeInfo Bereich im OB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_OB.%u.%u", section, index);
+        } else if (id_number >= 0x96000000 && id_number <= 0x96ffffff) {    /* TypeInfo Bereich im FBT */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FBT.%u.%u", section, index);
+        } else if (id_number >= 0x9a000000 && id_number <= 0x9affffff) {    /* Struct-Array in einem DB */
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_StructArrayDB.%u.%u", section, index);
         } else if (id_number >= 0x9eae0000 && id_number <= 0x9eaeffff) {    /* Hängt auch mit dem Alarmsystem zusammen??? TODO */
             g_snprintf(result, ITEM_LABEL_LENGTH, "?UnknownAlarms?.%u", section);
         } else if (id_number >= 0x02000000 && id_number <= 0x02ffffff) {    /* Explore Bereich LIB */
             str = try_val_to_str(index, explore_class_lib_names);
             if (str) {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreLIB.%s.%u", str, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_LIB.%s.%u", str, section);
             } else {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "ExploreUnknown.%u.%u", index, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_Unknown.%u.%u", index, section);
             }
         } else {                                                            /* Komplett unbekannt */
             g_snprintf(result, ITEM_LABEL_LENGTH, "Unknown (%u)", id_number);
@@ -3271,7 +3281,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     offsetinfo_tree = proto_item_add_subtree(offsetinfo_item, ett_s7commp_tagdescr_offsetinfo);
     start_offset = offset;
 
-    if (offsetinfotype & 0x04) {
+    if (offsetinfotype & 0x04 || offsetinfotype & 0x08) {
         vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
         proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_accessability, tvb, offset, octet_count, vlq_value);
         offset += octet_count;
@@ -3349,6 +3359,15 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
                     (array_dimension > 0) ? ", " : "]");
             }
             break;
+    }
+    /* Passt nicht ins Schema oben, unbekannt wozu die weiteren zwei Werte dienen */
+    if (offsetinfotype == 0x08) {
+        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Unknown SFB Instance Offset 1: %u", vlq_value);
+        offset += octet_count;
+        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
+        proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Unknown SFB Instance Offset 2: %u", vlq_value);
+        offset += octet_count;
     }
     proto_item_set_len(offsetinfo_tree, offset - start_offset);
     return offset;
@@ -5249,7 +5268,7 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
      * vorhanden. Ist in der Response keine Integritäts-ID, dann war es das auch nicht beim Request.
      * Was dadurch geprüft werden kann/soll ist unklar.
      * Leider gibt es bei der alten 1200 bei einem einzelnen Paket keine Möglichkeit, BEVOR das ganze Paket
-     * verarbeitet wurde, festzustellen, ob es diese Integritätst-Id gibt oder nicht. Protokollversion
+     * verarbeitet wurde, festzustellen, ob es diese Integritäts-Id gibt oder nicht. Protokollversion
      * V3 besitzt so wie es aussieht IMMER eine, V1 NIE, bei V2 nur bei der 1500.
      * Die hier realisierte Prüfung funktioniert nur, falls nicht zufällig der Wert von resseqinteg mit 0xa1 beginnt!
      */
@@ -5896,7 +5915,7 @@ dissect_s7commp(tvbuff_t *tvb,
                     next_tvb = new_tvb;
                     offset = 0;
                 } else { /* make a new subset */
-                    next_tvb = tvb_new_subset(tvb, offset, -1, -1);
+                    next_tvb = tvb_new_subset_length_caplen(tvb, offset, -1, -1);
                     offset = 0;
                 }
             } else {    /* nicht fragmentiert, oder nicht im Standardverfahren */

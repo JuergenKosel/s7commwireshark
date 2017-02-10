@@ -4057,6 +4057,183 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
     offset += 4;
     return offset;
 }
+
+/*******************************************************************************************************
+ *
+ * Decodes part 1 of an item address
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_item_address_part1(tvbuff_t *tvb,
+                                  proto_tree *tree,
+                                  guint32 *number_of_fields,
+                                  guint32 *id_value,
+                                  guint32 offset)
+{
+    guint8 octet_count = 0;
+    const guint8 *str_id_name;
+    guint32 value;
+    proto_item *area_item = NULL;
+    proto_item *area_item_tree = NULL;
+    guint16 var_area1 = 0;
+    guint16 db_number = 0;
+
+    /**************************************************************
+     * 2. Feld
+     * Das zweite Feld ist eine ID aus der ID-Namensliste, welche so etwas wie die "Base-Area" angibt auf den
+     * sich die weiteren IDs beziehen.
+     * Für dem Merkerbereich ist dort auch eine mit der Funktion übereinstimmende ID vorhanden (82).
+     * Für Datenbausteine gibt es keine explizite ID, weil sich diese aus einem fixen und einem variablen Teil
+     * zusammensetzt.
+     *   0x8a0e nnnn, mit nnnn = Nummer des Datenbausteins.
+     * Demnach entspricht eine id > 0x8a0e0000=2316173312 (DB0) und id < 0x8a0effff=2316238847 (DB65535) einem DB-Zugriff.
+     */
+    value = tvb_get_varuint32(tvb, &octet_count, offset);
+
+    if ((value >= 0x8a0e0000) && (value <= 0x8a0effff)) {
+        area_item = proto_tree_add_uint(tree, hf_s7commp_itemaddr_area, tvb, offset, octet_count, value);
+        area_item_tree = proto_item_add_subtree(area_item, ett_s7commp_itemaddr_area);
+        var_area1 = (value >> 16);
+        db_number = (value & 0xffff);
+        proto_tree_add_uint(area_item_tree, hf_s7commp_itemaddr_area1, tvb, offset, octet_count, var_area1);
+
+        proto_tree_add_uint(area_item_tree, hf_s7commp_itemaddr_dbnumber, tvb, offset, octet_count, db_number);
+        proto_item_append_text(area_item_tree, " (Datablock, DB-Number: %u)", db_number);
+        proto_item_append_text(tree, " DB%u", db_number);
+    } else {
+        proto_tree_add_uint(tree, hf_s7commp_itemaddr_area_base, tvb, offset, octet_count, value);
+        if ((str_id_name = try_val_to_str_ext(value, &id_number_names_ext))) {
+            proto_item_append_text(tree, " %s", str_id_name);
+        } else {
+            proto_item_append_text(tree, " (%u)", value);
+        }
+    }
+    offset += octet_count;
+
+    *number_of_fields += 1;
+    *id_value = value;
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decodes fields 4 and 5 of an item address
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_item_address_part2(tvbuff_t *tvb,
+                                  proto_tree *tree,
+                                  guint32 *number_of_fields,
+                                  guint32 id_value,
+                                  guint32 crc,
+                                  guint32 lid_nest_depth,
+                                  guint32 offset)
+{
+    guint32 value = 0;
+    guint32 lid_cnt = 0;
+    guint32 first_lid = 0;
+    guint8 octet_count = 0;
+    const guint8 *str_id_name;
+    gboolean is_datablock_access = FALSE;
+    gboolean is_iqmct_access = FALSE;
+    gboolean is_classicblob_access = FALSE;
+
+    /**************************************************************
+     * 4. Feld
+     * Eine ID aus der ID-Namensliste. Hiermit wird angezeigt, welcher Typ von Wert gelesen werden soll.
+     * Bei Merkern: 3736 = ControllerArea.ValueActual
+     * Bei DBs: 2550 = DB.ValueActual
+     * Vermutlich lassen sich damit auch Startwerte im DB lesen (über 2548).
+     * Es lassen sich auch diverse andere Objekte der SPS lesen.
+     */
+    value = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(tree, hf_s7commp_itemaddr_area_sub, tvb, offset, octet_count, value);
+    if ((str_id_name = try_val_to_str_ext(value, &id_number_names_ext))) {
+        proto_item_append_text(tree, ", %s", str_id_name);
+    } else {
+        proto_item_append_text(tree, ", (%u)", value);
+    }
+    offset += octet_count;
+
+    *number_of_fields += 1;
+
+    /**************************************************************
+     * 5. bis n. Feld
+     * LID pro Nest-Level
+     */
+    is_datablock_access = ((id_value >= 0x8a0e0000) && (id_value <= 0x8a0effff));     /* Datenbaustein mit Nummer */
+    is_iqmct_access = ((id_value >= 80) && (id_value <= 84));                         /* 80=I, 81=Q, 82=M, 83=C, 84=T */
+    is_classicblob_access = (crc == 0) && (is_datablock_access || is_iqmct_access);
+
+    if (lid_nest_depth > 1) {
+        if (is_classicblob_access) {
+            lid_cnt = 2;
+            /* 1. LID: Zugriffsart */
+            first_lid = tvb_get_varuint32(tvb, &octet_count, offset);
+            proto_tree_add_text(tree, tvb, offset, octet_count, "LID-access Aid: %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
+            proto_item_append_text(tree, ", %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
+            offset += octet_count;
+            lid_cnt += 1;
+            *number_of_fields += 1;
+            /* Wenn Zugriffsart == 3 (ClassicBlob), dann wird mit Absolutadressen gearbeitet */
+            if (first_lid == 3) {
+                /* 2. Startadresse */
+                value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(tree, tvb, offset, octet_count, "Blob startoffset: %u", value);
+                proto_item_append_text(tree, ", Offs=%u", value);
+                offset += octet_count;
+                lid_cnt += 1;
+                *number_of_fields += 1;
+                /* 3. Anzahl an Bytes */
+                value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(tree, tvb, offset, octet_count, "Blob bytecount: %u", value);
+                proto_item_append_text(tree, ", Cnt=%u", value);
+                offset += octet_count;
+                lid_cnt += 1;
+                *number_of_fields += 1;
+                /* Wenn jetzt noch ein Feld folgt, dann ist es ein Bitoffset */
+                if (lid_nest_depth >= lid_cnt) {
+                    value = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_text(tree, tvb, offset, octet_count, "Blob bitoffset: %u", value);
+                    proto_item_append_text(tree, ", Bitoffs=%u", value);
+                    offset += octet_count;
+                    lid_cnt += 1;
+                    *number_of_fields += 1;
+                }
+            }
+            /* TODO: Wenn jetzt noch LIDs folgen, erstmal als weitere IDs anzeigen */
+            if (lid_nest_depth > lid_cnt) {
+                proto_item_append_text(tree, ", LID=");
+            }
+            for (lid_cnt = lid_cnt; lid_cnt <= lid_nest_depth; lid_cnt++) {
+                value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(tree, hf_s7commp_itemaddr_lid_value, tvb, offset, octet_count, value);
+                if (lid_cnt == lid_nest_depth) {
+                    proto_item_append_text(tree, "%u", value);
+                } else {
+                    proto_item_append_text(tree, "%u.", value);
+                }
+                offset += octet_count;
+                *number_of_fields += 1;
+            }
+        } else {
+            /* Standard für symbolischen Zugriff mit crc und LIDs */
+            proto_item_append_text(tree, ", LID=");
+            for (lid_cnt = 2; lid_cnt <= lid_nest_depth; lid_cnt++) {
+                value = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(tree, hf_s7commp_itemaddr_lid_value, tvb, offset, octet_count, value);
+                if (lid_cnt == lid_nest_depth) {
+                    proto_item_append_text(tree, "%u", value);
+                } else {
+                    proto_item_append_text(tree, "%u.", value);
+                }
+                offset += octet_count;
+                *number_of_fields += 1;
+            }
+        }
+    }
+    return offset;
+}
 /*******************************************************************************************************
  *
  * Decodes a plc address
@@ -4071,28 +4248,17 @@ s7commp_decode_item_address(tvbuff_t *tvb,
 {
     proto_item *adr_item = NULL;
     proto_tree *adr_item_tree = NULL;
-    proto_item *area_item = NULL;
-    proto_item *area_item_tree = NULL;
-
     guint8 octet_count = 0;
-    guint32 value = 0;
-    guint32 first_lid = 0;
+    guint32 id_value = 0;
     guint32 crc = 0;
-    guint16 var_area1 = 0;
-    guint16 db_number = 0;
     guint32 lid_nest_depth = 0;
-    guint32 lid_cnt = 0;
     guint32 start_offset = offset;
-    const guint8 *str_id_name;
-    gboolean is_datablock_access = FALSE;
-    gboolean is_iqmct_access = FALSE;
-    gboolean is_classicblob_access = FALSE;
 
     *number_of_fields = 0;
 
     adr_item = proto_tree_add_item(tree, hf_s7commp_data_item_address, tvb, offset, -1, FALSE);
     adr_item_tree = proto_item_add_subtree(adr_item, ett_s7commp_data_item);
-    proto_item_append_text(adr_item_tree, " [%u]", item_nr);
+    proto_item_append_text(adr_item_tree, " [%u]:", item_nr);
 
     /**************************************************************
      * 1. Feld
@@ -4121,48 +4287,14 @@ s7commp_decode_item_address(tvbuff_t *tvb,
     proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_crc, tvb, offset, octet_count, crc);
     offset += octet_count;
 
-    proto_item_append_text(adr_item_tree, ": SYM-CRC=%x", crc);
-
     *number_of_fields += 1;
 
     /**************************************************************
-     * 2. Feld
-     * Das zweite Feld ist eine ID aus der ID-Namensliste, welche so etwas wie die "Base-Area" angibt auf den
-     * sich die weiteren IDs beziehen.
-     * Für dem Merkerbereich ist dort auch eine mit der Funktion übereinstimmende ID vorhanden (82).
-     * Für Datenbausteine gibt es keine explizite ID, weil sich diese aus einem fixen und einem variablen Teil
-     * zusammensetzt.
-     *   0x8a0e nnnn, mit nnnn = Nummer des Datenbausteins.
-     * Demnach entspricht eine id > 0x8a0e0000=2316173312 (DB0) und id < 0x8a0effff=2316238847 (DB65535) einem DB-Zugriff.
+     * ID aus der Namensliste
      */
-    value = tvb_get_varuint32(tvb, &octet_count, offset);
+    offset = s7commp_decode_item_address_part1(tvb, adr_item_tree, number_of_fields, &id_value, offset);
 
-    is_datablock_access = ((value >= 0x8a0e0000) && (value <= 0x8a0effff));     /* Datenbaustein mit Nummer */
-    is_iqmct_access = ((value >= 80) && (value <= 84));                         /* 80=I, 81=Q, 82=M, 83=C, 84=T */
-    is_classicblob_access = (crc == 0) && (is_datablock_access || is_iqmct_access);
-
-    if (is_datablock_access) {
-        area_item = proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_area, tvb, offset, octet_count, value);
-        area_item_tree = proto_item_add_subtree(area_item, ett_s7commp_itemaddr_area);
-        var_area1 = (value >> 16);
-        db_number = (value & 0xffff);
-        proto_tree_add_uint(area_item_tree, hf_s7commp_itemaddr_area1, tvb, offset, octet_count, var_area1);
-
-        proto_tree_add_uint(area_item_tree, hf_s7commp_itemaddr_dbnumber, tvb, offset, octet_count, db_number);
-        proto_item_append_text(area_item_tree, " (Datablock, DB-Number: %u)", db_number);
-        proto_item_append_text(adr_item_tree, ", DB%u", db_number);
-    } else {
-        proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_area_base, tvb, offset, octet_count, value);
-        if ((str_id_name = try_val_to_str_ext(value, &id_number_names_ext))) {
-            proto_item_append_text(adr_item_tree, ", %s", str_id_name);
-        } else {
-            proto_item_append_text(tree, ", (%u)", value);
-        }
-    }
-    offset += octet_count;
-
-    *number_of_fields += 1;
-
+    proto_item_append_text(adr_item_tree, ", SYM-CRC=%x", crc);
     /**************************************************************
      * 3. Feld
      * LID Nesting Depth
@@ -4180,98 +4312,93 @@ s7commp_decode_item_address(tvbuff_t *tvb,
     *number_of_fields += 1;
 
     /**************************************************************
-     * 4. Feld
-     * Eine ID aus der ID-Namensliste. Hiermit wird angezeigt, welcher Typ von Wert gelesen werden soll.
-     * Bei Merkern: 3736 = ControllerArea.ValueActual
-     * Bei DBs: 2550 = DB.ValueActual
-     * Vermutlich lassen sich damit auch Startwerte im DB lesen (über 2548).
-     * Es lassen sich auch diverse andere Objekte der SPS lesen.
+     * Felder 4 und 5 und weitere LIDs
+     */
+    offset = s7commp_decode_item_address_part2(tvb, adr_item_tree, number_of_fields, id_value, crc, lid_nest_depth, offset);
+
+    proto_item_set_len(adr_item_tree, offset - start_offset);
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decodes a plc address in subscription array.
+ *
+ * Abgeleitet von s7commp_decode_item_address().
+ * Unterschiede:
+ * - "Symbol-CRC" und "Access base-area" tauschen die Reihenfolge
+ * - Kein "Number of following IDs" als Einzelwert, sondern in den 16 Bits eines 32 Bit Werts codiert.
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_item_address_sub(tvbuff_t *tvb,
+                                proto_tree *tree,
+                                guint32 *number_of_fields,
+                                guint32 item_nr,
+                                guint32 offset)
+{
+    proto_item *adr_item = NULL;
+    proto_tree *adr_item_tree = NULL;
+
+    guint8 octet_count = 0;
+    guint32 value = 0;
+    guint32 id_value = 0;
+    guint32 crc = 0;
+    guint32 lid_nest_depth = 0;
+    guint32 start_offset = offset;
+    proto_item *ret_item = NULL;
+
+    adr_item = proto_tree_add_item(tree, hf_s7commp_data_item_address, tvb, offset, -1, FALSE);
+    adr_item_tree = proto_item_add_subtree(adr_item, ett_s7commp_data_item);
+    proto_item_append_text(adr_item_tree, " [%u]:", item_nr);
+
+    /* z.B. 0x80040003
+     * Wofür die linken 2 Bytes stehen ist nicht bekannt.
+     * In den rechten 2 Bytes steht die Anzahl der LIDs.
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_area_sub, tvb, offset, octet_count, value);
-    if ((str_id_name = try_val_to_str_ext(value, &id_number_names_ext))) {
-        proto_item_append_text(adr_item_tree, ", %s", str_id_name);
-    } else {
-        proto_item_append_text(tree, ", (%u)", value);
-    }
+    lid_nest_depth = value & 0xffff;
+    ret_item = proto_tree_add_bitmask_value(adr_item_tree, tvb, offset, hf_s7commp_subscrreflist_item_head,
+        ett_s7commp_subscrreflist_item_head, s7commp_subscrreflist_item_head_fields, value);
+    proto_item_set_len(ret_item, octet_count);
     offset += octet_count;
+    *number_of_fields += 1;
 
+    value = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(adr_item_tree, hf_s7commp_notification_vl_refnumber, tvb, offset, octet_count, value);
+    offset += octet_count;
+    *number_of_fields += 1;
+
+    value = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(adr_item_tree, hf_s7commp_subscrreflist_item_unknown1, tvb, offset, octet_count, value);
+    offset += octet_count;
     *number_of_fields += 1;
 
     /**************************************************************
-     * 5. bis n. Feld
-     * LID pro Nest-Level
+     * ID aus der Namensliste
      */
-    if (lid_nest_depth > 1) {
-        if (is_classicblob_access) {
-            lid_cnt = 2;
-            /* 1. LID: Zugriffsart */
-            first_lid = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(adr_item_tree, tvb, offset, octet_count, "LID-access Aid: %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
-            proto_item_append_text(adr_item_tree, ", %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
-            offset += octet_count;
-            lid_cnt += 1;
-            *number_of_fields += 1;
-            /* Wenn Zugriffsart == 3 (ClassicBlob), dann wird mit Absolutadressen gearbeitet */
-            if (first_lid == 3) {
-                /* 2. Startadresse */
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(adr_item_tree, tvb, offset, octet_count, "Blob startoffset: %u", value);
-                proto_item_append_text(adr_item_tree, ", Offs=%u", value);
-                offset += octet_count;
-                lid_cnt += 1;
-                *number_of_fields += 1;
-                /* 3. Anzahl an Bytes */
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(adr_item_tree, tvb, offset, octet_count, "Blob bytecount: %u", value);
-                proto_item_append_text(adr_item_tree, ", Cnt=%u", value);
-                offset += octet_count;
-                lid_cnt += 1;
-                *number_of_fields += 1;
-                /* Wenn jetzt noch ein Feld folgt, dann ist es ein Bitoffset */
-                if (lid_nest_depth >= lid_cnt) {
-                    value = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_text(adr_item_tree, tvb, offset, octet_count, "Blob bitoffset: %u", value);
-                    proto_item_append_text(adr_item_tree, ", Bitoffs=%u", value);
-                    offset += octet_count;
-                    lid_cnt += 1;
-                    *number_of_fields += 1;
-                }
-            }
-            /* TODO: Wenn jetzt noch LIDs folgen, erstmal als weitere IDs anzeigen */
-            if (lid_nest_depth > lid_cnt) {
-                proto_item_append_text(adr_item_tree, ", LID=");
-            }
-            for (lid_cnt = lid_cnt; lid_cnt <= lid_nest_depth; lid_cnt++) {
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_lid_value, tvb, offset, octet_count, value);
-                if (lid_cnt == lid_nest_depth) {
-                    proto_item_append_text(adr_item_tree, "%u", value);
-                } else {
-                    proto_item_append_text(adr_item_tree, "%u.", value);
-                }
-                offset += octet_count;
-                *number_of_fields += 1;
-            }
-        } else {
-            /* Standard für symbolischen Zugriff mit crc und LIDs */
-            proto_item_append_text(adr_item_tree, ", LID=");
-            for (lid_cnt = 2; lid_cnt <= lid_nest_depth; lid_cnt++) {
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_lid_value, tvb, offset, octet_count, value);
-                if (lid_cnt == lid_nest_depth) {
-                    proto_item_append_text(adr_item_tree, "%u", value);
-                } else {
-                    proto_item_append_text(adr_item_tree, "%u.", value);
-                }
-                offset += octet_count;
-                *number_of_fields += 1;
-            }
-        }
-    }
+    offset = s7commp_decode_item_address_part1(tvb, adr_item_tree, number_of_fields, &id_value, offset);
+
+    /**************************************************************
+     * CRC als varuint
+     */
+    crc = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_item_append_text(adr_item_tree, ", SYM-CRC=%x", crc);
+    proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_crc, tvb, offset, octet_count, crc);
+    offset += octet_count;
+    *number_of_fields += 1;
+
+    /**************************************************************
+     * Felder 4 und 5 und weitere LIDs
+     */
+    offset = s7commp_decode_item_address_part2(tvb, adr_item_tree, number_of_fields, id_value, crc, lid_nest_depth, offset);
+
     proto_item_set_len(adr_item_tree, offset - start_offset);
+
     return offset;
 }
+
+
 /*******************************************************************************************************
  *
  * Request SetMultiVariables
@@ -4714,219 +4841,6 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decodes a plc address in subscription array.
- *
- * Abgeleitet von s7commp_decode_item_address().
- * Unterschiede:
- * - "Symbol-CRC" und "Access base-area" tauschen die Reihenfolge
- * - Kein "Number of following IDs" als Einzelwert, sondern in den 16 Bits eines 32 Bit Werts.
- *
- *******************************************************************************************************/
-static guint32
-s7commp_decode_item_address_sub(tvbuff_t *tvb,
-                                proto_tree *tree,
-                                guint32 *number_of_fields,
-                                guint32 item_nr,
-                                guint32 offset)
-{
-    proto_item *adr_item = NULL;
-    proto_tree *adr_item_tree = NULL;
-    proto_item *area_item = NULL;
-    proto_item *area_item_tree = NULL;
-
-    guint8 octet_count = 0;
-    guint8 octet_count_crc = 0;
-    guint32 value = 0;
-    guint32 first_lid = 0;
-    guint32 crc = 0;
-    guint16 var_area1 = 0;
-    guint16 db_number = 0;
-    guint32 lid_nest_depth = 0;
-    guint32 lid_cnt = 0;
-    guint32 start_offset = offset;
-    const guint8 *str_id_name;
-    gboolean is_datablock_access = FALSE;
-    gboolean is_iqmct_access = FALSE;
-    gboolean is_classicblob_access = FALSE;
-
-    proto_item *ret_item = NULL;
-
-    adr_item = proto_tree_add_item(tree, hf_s7commp_data_item_address, tvb, offset, -1, FALSE);
-    adr_item_tree = proto_item_add_subtree(adr_item, ett_s7commp_data_item);
-    proto_item_append_text(adr_item_tree, " [%u]", item_nr);
-
-    /* z.B. 0x80040003
-     * Wofür die linken 2 Bytes stehen ist nicht bekannt.
-     * In den rechten 2 Bytes steht die Anzahl der LIDs.
-     */
-    value = tvb_get_varuint32(tvb, &octet_count, offset);
-    lid_nest_depth = value & 0xffff;
-    ret_item = proto_tree_add_bitmask_value(adr_item_tree, tvb, offset, hf_s7commp_subscrreflist_item_head,
-        ett_s7commp_subscrreflist_item_head, s7commp_subscrreflist_item_head_fields, value);
-    proto_item_set_len(ret_item, octet_count);
-    offset += octet_count;
-    *number_of_fields += 1;
-
-    value = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_uint(adr_item_tree, hf_s7commp_notification_vl_refnumber, tvb, offset, octet_count, value);
-    offset += octet_count;
-    *number_of_fields += 1;
-
-    value = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_uint(adr_item_tree, hf_s7commp_subscrreflist_item_unknown1, tvb, offset, octet_count, value);
-    offset += octet_count;
-    *number_of_fields += 1;
-
-    /**************************************************************
-     * 2. Feld
-     * Das zweite Feld ist eine ID aus der ID-Namensliste, welche so etwas wie die "Base-Area" angibt auf den
-     * sich die weiteren IDs beziehen.
-     * Für dem Merkerbereich ist dort auch eine mit der Funktion übereinstimmende ID vorhanden (82).
-     * Für Datenbausteine gibt es keine explizite ID, weil sich diese aus einem fixen und einem variablen Teil
-     * zusammensetzt.
-     *   0x8a0e nnnn, mit nnnn = Nummer des Datenbausteins.
-     * Demnach entspricht eine id > 0x8a0e0000=2316173312 (DB0) und id < 0x8a0effff=2316238847 (DB65535) einem DB-Zugriff.
-     */
-    value = tvb_get_varuint32(tvb, &octet_count, offset);
-
-    /* crc vorab holen */
-    crc = tvb_get_varuint32(tvb, &octet_count_crc, offset + octet_count);
-    proto_item_append_text(adr_item_tree, ": SYM-CRC=%x", crc);
-
-    is_datablock_access = ((value >= 0x8a0e0000) && (value <= 0x8a0effff));     /* Datenbaustein mit Nummer */
-    is_iqmct_access = ((value >= 80) && (value <= 84));                         /* 80=I, 81=Q, 82=M, 83=C, 84=T */
-    is_classicblob_access = (crc == 0) && (is_datablock_access || is_iqmct_access);
-
-    if (is_datablock_access) {
-        area_item = proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_area, tvb, offset, octet_count, value);
-        area_item_tree = proto_item_add_subtree(area_item, ett_s7commp_itemaddr_area);
-        var_area1 = (value >> 16);
-        db_number = (value & 0xffff);
-        proto_tree_add_uint(area_item_tree, hf_s7commp_itemaddr_area1, tvb, offset, octet_count, var_area1);
-
-        proto_tree_add_uint(area_item_tree, hf_s7commp_itemaddr_dbnumber, tvb, offset, octet_count, db_number);
-        proto_item_append_text(area_item_tree, " (Datablock, DB-Number: %u)", db_number);
-        proto_item_append_text(adr_item_tree, ", DB%u", db_number);
-    } else {
-        proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_area_base, tvb, offset, octet_count, value);
-        if ((str_id_name = try_val_to_str_ext(value, &id_number_names_ext))) {
-            proto_item_append_text(adr_item_tree, ", %s", str_id_name);
-        } else {
-            proto_item_append_text(tree, ", (%u)", value);
-        }
-    }
-    offset += octet_count;
-
-    *number_of_fields += 1;
-
-    /**************************************************************
-     * 1. Feld
-     * CRC als varuint
-     */
-    proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_crc, tvb, offset, octet_count_crc, crc);
-    offset += octet_count_crc;
-    *number_of_fields += 1;
-
-    /**************************************************************
-     * 3. Feld
-     * LID Nesting Depth
-     */
-
-    /**************************************************************
-     * 4. Feld
-     * Eine ID aus der ID-Namensliste. Hiermit wird angezeigt, welcher Typ von Wert gelesen werden soll.
-     * Bei Merkern: 3736 = ControllerArea.ValueActual
-     * Bei DBs: 2550 = DB.ValueActual
-     * Vermutlich lassen sich damit auch Startwerte im DB lesen (über 2548).
-     * Es lassen sich auch diverse andere Objekte der SPS lesen.
-     */
-    value = tvb_get_varuint32(tvb, &octet_count, offset);
-    proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_area_sub, tvb, offset, octet_count, value);
-    if ((str_id_name = try_val_to_str_ext(value, &id_number_names_ext))) {
-        proto_item_append_text(adr_item_tree, ", %s", str_id_name);
-    } else {
-        proto_item_append_text(tree, ", (%u)", value);
-    }
-    offset += octet_count;
-
-    *number_of_fields += 1;
-
-    /**************************************************************
-     * 5. bis n. Feld
-     * LID pro Nest-Level
-     */
-    if (lid_nest_depth > 1) {
-        if (is_classicblob_access) {
-            lid_cnt = 2;
-            /* 1. LID: Zugriffsart */
-            first_lid = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(adr_item_tree, tvb, offset, octet_count, "LID-access Aid: %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
-            proto_item_append_text(adr_item_tree, ", %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
-            offset += octet_count;
-            lid_cnt += 1;
-            *number_of_fields += 1;
-            /* Wenn Zugriffsart == 3 (ClassicBlob), dann wird mit Absolutadressen gearbeitet */
-            if (first_lid == 3) {
-                /* 2. Startadresse */
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(adr_item_tree, tvb, offset, octet_count, "Blob startoffset: %u", value);
-                proto_item_append_text(adr_item_tree, ", Offs=%u", value);
-                offset += octet_count;
-                lid_cnt += 1;
-                *number_of_fields += 1;
-                /* 3. Anzahl an Bytes */
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(adr_item_tree, tvb, offset, octet_count, "Blob bytecount: %u", value);
-                proto_item_append_text(adr_item_tree, ", Cnt=%u", value);
-                offset += octet_count;
-                lid_cnt += 1;
-                *number_of_fields += 1;
-                /* Wenn jetzt noch ein Feld folgt, dann ist es ein Bitoffset */
-                if (lid_nest_depth >= lid_cnt) {
-                    value = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_text(adr_item_tree, tvb, offset, octet_count, "Blob bitoffset: %u", value);
-                    proto_item_append_text(adr_item_tree, ", Bitoffs=%u", value);
-                    offset += octet_count;
-                    lid_cnt += 1;
-                    *number_of_fields += 1;
-                }
-            }
-            /* TODO: Wenn jetzt noch LIDs folgen, erstmal als weitere IDs anzeigen */
-            if (lid_nest_depth > lid_cnt) {
-                proto_item_append_text(adr_item_tree, ", LID=");
-            }
-            for (lid_cnt = lid_cnt; lid_cnt <= lid_nest_depth; lid_cnt++) {
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_lid_value, tvb, offset, octet_count, value);
-                if (lid_cnt == lid_nest_depth) {
-                    proto_item_append_text(adr_item_tree, "%u", value);
-                } else {
-                    proto_item_append_text(adr_item_tree, "%u.", value);
-                }
-                offset += octet_count;
-                *number_of_fields += 1;
-            }
-        } else {
-            /* Standard für symbolischen Zugriff mit crc und LIDs */
-            proto_item_append_text(adr_item_tree, ", LID=");
-            for (lid_cnt = 2; lid_cnt <= lid_nest_depth; lid_cnt++) {
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(adr_item_tree, hf_s7commp_itemaddr_lid_value, tvb, offset, octet_count, value);
-                if (lid_cnt == lid_nest_depth) {
-                    proto_item_append_text(adr_item_tree, "%u", value);
-                } else {
-                    proto_item_append_text(adr_item_tree, "%u.", value);
-                }
-                offset += octet_count;
-                *number_of_fields += 1;
-            }
-        }
-    }
-    proto_item_set_len(adr_item_tree, offset - start_offset);
-    return offset;
-}
-/*******************************************************************************************************
- *
  * Extended decoding of attribute with id SubscriptionReferenceList
  *
  * Der komplette "Item-Value" Zweig wurde vorher schon mit der Standard-Funktion zerlegt
@@ -4973,7 +4887,7 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
 
     /* Header mit insgesamt 3 Werten
      * 1. Wert:
-     * Bei Request Create Object: 0x80010000 -
+     * Bei Request Create Object: 0x80010000
      * Bei Request SetMultiVariables: 0x00020000, 0x00030000, 0x00040000, 0x00050000, 0x00060000
      *   Bearbeitet die Liste?
      */

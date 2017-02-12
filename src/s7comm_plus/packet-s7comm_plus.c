@@ -47,6 +47,7 @@ void proto_register_s7commp(void);
 
 static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, guint32 offset, gboolean looping);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
+static guint32 s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
 //#define USE_INTERNALS
@@ -3118,9 +3119,31 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
             offset += octet_count;
             struct_level = 0;
             offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
-            /* ID 1048 = SubscriptionReferenceList value nochmal separate decodieren */
-            if (id_number == 1048) {
-                s7commp_decode_attrib_subscriptionreflist(tvb, tree, start_offset + octet_count);
+            /* Extended decoding */
+            switch (id_number) {
+                case 1048:  /* 1048 = SubscriptionReferenceList */
+                    s7commp_decode_attrib_subscriptionreflist(tvb, tree, start_offset + octet_count);
+                    break;
+                case 410:   /*  410 = VariableTypeTypeInfoReserveDataModified */
+                case 529:   /*  529 = VariableTypeStructModificationTime */
+                case 2453:  /* 2453 = ASObjectSimple.LastModified */
+                case 2529:  /* 2529 = Block.RuntimeModified */
+                case 2543:  /* 2543 = DataInterface.InterfaceModified */
+                case 2581:  /* 2581 = FunctionalObject.ParameterModified */
+                case 3737:  /* 3737 = ControllerArea.RuntimeModified */
+                case 3745:  /* 3745 = HWConfiguration.OfflineChange */
+                case 3746:  /* 3746 = PLCProgram.OfflineChange */
+                case 4704:  /* 4704 = TISDescription.JobModified */
+                case 7646:  /* 7646 = ContinuingTisJob.JobModified */
+                case 7649:  /* 7649 = MC_DB.TOAlarmReactionModified */
+                case 7650:  /* 7650 = TA_DB.TechnologicalUnitsModified */
+                case 7733:  /* 7733 = DB.StructureModified */
+                case 7945:  /* 7945 = EventDefinition.LastUserModified_Rid */
+                case 8067:  /* 8067 = SWObject.LastUserModified_Rid */
+                case 8068:  /* 8068 = TextContainer.LastUserModified_Rid */
+                case 8162:  /* 8162 = TA_DB.TechnologicalConnectionsModified_Rid */
+                    s7commp_decode_attrib_ulint_timestamp(tvb, tree, start_offset + octet_count);
+                    break;
             }
 
             if (struct_level > 0) { /* A new struct was entered, use recursive struct traversal */
@@ -4935,6 +4958,38 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     PROTO_ITEM_SET_GENERATED(list_item_tree);
     return offset;
 }
+/*******************************************************************************************************
+ *
+ * Decoding of an ULInt value as timestamp
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
+                                      proto_tree *tree,
+                                      guint32 offset)
+{
+    guint64 uint64val = 0;
+    guint8 octet_count = 0;
+    gchar *str_val = NULL;
+    proto_item *pi = NULL;
+
+    if ((tvb_get_guint8(tvb, offset) != 0x0) || (tvb_get_guint8(tvb, offset+1) != S7COMMP_ITEM_DATATYPE_ULINT)) {
+        return offset;
+    }
+    offset += 2;
+
+    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
+    str_val[0] = '\0';
+
+    uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
+    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
+    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "Timestamp: %s", str_val);
+    offset += octet_count;
+
+    PROTO_ITEM_SET_GENERATED(pi);
+    return offset;
+}
+
 /*******************************************************************************************************
  *
  * Request SetVariable

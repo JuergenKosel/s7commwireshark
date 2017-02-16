@@ -49,7 +49,7 @@ static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, gui
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 static guint32 s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
-/* #include <epan/dissectors/packet-wap.h>  Für variable length */
+/* #include <epan/dissectors/packet-wap.h>  Fuer variable length */
 //#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
@@ -1061,7 +1061,7 @@ static gint hf_s7commp_data_retval_genericerrorcode = -1;
 static gint hf_s7commp_data_retval_servererror = -1;
 static gint hf_s7commp_data_retval_debuginfo = -1;
 static gint hf_s7commp_data_retval_errorextension = -1;
-/* Z.Zt. nicht verwendet, da 64 Bit Feld nicht vernünftig unterstützt wird. */
+/* Z.Zt. nicht verwendet, da 64 Bit Feld nicht vernuenftig unterstuetzt wird. */
 static const int *s7commp_data_returnvalue_fields[] = {
     &hf_s7commp_data_retval_errorcode,
     &hf_s7commp_data_retval_omsline,
@@ -1443,9 +1443,9 @@ proto_reg_handoff_s7commp(void)
 * In der globalen ID-Liste sind nur die statischen Werte vorhanden.
 * Dynamische Werte sind z.B. DB-Nummern, Bibliotheksbaustein-Nummern, usw.
 * Diese Funktion kann als BASE_CUSTOM in den header-fields verwendet werden.
-* val_to_str() darf in der Callback function nicht verwendet werden, da es intern für die
+* val_to_str() darf in der Callback function nicht verwendet werden, da es intern fuer die
 * Strings Speicher aus dem Scope wmem_packet_scope verwendet, und dieser zum Zeitpunkt
-* des Aufrufs über die Callback Funktion nicht gültig ist.
+* des Aufrufs ueber die Callback Funktion nicht gueltig ist.
 *******************************************************************************************************/
 static void
 s7commp_idname_fmt(gchar *result, guint32 id_number)
@@ -1486,7 +1486,7 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
             g_snprintf(result, ITEM_LABEL_LENGTH, "TextContainer.%u", section);
         } else if (id_number >= 0x8a7e0000 && id_number <= 0x8a7effff) {    /* AS Alarms */
             g_snprintf(result, ITEM_LABEL_LENGTH, "ASAlarms.%u", section);
-        } else if (id_number >= 0x90000000 && id_number <= 0x90ffffff) {    /* TypeInfo Bereich IQMCT, wofür hier section steht ist nicht bekannt, bisher immer 0 gesehen. */
+        } else if (id_number >= 0x90000000 && id_number <= 0x90ffffff) {    /* TypeInfo Bereich IQMCT, wofuer hier section steht ist nicht bekannt, bisher immer 0 gesehen. */
             str = try_val_to_str(index, explore_class_iqmct_names);
             if (str) {
                 g_snprintf(result, ITEM_LABEL_LENGTH, "TI_%s.%u", str, section);
@@ -1507,7 +1507,7 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
             g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FBT.%u.%u", section, index);
         } else if (id_number >= 0x9a000000 && id_number <= 0x9affffff) {    /* Struct-Array in einem DB */
             g_snprintf(result, ITEM_LABEL_LENGTH, "TI_StructArrayDB.%u.%u", section, index);
-        } else if (id_number >= 0x9eae0000 && id_number <= 0x9eaeffff) {    /* Hängt auch mit dem Alarmsystem zusammen??? TODO */
+        } else if (id_number >= 0x9eae0000 && id_number <= 0x9eaeffff) {    /* Haengt auch mit dem Alarmsystem zusammen??? TODO */
             g_snprintf(result, ITEM_LABEL_LENGTH, "?UnknownAlarms?.%u", section);
         } else if (id_number >= 0x02000000 && id_number <= 0x02ffffff) {    /* Explore Bereich LIB */
             str = try_val_to_str(index, explore_class_lib_names);
@@ -2468,9 +2468,9 @@ s7commp_pinfo_append_idname(packet_info *pinfo, guint32 id_number, gchar *str_pr
  * Spezial gepacktes Datenformat
  * siehe: http://en.wikipedia.org/wiki/Variable-length_quantity
  *
- * In der Datei packet-wap.c gibt es eine Funktion für unsigned:
+ * In der Datei packet-wap.c gibt es eine Funktion fuer unsigned:
  * guint tvb_get_guintvar (tvbuff_t *tvb, guint offset, guint *octetCount)
- * welche aber keine Begrenzung auf eine max-Anzahl hat (5 für int32).
+ * welche aber keine Begrenzung auf eine max-Anzahl hat (5 fuer int32).
  * Solange das Protokoll noch nicht sicher erkannt wird, ist diese Version hier sicherer.
  *
  *******************************************************************************************************/
@@ -2509,7 +2509,7 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     gint32 val = 0;
     guint8 octet;
     guint8 cont;
-    for (counter = 1; counter <= 4+1; counter++) {        /* große Werte benötigen 5 Bytes: 4*7 bit + 4 bit */
+    for (counter = 1; counter <= 4+1; counter++) {        /* grosse Werte benoetigen 5 Bytes: 4*7 bit + 4 bit */
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 7;
@@ -2683,7 +2683,7 @@ s7commp_decode_integrity_wid(tvbuff_t *tvb,
     guint32 integrity_id;
 
     if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
-        /* Pakete mit neuerer Firmware haben den Wert / id am Ende, der bei anderen FW vor der Integrität kommt.
+        /* Pakete mit neuerer Firmware haben den Wert / id am Ende, der bei anderen FW vor der Integritaet kommt.
          * Dieser ist aber nicht bei jedem Typ vorhanden. Wenn nicht, dann sind 4 Null-Bytes am Ende.
          */
         if ((*dlength > 4) && has_integrity_id) {
@@ -2694,13 +2694,13 @@ s7commp_decode_integrity_wid(tvbuff_t *tvb,
         }
     } else {
         if (*dlength > 4 && *dlength < 32 && has_integrity_id) {
-            /* Plcsim für die 1500 verwendet keine Integrität, dafür gibt es aber am Endeblock (vor den üblichen 4 Nullbytes)
+            /* Plcsim fuer die 1500 verwendet keine Integritaet, dafuer gibt es aber am Endeblock (vor den ueblichen 4 Nullbytes)
              * eine fortlaufende Nummer.
              * Vermutlich ist das trotzdem die Id, aber der andere Teil fehlt dann. Wenn die vorige Response ebenfalls eine
-             * Id hatte, dann wird die für den nächsten Request wieder aus der letzten Id+Seqnum berechnet, d.h. so wie auch
-             * bei der Id wenn es einen kompletten Integritätsteil gibt.
-             * War dort keine vorhanden, dann wird immer um 1 erhöht.
-             * Unklar was für eine Funktion das haben soll.
+             * Id hatte, dann wird die fuer den naechsten Request wieder aus der letzten Id+Seqnum berechnet, d.h. so wie auch
+             * bei der Id wenn es einen kompletten Integritaetsteil gibt.
+             * War dort keine vorhanden, dann wird immer um 1 erhoeht.
+             * Unklar was fuer eine Funktion das haben soll.
              */
             integrity_id = tvb_get_varuint32(tvb, &octet_count, offset);
             proto_tree_add_uint(tree, hf_s7commp_integrity_id, tvb, offset, octet_count, integrity_id);
@@ -2811,16 +2811,16 @@ s7commp_decode_value(tvbuff_t *tvb,
     is_sparsearray = (datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY);
     is_struct_addressarray = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY) && (datatype == S7COMMP_ITEM_DATATYPE_STRUCT);
     /* Besonderheit bei Adressarray und Datentyp Struct:
-     * Hier folgt nach dem Struct-Wert (üblicherweise eine AID) die Anzahl der folgenden
+     * Hier folgt nach dem Struct-Wert (ueblicherweise eine AID) die Anzahl der folgenden
      * Array-Elemente. Die Elemente bestehen aber wieder aus einer ID mit Wert, darum
      * kann es in diesem Fall nicht wie die anderen Arrays innerhalb dieser Funktion zerlegt werden,
-     * sondern es wird pro Array Element die Zerlegefunktion für eine ID/Value Liste aufgerufen.
+     * sondern es wird pro Array Element die Zerlegefunktion fuer eine ID/Value Liste aufgerufen.
      */
 
     if (is_array || is_address_array || is_sparsearray) {
         if (is_sparsearray) {
-            /* Bei diesem Array-Typ gibt es keine Angabe über die Anzahl. Das Array ist Null-terminiert.
-             * Damit die for-Schleife aber auch hierfür verwendet werden kann, wird die Anzahl auf 999999 gesetzt,
+            /* Bei diesem Array-Typ gibt es keine Angabe ueber die Anzahl. Das Array ist Null-terminiert.
+             * Damit die for-Schleife aber auch hierfuer verwendet werden kann, wird die Anzahl auf 999999 gesetzt,
              * und die Schleife bei erreichen der terminierenden Null explizit verlassen.
              */
             array_size = 999999;
@@ -3075,7 +3075,7 @@ s7commp_decode_value(tvbuff_t *tvb,
             proto_item_set_len(array_item_tree, offset - start_offset);
         }
         if (struct_level) {
-            *struct_level = -1;       /* Zur Signalisierung benutzen, dass anschließend keine Item-ID sondern eine Element-ID folgen muss. */
+            *struct_level = -1;       /* Zur Signalisierung benutzen, dass anschliessend keine Item-ID sondern eine Element-ID folgen muss. */
         }
     } else { /* not an array or address array */
         if (length_of_value > 0) {
@@ -3347,7 +3347,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
 
     /* Dieser Wert hat je nach Datentyp eine unterschiedliche Funktion.
      * Ist das Element eine Struktur, so kann mit einer folgenden Abfrage eines Sub-Elements im Datenbaustein anhand der ID
-     * die Beziehung zu dem übergeordneten Element hergestellt werden.
+     * die Beziehung zu dem uebergeordneten Element hergestellt werden.
      */
     length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
     if (datatype == S7COMMP_ITEM_DATATYPE_S7STRING) {
@@ -3481,9 +3481,9 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
     int d;
     guint8 offsetinfotype;
 
-    /* Hier können mehrere Datenblöcke vorhanden sein (gleiches bei varnamelist).
-     * Ist die Länge == 0, dann folgt kein weiterer Datenblock mehr.
-     * Nur der erste Datenblock besitzt zusätzlich noch eine 4-Byte ID (oder Flags?).
+    /* Hier koennen mehrere Datenbloecke vorhanden sein (gleiches bei varnamelist).
+     * Ist die Laenge == 0, dann folgt kein weiterer Datenblock mehr.
+     * Nur der erste Datenblock besitzt zusaetzlich noch eine 4-Byte ID (oder Flags?).
      *
      * Die Bytereihenfolge ist in diesem Block Little-Endian!!
      * Auf so eine Idee muss man erstmal kommen, ob da noch die S7 classic Abteilung am Werk war...
@@ -3535,7 +3535,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
             offset += 2;
 
             /* Bei nicht-optimierten immer 0x08?
-             * Sinnvoll auswerten lässt sich der Wert nur bei im IQM-Bereich.
+             * Sinnvoll auswerten laesst sich der Wert nur bei im IQM-Bereich.
              * Bitoffset pro Nibble:
              * Bit .0 = 0x08
              * Bit .1 = 0x19
@@ -3549,7 +3549,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
             offset += 1;
             /* Die folgenden zwei Offsetinfo-Felder sind bei allen Typen vorhanden.
              * Oft entsprechen den Werten die Anfangsadressen im DB, aber nicht immer.
-             * Bei Strings entspricht der erste Werte der Stringlänge
+             * Bei Strings entspricht der erste Werte der Stringlaenge
              */
             if (softdatatype == S7COMMP_SOFTDATATYPE_STRING ||
                 softdatatype == S7COMMP_SOFTDATATYPE_WSTRING) {
@@ -3804,7 +3804,7 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
 
     while (block_len > 0) {
         do {
-            /* Länge eines Namens max. 128 Zeichen */
+            /* Laenge eines Namens max. 128 Zeichen */
             length_of_value = tvb_get_guint8(tvb, offset);
             item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, (1 + length_of_value + 1), FALSE);
             tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
@@ -3813,7 +3813,7 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
             proto_tree_add_item_ret_string(tag_tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA, wmem_packet_scope(), &str_name);
             proto_item_append_text(tag_tree, "[%d]: Name=%s", i, str_name);
             offset += length_of_value;
-            /* String-terminierende Null? Bei Längenangabe eigentlich überflüssig */
+            /* String-terminierende Null? Bei Laengenangabe eigentlich ueberfluessig */
             proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
             offset += 1;
             i++;
@@ -3982,9 +3982,9 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
     proto_tree_add_text(tree, tvb, offset, 4, "Unknown value 1: 0x%08x", tvb_get_ntohl(tvb, offset));
     offset += 4;
 
-    /* Es gibt z.Zt. keine bekannte Möglichkeit anhand der vorigen Werte festzustellen, ob hier noch ein eingeschobener Wert (VLQ) folgt.
-     * Dieser zusätzliche Wert ist so wie es aussieht nur bei einer 1500 vorhanden.
-     * Darum wird geprüft, ob der nächste Wert nicht ein Objekt-Anfang darstellt.
+    /* Es gibt z.Zt. keine bekannte Moeglichkeit anhand der vorigen Werte festzustellen, ob hier noch ein eingeschobener Wert (VLQ) folgt.
+     * Dieser zusaetzliche Wert ist so wie es aussieht nur bei einer 1500 vorhanden.
+     * Darum wird geprueft, ob der naechste Wert nicht ein Objekt-Anfang darstellt.
      * Das eingeschobene Byte ist aber definitiv nur bei Data-Telegrammen vorhanden.
      */
     next_byte = tvb_get_guint8(tvb, offset);
@@ -4105,8 +4105,8 @@ s7commp_decode_item_address_part1(tvbuff_t *tvb,
      * 2. Feld
      * Das zweite Feld ist eine ID aus der ID-Namensliste, welche so etwas wie die "Base-Area" angibt auf den
      * sich die weiteren IDs beziehen.
-     * Für dem Merkerbereich ist dort auch eine mit der Funktion übereinstimmende ID vorhanden (82).
-     * Für Datenbausteine gibt es keine explizite ID, weil sich diese aus einem fixen und einem variablen Teil
+     * Fuer dem Merkerbereich ist dort auch eine mit der Funktion uebereinstimmende ID vorhanden (82).
+     * Fuer Datenbausteine gibt es keine explizite ID, weil sich diese aus einem fixen und einem variablen Teil
      * zusammensetzt.
      *   0x8a0e nnnn, mit nnnn = Nummer des Datenbausteins.
      * Demnach entspricht eine id > 0x8a0e0000=2316173312 (DB0) und id < 0x8a0effff=2316238847 (DB65535) einem DB-Zugriff.
@@ -4166,7 +4166,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
      * Eine ID aus der ID-Namensliste. Hiermit wird angezeigt, welcher Typ von Wert gelesen werden soll.
      * Bei Merkern: 3736 = ControllerArea.ValueActual
      * Bei DBs: 2550 = DB.ValueActual
-     * Vermutlich lassen sich damit auch Startwerte im DB lesen (über 2548).
+     * Vermutlich lassen sich damit auch Startwerte im DB lesen (ueber 2548).
      * Es lassen sich auch diverse andere Objekte der SPS lesen.
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -4240,7 +4240,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                 *number_of_fields += 1;
             }
         } else {
-            /* Standard für symbolischen Zugriff mit crc und LIDs */
+            /* Standard fuer symbolischen Zugriff mit crc und LIDs */
             proto_item_append_text(tree, ", LID=");
             for (lid_cnt = 2; lid_cnt <= lid_nest_depth; lid_cnt++) {
                 value = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -4288,21 +4288,21 @@ s7commp_decode_item_address(tvbuff_t *tvb,
      * CRC als varuint
      *
      * Es gibt mindestens zwei Interpretationsarten:
-     * 1) Symbolischer Zugriff vom HMI über CRC und LID
-     * 2) Zugriff auf Objekte über AID/RID
+     * 1) Symbolischer Zugriff vom HMI ueber CRC und LID
+     * 2) Zugriff auf Objekte ueber AID/RID
      *
      * Vom Aufbau her sind beide Adressen identisch nur die Interpretation ist eine andere. Die Unterscheidung
      * erfolgt anhand des ersten Feldes (crc). Ist dieses Null, dann ist es eine Object ID Interpretation.
      * Ohne crc scheint es sich bei den LIDs um Adressen zu handeln, wenn der DB ein nicht-optimierter DB ist, oder
      * der Speicherbereich IQMCT ist.
-     * Zumindest bei I/Q/M und nicht opt. DBs passt das mit den Adressen überein, bei T/C wird die Nummer mal zwei genommen.
+     * Zumindest bei I/Q/M und nicht opt. DBs passt das mit den Adressen ueberein, bei T/C wird die Nummer mal zwei genommen.
      * Optimierte DBs werden nach aktueller Erkenntnis immer mit crc gelesen.
      * Beispiel: M122.7: 3.122.1.7
      *                   3 = ClassicBlob, 122 = offset, 1 = Typ BOOL??? nur dann folgt eine Bitadresse, 7=bitoffset
      *                   Antwort ist dann mit Datentyp BOOL
      * Beispiel: DB1.intVar2 (nicht opt. an DB1.DBW2): 3.2.2
-     *                   3 = ClassicBlob, 2 = offset, 2 = Typ Blob?, bzw. Länge 2 Bytes?
-     *                   Antwort ist mit Datentyp Blob von Größe 2
+     *                   3 = ClassicBlob, 2 = offset, 2 = Typ Blob?, bzw. Laenge 2 Bytes?
+     *                   Antwort ist mit Datentyp Blob von Groesse 2
      * Beispiel: DB1.dateAndTimeVar_48_0 = 3.48.8
      *                   3 = ClassicBlob, 48 = offset, 8 = length
      */
@@ -4376,7 +4376,7 @@ s7commp_decode_item_address_sub(tvbuff_t *tvb,
     proto_item_append_text(adr_item_tree, " [%u]:", item_nr);
 
     /* z.B. 0x80040003
-     * Wofür die linken 2 Bytes stehen ist nicht bekannt.
+     * Wofuer die linken 2 Bytes stehen ist nicht bekannt.
      * In den rechten 2 Bytes steht die Anzahl der LIDs.
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -4507,7 +4507,7 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
         for (i = 1; i <= item_count; i++) {
-            /* Nochmal zugehörige ID auslesen um die ID zum Datensatz zu bekommen. */
+            /* Nochmal zugehoerige ID auslesen um die ID zum Datensatz zu bekommen. */
             id_number = tvb_get_varuint32(tvb, &octet_count, id_number_offset);
             id_number_offset += octet_count;
             offset_save = offset;
@@ -4516,7 +4516,7 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
 
             /* ID 1048 = SubscriptionReferenceList gesondert decodieren */
             if (id_number == 1048) {
-                tvb_get_varuint32(tvb, &octet_count, offset); /* Länge des Item-number elements */
+                tvb_get_varuint32(tvb, &octet_count, offset); /* Laenge des Item-number elements */
                 s7commp_decode_attrib_subscriptionreflist(tvb, list_item_tree, offset_save + octet_count);
             }
         }
@@ -4546,7 +4546,7 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset;
 
-    /* Zum Variablen-Lesen müssen die ersten 4 Bytes 0 sein. Andernfalls ist es eine Link-Id.
+    /* Zum Variablen-Lesen muessen die ersten 4 Bytes 0 sein. Andernfalls ist es eine Link-Id.
      */
     value = tvb_get_ntohl(tvb, offset);
     if (value == 0) {
@@ -4616,7 +4616,7 @@ s7commp_decode_response_setmultivar(tvbuff_t *tvb,
                                     guint32 offset)
 {
     /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
-     * Ein erfolgreiches Schreiben einzelner Werte scheint nicht extra bestätigt zu werden.
+     * Ein erfolgreiches Schreiben einzelner Werte scheint nicht extra bestaetigt zu werden.
      */
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, NULL);
@@ -4645,15 +4645,15 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
     int n_access_errors = 0;
     /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
      * Aufbau aus den anderen Telegrammen.
-     * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte übertragen. Dann ist Datatype=NULL
-     * Folgende Rückgabewerte wurden gesichtet:
+     * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte uebertragen. Dann ist Datatype=NULL
+     * Folgende Rueckgabewerte wurden gesichtet:
      *  0x03 -> Fehler bei einer Adresse (S7-1500 - Plcsim)
      *  0x13 -> Fehler bei einer Adresse (S7-1200) und 1500-Plcsim
      *  0x92 -> Erfolg (S7-1200)
      *  0x9b -> Bei 1500 und 1200 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
      *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
      *  => Bit 15 = true bei Erfolg?
-     * Danach können noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
+     * Danach koennen noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
      */
     do {
         struct_level = 0;
@@ -4747,20 +4747,20 @@ s7commp_decode_notification(tvbuff_t *tvb,
 
     if (unknown2 == 0x0400) {
         /* Bei V13 und einer 1200 werden hiermit Daten vom HMI zyklisch
-         * bei Änderung übermittelt. Daten sind nur enthalten wenn sich etwas ändert.
-         * Sonst gibt es ein verkürztes (Status?)-Telegramm.
+         * bei AEnderung uebermittelt. Daten sind nur enthalten wenn sich etwas aendert.
+         * Sonst gibt es ein verkuerztes (Status?)-Telegramm.
          */
         proto_tree_add_item(tree, hf_s7commp_notification_unknown4, tvb, offset, 2, ENC_BIG_ENDIAN);
         offset += 2;
 
         /* Es gibt zwei Nummern:
-         * 1) Nummerierung für Creditlimit: Wird bei Aufbau der notification-session ein Wert angegeben, so erfolgt die Übertragung
+         * 1) Nummerierung fuer Creditlimit: Wird bei Aufbau der notification-session ein Wert angegeben, so erfolgt die UEbertragung
          *                                  bis zur in modifiy-session angegebenen Limit.
          * 2) Sequenznummer: Wurde beim Session-Aufbau -1 angegeben, so ist die Zahl bei 1) Null, und es folgt hier eine aufsteigende Nummer.
          *
          * Bei der Sequenznummer scheint es einen Unterschied zwischen 1200 und 1500 zu geben.
          * Bei der 1200 ist diese immer nur 1 Byte, bei der 1500 ist es ein VLQ!
-         * Es scheint abhängig von der ersten ID zu sein. Ist diese größer 0x7000000 dann ist es ein VLQ.
+         * Es scheint abhaengig von der ersten ID zu sein. Ist diese groesser 0x7000000 dann ist es ein VLQ.
          * Es scheint generell so, dass eine 1200 IDs beginnend mit 0x1.. und eine 1500 mit 0x7.. verwendet.
          * Eine 1200 mit FW4 verwendet ebenfall > 0x700000. An der Protokollversion kann es nicht festgemacht werden.
          */
@@ -4781,10 +4781,10 @@ s7commp_decode_notification(tvbuff_t *tvb,
 
         item_return_value = tvb_get_guint8(tvb, offset);
         /* Woran zu erkennen ist, dass hier ein eingeschobener Wert folgt ist noch nicht bekannt.
-         * Wenn vorhanden, wird dieser Wert (gelegentlich) jedes Telegramm erhöht, sodass auch normal "gültige"
-         * retval Werte einer Variable möglich sind.
-         * Ist es ein retval der Variable, dann folgt üblicherweise min. ein 0xff da die Referenznummern von
-         * 0xffffffff abwärts gezählt werden.
+         * Wenn vorhanden, wird dieser Wert (gelegentlich) jedes Telegramm erhoeht, sodass auch normal "gueltige"
+         * retval Werte einer Variable moeglich sind.
+         * Ist es ein retval der Variable, dann folgt ueblicherweise min. ein 0xff da die Referenznummern von
+         * 0xffffffff abwaerts gezaehlt werden.
          * Hier besteht auf jeden Fall noch Analysebedarf.
          */
         if ((subscr_object_id > 0x70000000) && (item_return_value != 0x00 && (tvb_get_guint8(tvb, offset + 1) != 0xff))) {
@@ -4817,7 +4817,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
             }
         }
         /* Nur wenn die id > 0x70000000 dann folgen noch 3 Bytes, die bisher immer null waren.
-         * Das ist hier weiterhin notwendig, da ansonsten ein ggf. vorhandener Integritätsteil nicht erkannt würde.
+         * Das ist hier weiterhin notwendig, da ansonsten ein ggf. vorhandener Integritaetsteil nicht erkannt wuerde.
          */
         if (subscr_object_id > 0x70000000) {
             /* Unknown additional 3 bytes, because 1st Object ID > 0x70000000 */
@@ -4868,7 +4868,7 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
  *
  * Der komplette "Item-Value" Zweig wurde vorher schon mit der Standard-Funktion zerlegt
  * und auch im Baum angezeigt.
- * Diese Funktion dekodiert die Werte weiter in die Adressen, weil diese für eine Analyse
+ * Diese Funktion dekodiert die Werte weiter in die Adressen, weil diese fuer eine Analyse
  * welche Werte abbonniert werden interessanter sind.
  * Wenn Datentyp und flags nicht zum Standard passen, wird abgebrochen.
  *
@@ -4900,7 +4900,7 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     }
     offset += 2;
 
-    /* Array size: wird nicht weiter benötigt, muss für die Berechnung des offsets aber nochmal ausgelesen werden */
+    /* Array size: wird nicht weiter benoetigt, muss fuer die Berechnung des offsets aber nochmal ausgelesen werden */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
     offset += octet_count;
 
@@ -5063,7 +5063,7 @@ s7commp_decode_request_getvariable(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_object_relid, tvb, offset, 4, relid);
     s7commp_pinfo_append_idname(pinfo, relid, NULL);
     offset += 4;
-    /* Ob es wirklich möglich ist hier auch mehrere Variablen zu lesen ist
+    /* Ob es wirklich moeglich ist hier auch mehrere Variablen zu lesen ist
      * nicht bekannt, denn dazu gibt es eigentlich eine eigene Funktion.
      */
     item_count = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -5296,7 +5296,7 @@ s7commp_decode_request_getlink(tvbuff_t *tvb,
     guint8 octet_count = 0;
     guint32 item_number = 0;
 
-    /* Ein Datensatz wurde bisher nur mit 12 Bytes Länge gesichtet. Minus 4 Null-Bytes am Ende bleiben 8 Bytes
+    /* Ein Datensatz wurde bisher nur mit 12 Bytes Laenge gesichtet. Minus 4 Null-Bytes am Ende bleiben 8 Bytes
      * - 4 Bytes fix
      * - 1 VLQ
      * - 2 Nullbytes?
@@ -5337,7 +5337,7 @@ s7commp_decode_response_getlink(tvbuff_t *tvb,
     offset += 1;
 
     for (i = 1; i <= number_of_items; i++) {
-        /* Es scheint eine Link-Id zu sein, die im folgenden verwendet werden kann (z.B. Vartab als Start-Id für getmultivar */
+        /* Es scheint eine Link-Id zu sein, die im folgenden verwendet werden kann (z.B. Vartab als Start-Id fuer getmultivar */
         linkid = tvb_get_ntohl(tvb, offset);
         proto_tree_add_uint_format(tree, hf_s7commp_getlink_linkid, tvb, offset, 4, linkid,
             "Link-Id [%d]: 0x%08x", i, linkid);
@@ -5368,11 +5368,11 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
     proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset += 2;
 
-    /* Ob ein Objekt oder anderer weiterer Wert folgt, scheint abhängig vom 2./3. Byte zu sein.
+    /* Ob ein Objekt oder anderer weiterer Wert folgt, scheint abhaengig vom 2./3. Byte zu sein.
      * Wenn 1 dann Objekt, wenn 18 dann ID. Andere Werte als 1 und 18 bisher noch nicht gesichtet.
      */
     if (valtype == 1) {
-        /* Die 1200 mit V2 lässt hier gelegentlich 1 Byte aus. Die Antwort zeigt aber keine
+        /* Die 1200 mit V2 laesst hier gelegentlich 1 Byte aus. Die Antwort zeigt aber keine
          * Fehlermeldung, d.h. dies scheint toleriert zu werden.
          */
         if (tvb_get_guint8(tvb, offset + 1) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
@@ -5481,7 +5481,7 @@ s7commp_decode_response_invoke(tvbuff_t *tvb,
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
     /* Ein Panel TPxy mit V14 schiebt hier bei der Antwort noch ein Null-Byte ein.
-     * Solange es anschließend keine leere ValueList gibt, funktioniert das auch. */
+     * Solange es anschliessend keine leere ValueList gibt, funktioniert das auch. */
     if (tvb_get_guint8(tvb, offset) == 0) {
         proto_tree_add_item(tree, hf_s7commp_invoke_resunknown1, tvb, offset, 1, ENC_BIG_ENDIAN);
         offset += 1;
@@ -5615,13 +5615,13 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
     offset += 4;
 
     /* Der folgende Wert berechnet sich so wie es aussieht aus (SequenceNumber + IntegrityId) des
-     * zugehörigen Requests. Darum ist das Feld bei der alten 1200 ohne Integritätsteil auch nicht
-     * vorhanden. Ist in der Response keine Integritäts-ID, dann war es das auch nicht beim Request.
-     * Was dadurch geprüft werden kann/soll ist unklar.
-     * Leider gibt es bei der alten 1200 bei einem einzelnen Paket keine Möglichkeit, BEVOR das ganze Paket
-     * verarbeitet wurde, festzustellen, ob es diese Integritäts-Id gibt oder nicht. Protokollversion
+     * zugehoerigen Requests. Darum ist das Feld bei der alten 1200 ohne Integritaetsteil auch nicht
+     * vorhanden. Ist in der Response keine Integritaets-ID, dann war es das auch nicht beim Request.
+     * Was dadurch geprueft werden kann/soll ist unklar.
+     * Leider gibt es bei der alten 1200 bei einem einzelnen Paket keine Moeglichkeit, BEVOR das ganze Paket
+     * verarbeitet wurde, festzustellen, ob es diese Integritaets-Id gibt oder nicht. Protokollversion
      * V3 besitzt so wie es aussieht IMMER eine, V1 NIE, bei V2 nur bei der 1500.
-     * Die hier realisierte Prüfung funktioniert nur, falls nicht zufällig der Wert von resseqinteg mit 0xa1 beginnt!
+     * Die hier realisierte Pruefung funktioniert nur, falls nicht zufaellig der Wert von resseqinteg mit 0xa1 beginnt!
      */
     nextb = tvb_get_guint8(tvb, offset);
     if ( (protocolversion == S7COMMP_PROTOCOLVERSION_3) ||
@@ -5631,8 +5631,8 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
         proto_tree_add_uint(tree, hf_s7commp_explore_resseqinteg, tvb, offset, octet_count, resseqinteg);
         offset += octet_count;
     }
-    /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst würde ein Null-Byte
-     * zur Terminierung der Liste eingefügt werden.
+    /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst wuerde ein Null-Byte
+     * zur Terminierung der Liste eingefuegt werden.
      */
     if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
         offset = s7commp_decode_object(tvb, NULL, tree, offset);
@@ -5662,7 +5662,7 @@ s7commp_decode_objectqualifier(tvbuff_t *tvb,
     while (offset < offsetmax) {
         id = tvb_get_ntohs(tvb, offset);
         if (id == 0x4e8) {
-            /* alles dazwischen mit Dummy-Bytes auffüllen */
+            /* alles dazwischen mit Dummy-Bytes auffuellen */
             if ((offset+2 - offset_save) > 0) {
                 proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset_save, offset - offset_save, tvb_get_ptr(tvb, offset_save, offset - offset_save));
             }
@@ -5679,7 +5679,7 @@ s7commp_decode_objectqualifier(tvbuff_t *tvb,
         offset += 1;
     }
     if (id != 0x4e8) {
-        offset = offset_save; /* Offset zurücksetzen wenn nicht gefunden */
+        offset = offset_save; /* Offset zuruecksetzen wenn nicht gefunden */
     }
     return offset;
 }
@@ -5714,7 +5714,7 @@ s7commp_decode_extkeepalive(tvbuff_t *tvb,
     proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved1, tvb, offset, 4, FALSE);
     offset += 4;
     /* Es folgt die Anzahl der Bytes die seit dem letzten Keep Alive oder seit Start empfangen wurden.
-     * Es werden dazu die Längenangaben aus dem Header verwendet und aufsummiert.
+     * Es werden dazu die Laengenangaben aus dem Header verwendet und aufsummiert.
      */
     confirmed_bytes = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(data_item_tree, hf_s7commp_extkeepalive_confirmedbytes, tvb, offset, 4, confirmed_bytes);
@@ -6073,16 +6073,16 @@ dissect_s7commp(tvbuff_t *tvb,
         proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_datlg, tvb, offset, 2, dlength);
         offset += 2;
 
-        /* Paket hat einen Trailer, wenn nach der angegebenen Datenlänge noch 4 Bytes übrig bleiben */
+        /* Paket hat einen Trailer, wenn nach der angegebenen Datenlaenge noch 4 Bytes uebrig bleiben */
         has_trailer = ((signed) packetlength) > (dlength + 4);
 
-        /* Bei einer 1500 mit Firmware Version >= V1.5 wurde der Integritätsteil vom Ende des Datenteils an den Anfang verschoben.
-         * Bei fragmentierten Paketen hatte bisher nur das letzte Fragment einen Integritätsteil.
-         * Bei FW >= V1.5 hat nun auch bei fragmentierten Paketen jedes Fragment einen Integritätsteil. Der Integritätsteil
-         * zählt aber von der Längenangabe im Kopf zum Datenteil. Bei fragmentierten Paketen muss daher bei dieser Version
-         * der Integritätsteil außerhalb der eigentlichen Funktion zum Zerlegen des Datenteils platziert werden, da ansonsten
-         * dieser beim Reassemblieren innerhalb der Datenteile liegen würde.
-         * Leider wird damit der Zweig nicht unter dem Datenteil, sondern als eigener separater Zweig eingefügt.
+        /* Bei einer 1500 mit Firmware Version >= V1.5 wurde der Integritaetsteil vom Ende des Datenteils an den Anfang verschoben.
+         * Bei fragmentierten Paketen hatte bisher nur das letzte Fragment einen Integritaetsteil.
+         * Bei FW >= V1.5 hat nun auch bei fragmentierten Paketen jedes Fragment einen Integritaetsteil. Der Integritaetsteil
+         * zaehlt aber von der Laengenangabe im Kopf zum Datenteil. Bei fragmentierten Paketen muss daher bei dieser Version
+         * der Integritaetsteil ausserhalb der eigentlichen Funktion zum Zerlegen des Datenteils platziert werden, da ansonsten
+         * dieser beim Reassemblieren innerhalb der Datenteile liegen wuerde.
+         * Leider wird damit der Zweig nicht unter dem Datenteil, sondern als eigener separater Zweig eingefuegt.
          */
         if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
             offset_save = offset;
@@ -6094,7 +6094,7 @@ dissect_s7commp(tvbuff_t *tvb,
         if (s7commp_reassemble) {
             /*
              * Fragmentation check:
-             * Da es keine Kennzeichnungen über die Fragmentierung gibt, muss es in einer Zustandsmaschine abgefragt werden
+             * Da es keine Kennzeichnungen ueber die Fragmentierung gibt, muss es in einer Zustandsmaschine abgefragt werden
              *
              * Istzustand   Transition                                      Aktion                                Neuer Zustand
              * state == 0:  Paket hat einen Trailer, keine Fragmentierung   dissect_data                          state = 0
@@ -6102,10 +6102,10 @@ dissect_s7commp(tvbuff_t *tvb,
              * state == 1:  Paket hat keinen Trailer, weiterhin Fragment    push data                             state = 1
              * state == 1:  Paket hat einen trailer, Ende Fragmente         push data, pop, dissect_data          state = 0
              *
-             * Die einzige Zugehörigkeit die es gibt, ist die TCP Portnummer. Es müssen dabei BEIDE übereinstimmen.
+             * Die einzige Zugehoerigkeit die es gibt, ist die TCP Portnummer. Es muessen dabei BEIDE uebereinstimmen.
              *
-             * Dabei muss zusätzlich beachtet werden, dass womöglich ein capture inmitten einer solchen Serie gestartet wurde.
-             * Das kann aber nicht zuverlässig abgefangen werden, wenn zufällig in den ersten Bytes des Datenteils gültige Daten stehen.
+             * Dabei muss zusaetzlich beachtet werden, dass womoeglich ein capture inmitten einer solchen Serie gestartet wurde.
+             * Das kann aber nicht zuverlaessig abgefangen werden, wenn zufaellig in den ersten Bytes des Datenteils gueltige Daten stehen.
              *
              */
 
@@ -6173,7 +6173,7 @@ dissect_s7commp(tvbuff_t *tvb,
                         #endif
                     } else {
                         last_fragment = TRUE;
-                        /* rücksetzen */
+                        /* ruecksetzen */
                         #ifdef DEBUG_REASSEMBLING
                         col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG: A state=%d)", conversation_state->state);
                         printf(" last_fragment=1, delete_proto_data");
@@ -6282,9 +6282,9 @@ dissect_s7commp(tvbuff_t *tvb,
         /******************************************************
          * Data
          ******************************************************/
-        /* Besondere Behandlung von SetVarSubstreamed, da hier ein völlig anderer!!! Fragmentierungsmechanismus
+        /* Besondere Behandlung von SetVarSubstreamed, da hier ein voellig anderer!!! Fragmentierungsmechanismus
          * verwendet wird. Im Ersten Paket gibt es als Datenteil einen Blob der auch abgeschlossen wird.
-         * Danach besitzt jedes Paket nochmal einen eigenen Längenheader im Datenteil.
+         * Danach besitzt jedes Paket nochmal einen eigenen Laengenheader im Datenteil.
          */
         if (packet_state &&
             packet_state->start_opcode == S7COMMP_OPCODE_REQ &&

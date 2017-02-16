@@ -48,6 +48,7 @@ void proto_register_s7commp(void);
 static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, guint32 offset, gboolean looping);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 static guint32 s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
+static guint32 s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
 /* #include <epan/dissectors/packet-wap.h>  Für variable length */
 //#define USE_INTERNALS
@@ -988,6 +989,50 @@ static const value_string lid_access_aid_names[] = {
     { 18,       "LID_PoolUsageBytesUsedMax" },
     { 19,       "LID_PoolUsageBytesTotal" },
     { 20,       "LID_PoolUsageAllocSize" },
+    { 0,        NULL }
+};
+
+static const value_string attrib_blocklanguage_names[] = {
+    { 0,       "Undefined" },
+    { 1,        "STL" },
+    { 2,        "LAD_CLASSIC" },
+    { 3,        "FBD_CLASSIC" },
+    { 4,        "SCL" },
+    { 5,        "DB" },
+    { 6,        "GRAPH" },
+    { 7,        "SDB" },
+    { 8,        "CPU_DB" },
+    { 17,       "CPU_SDB" },
+    { 21,       "CforS7" },
+    { 22,       "HIGRAPH" },
+    { 23,       "CFC" },
+    { 24,       "SFC" },
+    { 26,       "S7_PDIAG" },
+    { 29,       "RSE" },
+    { 31,       "F_STL" },
+    { 32,       "F_LAD" },
+    { 33,       "F_FBD" },
+    { 34,       "F_DB" },
+    { 35,       "F_CALL" },
+    { 37,       "TechnoDB" },
+    { 38,       "F_LAD_LIB" },
+    { 39,       "F_FBD_LIB" },
+    { 41,       "ClassicEncryption" },
+    { 50,       "FCP" },
+    { 100,      "LAD_IEC" },
+    { 101,      "FBD_IEC" },
+    { 102,      "FLD" },
+    { 150,      "UDT" },
+    { 151,      "SDT" },
+    { 152,      "FBT" },
+    { 201,      "Motion_DB" },
+    { 300,      "GRAPH_ACTIONS" },
+    { 301,      "GRAPH_SEQUENCE" },
+    { 303,      "GRAPH_ADDINFOS" },
+    { 310,      "GRAPH_PLUS" },
+    { 400,      "MC7plus" },
+    { 500,      "ProDiag" },
+    { 501,      "ProDiag_OB" },
     { 0,        NULL }
 };
 
@@ -3124,6 +3169,7 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
                 case 1048:  /* 1048 = SubscriptionReferenceList */
                     s7commp_decode_attrib_subscriptionreflist(tvb, tree, start_offset + octet_count);
                     break;
+                case 6:     /*    6 = TypeInfoModificationTime */
                 case 410:   /*  410 = VariableTypeTypeInfoReserveDataModified */
                 case 529:   /*  529 = VariableTypeStructModificationTime */
                 case 2453:  /* 2453 = ASObjectSimple.LastModified */
@@ -3143,6 +3189,9 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
                 case 8068:  /* 8068 = TextContainer.LastUserModified_Rid */
                 case 8162:  /* 8162 = TA_DB.TechnologicalConnectionsModified_Rid */
                     s7commp_decode_attrib_ulint_timestamp(tvb, tree, start_offset + octet_count);
+                    break;
+                case 2523:  /* 2523 = Block.BlockLanguage */
+                    s7commp_decode_attrib_blocklanguage(tvb, tree, start_offset + octet_count);
                     break;
             }
 
@@ -4990,6 +5039,31 @@ s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
     return offset;
 }
 
+/*******************************************************************************************************
+ *
+ * Decoding if attribute Blocklanguage (ID 2523)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
+                                   proto_tree *tree,
+                                   guint32 offset)
+{
+    guint16 blocklang;
+    proto_item *pi = NULL;
+
+    if ((tvb_get_guint8(tvb, offset) != 0x0) || (tvb_get_guint8(tvb, offset+1) != S7COMMP_ITEM_DATATYPE_UINT)) {
+        return offset;
+    }
+    offset += 2;
+
+    blocklang = tvb_get_ntohs(tvb, offset);
+    pi = proto_tree_add_text(tree, tvb, offset, 2, "Blocklanguage: %s", val_to_str(blocklang, attrib_blocklanguage_names, "Unknown Blocklanguage: %u"));
+    offset += 2;
+
+    PROTO_ITEM_SET_GENERATED(pi);
+    return offset;
+}
 /*******************************************************************************************************
  *
  * Request SetVariable

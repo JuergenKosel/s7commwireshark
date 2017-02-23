@@ -49,6 +49,7 @@ static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, gui
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 static guint32 s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint8 datatype, guint32 length_of_value);
 static guint32 s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint8 datatype, guint32 length_of_value);
+static guint32 s7commp_decode_attrib_securitykeyencryptedkey(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint8 datatype, guint32 blobsize);
 
 /* #include <epan/dissectors/packet-wap.h>  Fuer variable length */
 //#define USE_INTERNALS
@@ -1366,6 +1367,23 @@ static const int *s7commp_subscrreflist_item_head_fields[] = {
 static gint hf_s7commp_subscrreflist_item_unknown1 = -1;
 static gint ett_s7commp_subscrreflist = -1;
 
+/* SecurityKeyEncryptedKey */
+static gint hf_s7commp_securitykeyencryptedkey = -1;
+static gint ett_s7commp_securitykeyencryptedkey = -1;
+static gint hf_s7commp_securitykeyencryptedkey_magic = -1;
+static gint hf_s7commp_securitykeyencryptedkey_length = -1;
+static gint hf_s7commp_securitykeyencryptedkey_unknown1 = -1;
+static gint hf_s7commp_securitykeyencryptedkey_unknown2 = -1;
+static gint hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum = -1;
+static gint hf_s7commp_securitykeyencryptedkey_symmetrickeyflags = -1;
+static gint hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal = -1;
+static gint hf_s7commp_securitykeyencryptedkey_publickeychecksum = -1;
+static gint hf_s7commp_securitykeyencryptedkey_publickeyflags = -1;
+static gint hf_s7commp_securitykeyencryptedkey_publickeyflags_internal = -1;
+static gint hf_s7commp_securitykeyencryptedkey_encrypted_random_seed = -1;
+static gint hf_s7commp_securitykeyencryptedkey_encryption_init_vector = -1;
+static gint hf_s7commp_securitykeyencryptedkey_encrypted_challenge = -1;
+
 /* Getlink */
 static gint hf_s7commp_getlink_requnknown1 = -1;
 static gint hf_s7commp_getlink_requnknown2 = -1;
@@ -2276,6 +2294,50 @@ proto_register_s7commp (void)
           { "Unknown 1", "s7comm-plus.subscrreflist.item.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
 
+        /* SecurityKeyEncryptedKey */
+        { &hf_s7commp_securitykeyencryptedkey,
+          { "Encrypted key", "s7comm-plus.securitykeyencryptedkey", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_magic,
+          { "Magic", "s7comm-plus.securitykeyencryptedkey.magic", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_length,
+          { "Length", "s7comm-plus.securitykeyencryptedkey.length", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_unknown1,
+          { "Unknown 1", "s7comm-plus.securitykeyencryptedkey.unknown1", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_unknown2,
+          { "Unknown 2", "s7comm-plus.securitykeyencryptedkey.unknown2", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum,
+          { "Symmetric key checksum", "s7comm-plus.securitykeyencryptedkey.symmetrickey.checksum", FT_UINT64, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_symmetrickeyflags,
+          { "Symmetric key flags", "s7comm-plus.securitykeyencryptedkey.symmetrickey.flags", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal,
+          { "Symmetric key internal flags", "s7comm-plus.securitykeyencryptedkey.symmetrickey.flags_internal", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_publickeychecksum,
+          { "Public key checksum", "s7comm-plus.securitykeyencryptedkey.publickey.checksum", FT_UINT64, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_publickeyflags,
+          { "Public key flags", "s7comm-plus.securitykeyencryptedkey.publickey.flags", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_publickeyflags_internal,
+          { "Public key internal flags", "s7comm-plus.securitykeyencryptedkey.publickey.flags_internal", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_encrypted_random_seed,
+          { "Encrypted random seed", "s7comm-plus.securitykeyencryptedkey.encrypted_random_seed", FT_BYTES, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_encryption_init_vector,
+          { "Encryption initialisation vector", "s7comm-plus.securitykeyencryptedkey.encryption_init_vector", FT_BYTES, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_encrypted_challenge,
+          { "Encrypted challenge", "s7comm-plus.securitykeyencryptedkey.encrypted_challenge", FT_BYTES, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+
         /* Getlink */
         { &hf_s7commp_getlink_requnknown1,
           { "Request unknown 1", "s7comm-plus.getlink.requnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -2419,7 +2481,8 @@ proto_register_s7commp (void)
         &ett_s7commp_object_classflags,
         &ett_s7commp_streamdata,
         &ett_s7commp_subscrreflist,
-        &ett_s7commp_subscrreflist_item_head
+        &ett_s7commp_subscrreflist_item_head,
+        &ett_s7commp_securitykeyencryptedkey
     };
 
     module_t *s7commp_module;
@@ -2836,6 +2899,9 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
             break;
         case 2523:  /* 2523 = Block.BlockLanguage */
             offset = s7commp_decode_attrib_blocklanguage(tvb, tree, value_start_offset, datatype, length_of_value);
+            break;
+        case 1805:  /* 1805 = SecurityKeyEncryptedKey */
+            offset = s7commp_decode_attrib_securitykeyencryptedkey(tvb, tree, value_start_offset, datatype, length_of_value);
             break;
     }
     return offset;
@@ -5114,6 +5180,96 @@ s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
     PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
+
+/*******************************************************************************************************
+ *
+ * Decoding of attribute SecurityKeyEncryptedKey (ID 1805)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_securitykeyencryptedkey(tvbuff_t *tvb,
+                                              proto_tree *tree,
+                                              guint32 offset,
+                                              guint8 datatype,
+                                              guint32 blobsize)
+{
+    guint32 varsize = 0;
+    proto_item *pi = NULL;
+    proto_tree *subtree = NULL;
+    proto_item *subpi = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB) {
+        return offset;
+    }
+
+    /* note: the values in this blob are Little-Endian! */
+    if ((blobsize < 0xB4) || (tvb_get_letohl(tvb, offset) != 0xFEE1DEAD) || (tvb_get_letohl(tvb, offset+4) != blobsize)) {
+        return offset;
+    }
+
+    pi = proto_tree_add_item(tree, hf_s7commp_securitykeyencryptedkey, tvb, offset, -1, FALSE);
+    PROTO_ITEM_SET_GENERATED(pi);
+    subtree = proto_item_add_subtree(pi, ett_s7commp_securitykeyencryptedkey);
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_magic, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_length, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_unknown1, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_unknown2, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    /* next 3 are the same as the SecurityKeySymmetricKeyID earlier in the frame */
+    subpi = proto_tree_add_uint64(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum, tvb, offset, 8, tvb_get_letoh64(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 8;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    /* next 3 are the same as the SecurityKeyPublicKeyID earlier in the frame */
+    subpi = proto_tree_add_uint64(subtree, hf_s7commp_securitykeyencryptedkey_publickeychecksum, tvb, offset, 8, tvb_get_letoh64(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 8;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags_internal, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    /* this field has variable length, I have seen 0x3C and 0x50 */
+    varsize = blobsize - 0x30 - 0x48;
+    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_random_seed, tvb, offset, varsize, tvb_get_ptr(tvb, offset, varsize));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += varsize;
+
+    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encryption_init_vector, tvb, offset, 0x10, tvb_get_ptr(tvb, offset, 0x10));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 0x10;
+
+    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_challenge, tvb, offset, 0x38, tvb_get_ptr(tvb, offset, 0x38));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 0x38;
+
+    return offset;
+}
+
 /*******************************************************************************************************
  *
  * Request SetVariable

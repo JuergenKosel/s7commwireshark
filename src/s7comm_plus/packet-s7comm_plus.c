@@ -1,4 +1,4 @@
-/* packet-s7onlinxfdl.c
+/* packet-s7comm_plus.c
  *
  * Author:      Thomas Wiens, 2014 <th.wiens@gmx.de>
  * Description: Wireshark dissector for S7 Communication plus
@@ -47,9 +47,6 @@ void proto_register_s7commp(void);
 
 static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, guint32 offset, gboolean looping);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
-static guint32 s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint8 datatype, guint32 length_of_value);
-static guint32 s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint8 datatype, guint32 length_of_value);
-static guint32 s7commp_decode_attrib_securitykeyencryptedkey(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint8 datatype, guint32 blobsize);
 
 /* #include <epan/dissectors/packet-wap.h>  Fuer variable length */
 //#define USE_INTERNALS
@@ -2823,6 +2820,7 @@ s7commp_decode_integrity_wid(tvbuff_t *tvb,
 
     return offset;
 }
+
 /*******************************************************************************************************
  *
  * Decodes a return value, coded as 64 Bit VLQ. Includes an errorcode and some flags.
@@ -2855,6 +2853,155 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
     if (pinfo) {
         col_append_fstr(pinfo->cinfo, COL_INFO, " Retval=%s", val64_to_str_const(errorcode, errorcode_names, "Unknown"));
     }
+
+    return offset;
+}
+
+/*******************************************************************************************************
+ *
+ * Decoding of an ULInt value as timestamp
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
+                                      proto_tree *tree,
+                                      guint32 offset,
+                                      guint8 datatype,
+                                      guint32 length_of_value)
+{
+    guint64 uint64val = 0;
+    guint8 octet_count = 0;
+    gchar *str_val = NULL;
+    proto_item *pi = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_ULINT) {
+        return offset;
+    }
+
+    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
+    str_val[0] = '\0';
+
+    uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
+    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
+    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "Timestamp: %s", str_val);
+    offset += octet_count;
+
+    PROTO_ITEM_SET_GENERATED(pi);
+    return offset;
+}
+
+/*******************************************************************************************************
+ *
+ * Decoding if attribute Blocklanguage (ID 2523)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
+                                   proto_tree *tree,
+                                   guint32 offset,
+                                   guint8 datatype,
+                                   guint32 length_of_value)
+{
+    guint16 blocklang;
+    proto_item *pi = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_UINT) {
+        return offset;
+    }
+
+    blocklang = tvb_get_ntohs(tvb, offset);
+    pi = proto_tree_add_text(tree, tvb, offset, 2, "Blocklanguage: %s", val_to_str(blocklang, attrib_blocklanguage_names, "Unknown Blocklanguage: %u"));
+    offset += 2;
+
+    PROTO_ITEM_SET_GENERATED(pi);
+    return offset;
+}
+
+/*******************************************************************************************************
+ *
+ * Decoding of attribute SecurityKeyEncryptedKey (ID 1805)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_securitykeyencryptedkey(tvbuff_t *tvb,
+                                              proto_tree *tree,
+                                              guint32 offset,
+                                              guint8 datatype,
+                                              guint32 blobsize)
+{
+    guint32 varsize = 0;
+    proto_item *pi = NULL;
+    proto_tree *subtree = NULL;
+    proto_item *subpi = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB) {
+        return offset;
+    }
+
+    /* note: the values in this blob are Little-Endian! */
+    if ((blobsize < 0xB4) || (tvb_get_letohl(tvb, offset) != 0xFEE1DEAD) || (tvb_get_letohl(tvb, offset+4) != blobsize)) {
+        return offset;
+    }
+
+    pi = proto_tree_add_item(tree, hf_s7commp_securitykeyencryptedkey, tvb, offset, -1, FALSE);
+    PROTO_ITEM_SET_GENERATED(pi);
+    subtree = proto_item_add_subtree(pi, ett_s7commp_securitykeyencryptedkey);
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_magic, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_length, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_unknown1, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_unknown2, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    /* next 3 are the same as the SecurityKeySymmetricKeyID earlier in the frame */
+    subpi = proto_tree_add_uint64(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum, tvb, offset, 8, tvb_get_letoh64(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 8;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    /* next 3 are the same as the SecurityKeyPublicKeyID earlier in the frame */
+    subpi = proto_tree_add_uint64(subtree, hf_s7commp_securitykeyencryptedkey_publickeychecksum, tvb, offset, 8, tvb_get_letoh64(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 8;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags_internal, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    /* this field has variable length, I have seen 0x3C and 0x50 */
+    varsize = blobsize - 0x30 - 0x48;
+    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_random_seed, tvb, offset, varsize, tvb_get_ptr(tvb, offset, varsize));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += varsize;
+
+    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encryption_init_vector, tvb, offset, 0x10, tvb_get_ptr(tvb, offset, 0x10));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 0x10;
+
+    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_challenge, tvb, offset, 0x38, tvb_get_ptr(tvb, offset, 0x38));
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 0x38;
 
     return offset;
 }
@@ -5121,155 +5268,6 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     PROTO_ITEM_SET_GENERATED(list_item_tree);
     return offset;
 }
-/*******************************************************************************************************
- *
- * Decoding of an ULInt value as timestamp
- *
- *******************************************************************************************************/
-static guint32
-s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
-                                      proto_tree *tree,
-                                      guint32 offset,
-                                      guint8 datatype,
-                                      guint32 length_of_value)
-{
-    guint64 uint64val = 0;
-    guint8 octet_count = 0;
-    gchar *str_val = NULL;
-    proto_item *pi = NULL;
-
-    if (datatype != S7COMMP_ITEM_DATATYPE_ULINT) {
-        return offset;
-    }
-
-    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
-    str_val[0] = '\0';
-
-    uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
-    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
-    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "Timestamp: %s", str_val);
-    offset += octet_count;
-
-    PROTO_ITEM_SET_GENERATED(pi);
-    return offset;
-}
-
-/*******************************************************************************************************
- *
- * Decoding if attribute Blocklanguage (ID 2523)
- *
- *******************************************************************************************************/
-static guint32
-s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
-                                   proto_tree *tree,
-                                   guint32 offset,
-                                   guint8 datatype,
-                                   guint32 length_of_value)
-{
-    guint16 blocklang;
-    proto_item *pi = NULL;
-
-    if (datatype != S7COMMP_ITEM_DATATYPE_UINT) {
-        return offset;
-    }
-
-    blocklang = tvb_get_ntohs(tvb, offset);
-    pi = proto_tree_add_text(tree, tvb, offset, 2, "Blocklanguage: %s", val_to_str(blocklang, attrib_blocklanguage_names, "Unknown Blocklanguage: %u"));
-    offset += 2;
-
-    PROTO_ITEM_SET_GENERATED(pi);
-    return offset;
-}
-
-/*******************************************************************************************************
- *
- * Decoding of attribute SecurityKeyEncryptedKey (ID 1805)
- *
- *******************************************************************************************************/
-static guint32
-s7commp_decode_attrib_securitykeyencryptedkey(tvbuff_t *tvb,
-                                              proto_tree *tree,
-                                              guint32 offset,
-                                              guint8 datatype,
-                                              guint32 blobsize)
-{
-    guint32 varsize = 0;
-    proto_item *pi = NULL;
-    proto_tree *subtree = NULL;
-    proto_item *subpi = NULL;
-
-    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB) {
-        return offset;
-    }
-
-    /* note: the values in this blob are Little-Endian! */
-    if ((blobsize < 0xB4) || (tvb_get_letohl(tvb, offset) != 0xFEE1DEAD) || (tvb_get_letohl(tvb, offset+4) != blobsize)) {
-        return offset;
-    }
-
-    pi = proto_tree_add_item(tree, hf_s7commp_securitykeyencryptedkey, tvb, offset, -1, FALSE);
-    PROTO_ITEM_SET_GENERATED(pi);
-    subtree = proto_item_add_subtree(pi, ett_s7commp_securitykeyencryptedkey);
-
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_magic, tvb, offset, 4, tvb_get_letohl(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 4;
-
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_length, tvb, offset, 4, tvb_get_letohl(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 4;
-
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_unknown1, tvb, offset, 4, tvb_get_letohl(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 4;
-
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_unknown2, tvb, offset, 4, tvb_get_letohl(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 4;
-
-    /* next 3 are the same as the SecurityKeySymmetricKeyID earlier in the frame */
-    subpi = proto_tree_add_uint64(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum, tvb, offset, 8, tvb_get_letoh64(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 8;
-
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags, tvb, offset, 4, tvb_get_letohl(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 4;
-
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal, tvb, offset, 4, tvb_get_letohl(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 4;
-
-    /* next 3 are the same as the SecurityKeyPublicKeyID earlier in the frame */
-    subpi = proto_tree_add_uint64(subtree, hf_s7commp_securitykeyencryptedkey_publickeychecksum, tvb, offset, 8, tvb_get_letoh64(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 8;
-
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags, tvb, offset, 4, tvb_get_letohl(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 4;
-
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags_internal, tvb, offset, 4, tvb_get_letohl(tvb, offset));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 4;
-
-    /* this field has variable length, I have seen 0x3C and 0x50 */
-    varsize = blobsize - 0x30 - 0x48;
-    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_random_seed, tvb, offset, varsize, tvb_get_ptr(tvb, offset, varsize));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += varsize;
-
-    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encryption_init_vector, tvb, offset, 0x10, tvb_get_ptr(tvb, offset, 0x10));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 0x10;
-
-    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_challenge, tvb, offset, 0x38, tvb_get_ptr(tvb, offset, 0x38));
-    PROTO_ITEM_SET_GENERATED(subpi);
-    offset += 0x38;
-
-    return offset;
-}
-
 /*******************************************************************************************************
  *
  * Request SetVariable

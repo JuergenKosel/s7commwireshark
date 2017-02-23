@@ -2943,7 +2943,7 @@ s7commp_decode_attrib_securitykeyencryptedkey(tvbuff_t *tvb,
         return offset;
     }
 
-    pi = proto_tree_add_item(tree, hf_s7commp_securitykeyencryptedkey, tvb, offset, -1, FALSE);
+    pi = proto_tree_add_item(tree, hf_s7commp_securitykeyencryptedkey, tvb, offset, blobsize, FALSE);
     PROTO_ITEM_SET_GENERATED(pi);
     subtree = proto_item_add_subtree(pi, ett_s7commp_securitykeyencryptedkey);
 

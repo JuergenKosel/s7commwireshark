@@ -1,4 +1,4 @@
-/* packet-s7onlinxfdl.c
+/* packet-s7comm_plus.c
  *
  * Author:      Thomas Wiens, 2014 <th.wiens@gmx.de>
  * Description: Wireshark dissector for S7 Communication plus
@@ -42,15 +42,17 @@
 #include <epan/proto_data.h>
 #include <wsutil/utf8_entities.h>
 
+#ifdef HAVE_ZLIB
+#define ZLIB_CONST
+#include <zlib.h>
+#endif
+
 void proto_reg_handoff_s7commp(void);
 void proto_register_s7commp(void);
 
-static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, guint32 offset, gboolean looping);
+static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, guint32 offset, gboolean recursive);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
-static guint32 s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
-static guint32 s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
-/* #include <epan/dissectors/packet-wap.h>  Fuer variable length */
 //#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
@@ -1036,6 +1038,50 @@ static const value_string attrib_blocklanguage_names[] = {
     { 0,        NULL }
 };
 
+/* blob decompression dictionaries */
+#ifdef HAVE_ZLIB
+#define BLOB_DECOMPRESS_BUFSIZE     16384
+#endif
+
+static const char s7commp_dict_NWT_98000001[] = {
+    0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x44, 0x69, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x61,
+    0x72, 0x79, 0x3e, 0x3c, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x54, 0x69, 0x74, 0x6c, 0x65,
+    0x73, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x3c, 0x44, 0x69, 0x63, 0x74, 0x45,
+    0x6e, 0x74, 0x72, 0x79, 0x20, 0x52, 0x65, 0x66, 0x49, 0x44, 0x3d, 0x22, 0x20, 0x4c, 0x61, 0x6e,
+    0x67, 0x75, 0x61, 0x67, 0x65, 0x3d, 0x22, 0x3d, 0x22, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65,
+    0x6e, 0x74, 0x44, 0x69, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x61, 0x72, 0x79, 0x3e, 0x3c, 0x4e, 0x65,
+    0x74, 0x77, 0x6f, 0x72, 0x6b, 0x54, 0x69, 0x74, 0x6c, 0x65, 0x73, 0x3e, 0x3c, 0x2f, 0x43, 0x6f,
+    0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x20, 0x52,
+    0x65, 0x66, 0x49, 0x44, 0x3d, 0x22, 0x30, 0x22, 0x3e, 0x3c, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e,
+    0x74, 0x72, 0x79, 0x20, 0x4c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x3d, 0x22, 0x64, 0x65,
+    0x2d, 0x44, 0x45, 0x22, 0x3e, 0x20, 0x22, 0x4d, 0x61, 0x69, 0x6e, 0x20, 0x50, 0x72, 0x6f, 0x67,
+    0x72, 0x61, 0x6d, 0x20, 0x53, 0x77, 0x65, 0x65, 0x70, 0x20, 0x28, 0x43, 0x79, 0x63, 0x6c, 0x65,
+    0x29, 0x22, 0x3c, 0x2f, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x3e, 0x3c, 0x2f,
+    0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74,
+    0x20, 0x52, 0x65, 0x66, 0x49, 0x44, 0x3d, 0x22, 0x32, 0x22, 0x3e, 0x3c, 0x44, 0x69, 0x63, 0x74,
+    0x45, 0x6e, 0x74, 0x72, 0x79, 0x20, 0x4c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x3d, 0x22,
+    0x66, 0x72, 0x2d, 0x46, 0x52, 0x22, 0x3e, 0x3c, 0x2f, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74,
+    0x72, 0x79, 0x3e, 0x3c, 0x2f, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x43, 0x6f,
+    0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x20, 0x52, 0x65, 0x66, 0x49, 0x44, 0x3d, 0x22, 0x31, 0x36, 0x22,
+    0x3e, 0x3c, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x20, 0x4c, 0x61, 0x6e, 0x67,
+    0x75, 0x61, 0x67, 0x65, 0x3d, 0x22, 0x69, 0x74, 0x2d, 0x49, 0x54, 0x22, 0x3e, 0x74, 0x68, 0x69,
+    0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x74, 0x68, 0x65, 0x20, 0x69, 0x6e, 0x20, 0x74, 0x6f,
+    0x20, 0x61, 0x6e, 0x20, 0x63, 0x61, 0x6e, 0x20, 0x62, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x20, 0x61,
+    0x72, 0x65, 0x20, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x20, 0x61, 0x6e, 0x64, 0x3c, 0x2f,
+    0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x3e, 0x3c, 0x2f, 0x43, 0x6f, 0x6d, 0x6d,
+    0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x20, 0x52, 0x65, 0x66,
+    0x49, 0x44, 0x3d, 0x22, 0x32, 0x36, 0x22, 0x3e, 0x3c, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74,
+    0x72, 0x79, 0x20, 0x4c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x3d, 0x22, 0x65, 0x6e, 0x2d,
+    0x55, 0x53, 0x22, 0x3e, 0x64, 0x69, 0x65, 0x73, 0x20, 0x69, 0x73, 0x74, 0x20, 0x65, 0x69, 0x6e,
+    0x20, 0x64, 0x65, 0x72, 0x20, 0x64, 0x69, 0x65, 0x20, 0x64, 0x61, 0x73, 0x20, 0x69, 0x6d, 0x20,
+    0x6e, 0x61, 0x63, 0x68, 0x20, 0x65, 0x69, 0x6e, 0x65, 0x6e, 0x20, 0x6b, 0x61, 0x6e, 0x6e, 0x20,
+    0x73, 0x65, 0x69, 0x6e, 0x20, 0x66, 0xc3, 0xbc, 0x72, 0x20, 0x73, 0x69, 0x6e, 0x64, 0x20, 0x4e,
+    0x65, 0x74, 0x7a, 0x77, 0x65, 0x72, 0x6b, 0x20, 0x75, 0x6e, 0x64, 0x3c, 0x2f, 0x44, 0x69, 0x63,
+    0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x3e, 0x3c, 0x2f, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b,
+    0x54, 0x69, 0x74, 0x6c, 0x65, 0x73, 0x3e, 0x3c, 0x2f, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74,
+    0x44, 0x69, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x61, 0x72, 0x79, 0x3e
+};
+
 /**************************************************************************
  **************************************************************************/
 /* Header Block */
@@ -1366,6 +1412,30 @@ static const int *s7commp_subscrreflist_item_head_fields[] = {
 static gint hf_s7commp_subscrreflist_item_unknown1 = -1;
 static gint ett_s7commp_subscrreflist = -1;
 
+/* SecurityKeyEncryptedKey */
+static gint hf_s7commp_securitykeyencryptedkey = -1;
+static gint ett_s7commp_securitykeyencryptedkey = -1;
+static gint hf_s7commp_securitykeyencryptedkey_magic = -1;
+static gint hf_s7commp_securitykeyencryptedkey_length = -1;
+static gint hf_s7commp_securitykeyencryptedkey_unknown1 = -1;
+static gint hf_s7commp_securitykeyencryptedkey_unknown2 = -1;
+static gint hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum = -1;
+static gint hf_s7commp_securitykeyencryptedkey_symmetrickeyflags = -1;
+static gint hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal = -1;
+static gint hf_s7commp_securitykeyencryptedkey_publickeychecksum = -1;
+static gint hf_s7commp_securitykeyencryptedkey_publickeyflags = -1;
+static gint hf_s7commp_securitykeyencryptedkey_publickeyflags_internal = -1;
+static gint hf_s7commp_securitykeyencryptedkey_encrypted_random_seed = -1;
+static gint hf_s7commp_securitykeyencryptedkey_encryption_init_vector = -1;
+static gint hf_s7commp_securitykeyencryptedkey_encrypted_challenge = -1;
+
+/* zlib compressed blob */
+static gint hf_s7commp_compressedblob = -1;
+static gint ett_s7commp_compressedblob = -1;
+static gint hf_s7commp_compressedblob_dictionary_version = -1;
+static gint hf_s7commp_compressedblob_dictionary_id = -1;
+static gint hf_s7commp_compressedblob_uncompressed = -1;
+
 /* Getlink */
 static gint hf_s7commp_getlink_requnknown1 = -1;
 static gint hf_s7commp_getlink_requnknown2 = -1;
@@ -1455,6 +1525,11 @@ typedef struct {
 
 /* options */
 static gboolean s7commp_reassemble = TRUE;
+#ifdef HAVE_ZLIB
+static gboolean s7commp_opt_decompress_blobs = TRUE;
+#else
+static gboolean s7commp_opt_decompress_blobs = FALSE;
+#endif
 
 /*
  * reassembly of S7COMMP
@@ -2276,6 +2351,64 @@ proto_register_s7commp (void)
           { "Unknown 1", "s7comm-plus.subscrreflist.item.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
 
+        /* SecurityKeyEncryptedKey */
+        { &hf_s7commp_securitykeyencryptedkey,
+          { "Encrypted key", "s7comm-plus.securitykeyencryptedkey", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_magic,
+          { "Magic", "s7comm-plus.securitykeyencryptedkey.magic", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_length,
+          { "Length", "s7comm-plus.securitykeyencryptedkey.length", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_unknown1,
+          { "Unknown 1", "s7comm-plus.securitykeyencryptedkey.unknown1", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_unknown2,
+          { "Unknown 2", "s7comm-plus.securitykeyencryptedkey.unknown2", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum,
+          { "Symmetric key checksum", "s7comm-plus.securitykeyencryptedkey.symmetrickey.checksum", FT_UINT64, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_symmetrickeyflags,
+          { "Symmetric key flags", "s7comm-plus.securitykeyencryptedkey.symmetrickey.flags", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal,
+          { "Symmetric key internal flags", "s7comm-plus.securitykeyencryptedkey.symmetrickey.flags_internal", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_publickeychecksum,
+          { "Public key checksum", "s7comm-plus.securitykeyencryptedkey.publickey.checksum", FT_UINT64, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_publickeyflags,
+          { "Public key flags", "s7comm-plus.securitykeyencryptedkey.publickey.flags", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_publickeyflags_internal,
+          { "Public key internal flags", "s7comm-plus.securitykeyencryptedkey.publickey.flags_internal", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_encrypted_random_seed,
+          { "Encrypted random seed", "s7comm-plus.securitykeyencryptedkey.encrypted_random_seed", FT_BYTES, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_encryption_init_vector,
+          { "Encryption initialisation vector", "s7comm-plus.securitykeyencryptedkey.encryption_init_vector", FT_BYTES, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_securitykeyencryptedkey_encrypted_challenge,
+          { "Encrypted challenge", "s7comm-plus.securitykeyencryptedkey.encrypted_challenge", FT_BYTES, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+
+        /* zlib compressed blob */
+        { &hf_s7commp_compressedblob,
+          { "zlib compressed blob", "s7comm-plus.compressedblob", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_compressedblob_dictionary_version,
+          { "Dictionary version", "s7comm-plus.compressedblob.dictionary_version", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_compressedblob_dictionary_id,
+          { "Dictionary checksum (Adler-32)", "s7comm-plus.compressedblob.dictionary_id", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_compressedblob_uncompressed,
+          { "Uncompressed", "s7comm-plus.compressedblob.uncompressed", FT_STRING, STR_UNICODE, NULL, 0x0,
+            NULL, HFILL }},
+
         /* Getlink */
         { &hf_s7commp_getlink_requnknown1,
           { "Request unknown 1", "s7comm-plus.getlink.requnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -2419,7 +2552,9 @@ proto_register_s7commp (void)
         &ett_s7commp_object_classflags,
         &ett_s7commp_streamdata,
         &ett_s7commp_subscrreflist,
-        &ett_s7commp_subscrreflist_item_head
+        &ett_s7commp_subscrreflist_item_head,
+        &ett_s7commp_securitykeyencryptedkey,
+        &ett_s7commp_compressedblob
     };
 
     module_t *s7commp_module;
@@ -2441,6 +2576,11 @@ proto_register_s7commp (void)
                                    "Whether segmented S7COMM-PLUS telegrams should be "
                                    "reassembled.",
                                    &s7commp_reassemble);
+
+    prefs_register_bool_preference(s7commp_module, "decompress_blobs",
+                                   "Uncompress S7COMM-PLUS blobs",
+                                   "Whether to uncompress S7COMM-PLUS blobs ",
+                                   &s7commp_opt_decompress_blobs);
 
     /* Register the init routine. */
     register_init_routine(s7commp_defragment_init);
@@ -2700,7 +2840,7 @@ s7commp_decode_integrity(tvbuff_t *tvb,
      * To prevent malformed packet errors, check this.
      */
     if (integrity_len == 32) {
-        proto_tree_add_bytes(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, tvb_get_ptr(tvb, offset, integrity_len));
+        proto_tree_add_item(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, ENC_NA);
         offset += integrity_len;
     } else {
         proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
@@ -2760,6 +2900,7 @@ s7commp_decode_integrity_wid(tvbuff_t *tvb,
 
     return offset;
 }
+
 /*******************************************************************************************************
  *
  * Decodes a return value, coded as 64 Bit VLQ. Includes an errorcode and some flags.
@@ -2795,6 +2936,313 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
 
     return offset;
 }
+
+/*******************************************************************************************************
+ *
+ * Decoding of an ULInt value as timestamp
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
+                                      proto_tree *tree,
+                                      guint32 offset,
+                                      guint8 datatype,
+                                      guint32 length_of_value)
+{
+    guint64 uint64val = 0;
+    guint8 octet_count = 0;
+    gchar *str_val = NULL;
+    proto_item *pi = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_ULINT) {
+        return offset;
+    }
+
+    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
+    str_val[0] = '\0';
+
+    uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
+    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
+    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "Timestamp: %s", str_val);
+    offset += octet_count;
+
+    PROTO_ITEM_SET_GENERATED(pi);
+    return offset;
+}
+
+/*******************************************************************************************************
+ *
+ * Decoding if attribute Blocklanguage (ID 2523)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset,
+                                    guint8 datatype,
+                                    guint32 length_of_value)
+{
+    guint16 blocklang;
+    proto_item *pi = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_UINT) {
+        return offset;
+    }
+
+    blocklang = tvb_get_ntohs(tvb, offset);
+    pi = proto_tree_add_text(tree, tvb, offset, 2, "Blocklanguage: %s", val_to_str(blocklang, attrib_blocklanguage_names, "Unknown Blocklanguage: %u"));
+    offset += 2;
+
+    PROTO_ITEM_SET_GENERATED(pi);
+    return offset;
+}
+
+/*******************************************************************************************************
+ *
+ * Decoding of attribute SecurityKeyEncryptedKey (ID 1805)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_securitykeyencryptedkey(tvbuff_t *tvb,
+                                              proto_tree *tree,
+                                              guint32 offset,
+                                              guint8 datatype,
+                                              guint32 blobsize)
+{
+    guint32 varsize = 0;
+    proto_item *pi = NULL;
+    proto_tree *subtree = NULL;
+    proto_item *subpi = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB) {
+        return offset;
+    }
+
+    /* note: the values in this blob are Little-Endian! */
+    if ((blobsize < 0xB4) || (tvb_get_letohl(tvb, offset) != 0xFEE1DEAD) || (tvb_get_letohl(tvb, offset+4) != blobsize)) {
+        return offset;
+    }
+
+    pi = proto_tree_add_item(tree, hf_s7commp_securitykeyencryptedkey, tvb, offset, blobsize, FALSE);
+    PROTO_ITEM_SET_GENERATED(pi);
+    subtree = proto_item_add_subtree(pi, ett_s7commp_securitykeyencryptedkey);
+
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_magic, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_length, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_unknown1, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_unknown2, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    /* next 3 are the same as the SecurityKeySymmetricKeyID earlier in the frame */
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum, tvb, offset, 8, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 8;
+
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    /* next 3 are the same as the SecurityKeyPublicKeyID earlier in the frame */
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_publickeychecksum, tvb, offset, 8, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 8;
+
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags_internal, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 4;
+
+    /* this field has variable length, I have seen 0x3C and 0x50 */
+    varsize = blobsize - 0x30 - 0x48;
+    proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_random_seed, tvb, offset, varsize, ENC_NA);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += varsize;
+
+    proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_encryption_init_vector, tvb, offset, 0x10, ENC_NA);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 0x10;
+
+    proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_challenge, tvb, offset, 0x38, ENC_NA);
+    PROTO_ITEM_SET_GENERATED(subpi);
+    offset += 0x38;
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decompress a zlib compressed blob with dictionary
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decompress_blob(tvbuff_t *tvb,
+                        proto_tree *tree,
+                        guint32 offset,
+                        guint8 datatype,
+                        guint32 length_of_value,
+                        guint32 id_number)
+{
+    guint32 version;
+    guint32 dict_id;
+    proto_item *pi = NULL;
+    proto_tree *subtree = NULL;
+
+#ifdef HAVE_ZLIB
+    int retcode;
+    z_streamp streamp;
+    guint32 uncomp_length;
+    const char *dict = NULL;
+    guint32 dict_size = 0;
+    guint8 *uncomp_blob = (guint8 *)wmem_alloc(wmem_packet_scope(), BLOB_DECOMPRESS_BUFSIZE);
+    const guint8 *blobptr = tvb_get_ptr(tvb, offset + 4, length_of_value - 4);
+#endif
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB) {
+        return offset;
+    }
+
+    pi = proto_tree_add_item(tree, hf_s7commp_compressedblob, tvb, offset, length_of_value, FALSE);
+    PROTO_ITEM_SET_GENERATED(pi);
+    subtree = proto_item_add_subtree(pi, ett_s7commp_compressedblob);
+
+    version = tvb_get_ntohl(tvb, offset);
+    pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_version, tvb, offset, 4, version);
+    PROTO_ITEM_SET_GENERATED(pi);
+    offset += 4;
+
+    /* +2 for skipped zlib header */
+    offset += 2;
+    dict_id = tvb_get_ntohl(tvb, offset);
+    pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset, 4, dict_id);
+    PROTO_ITEM_SET_GENERATED(pi);
+    offset += 4;
+
+    if (s7commp_opt_decompress_blobs) {
+#ifdef HAVE_ZLIB
+        streamp = wmem_new0(wmem_packet_scope(), z_stream);
+        retcode = inflateInit(streamp);
+        streamp->avail_in = length_of_value - 4;
+#ifdef z_const
+        streamp->next_in = (z_const Bytef *)blobptr;
+#else
+DIAG_OFF(cast-qual)
+        streamp->next_in = (Bytef *)blobptr;
+DIAG_ON(cast-qual)
+#endif
+        streamp->next_out = uncomp_blob;
+        streamp->avail_out = BLOB_DECOMPRESS_BUFSIZE;
+
+        retcode = inflate(streamp, Z_NO_FLUSH);
+
+        if (retcode == Z_NEED_DICT) {
+            switch (dict_id) {
+                case 0x845fc605:
+                    dict = s7commp_dict_NWT_98000001;
+                    dict_size = sizeof(s7commp_dict_NWT_98000001);
+                    break;
+                default:
+                    proto_item_append_text(subtree, ", Error: Blob decompression failed, no dictionary found");
+                    break;
+            }
+            if (dict) {
+                retcode = inflateSetDictionary(streamp, dict, dict_size);
+                if (retcode == Z_OK) {
+                    retcode = inflate(streamp, Z_NO_FLUSH);
+                    /* retcode is Z_OK or Z_STREAM_END */
+                }
+                if (uncomp_blob == NULL) {
+                    proto_item_append_text(subtree, ", Error: Blob decompression failed");
+                }
+            }
+        }
+        uncomp_length = BLOB_DECOMPRESS_BUFSIZE - streamp->avail_out;
+
+        if (uncomp_length > 0) {
+            uncomp_blob[uncomp_length] = '\0';
+            pi = proto_tree_add_string(subtree, hf_s7commp_compressedblob_uncompressed, tvb, offset, length_of_value - 4, uncomp_blob);
+            PROTO_ITEM_SET_GENERATED(pi);
+        }
+        inflateEnd(streamp);
+#endif
+    }
+    offset += (length_of_value - 4 - 2);
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Extended decoding of some id-values
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_value_extended(tvbuff_t *tvb,
+                              proto_tree *tree,
+                              guint32 value_start_offset,           /* offset to start of the value */
+                              guint8 datatype,
+                              guint32 length_of_value,  /* length of the value in bytes */
+                              guint32 id_number)
+{
+    guint32 offset = 0;
+    switch (id_number) {
+        //case 1048:  /* 1048 = SubscriptionReferenceList */
+        //    offset = s7commp_decode_attrib_subscriptionreflist(tvb, tree, value_start_offset, datatype, length_of_value);
+        //    break;
+        case 6:     /*    6 = TypeInfoModificationTime */
+        case 410:   /*  410 = VariableTypeTypeInfoReserveDataModified */
+        case 529:   /*  529 = VariableTypeStructModificationTime */
+        case 2453:  /* 2453 = ASObjectSimple.LastModified */
+        case 2529:  /* 2529 = Block.RuntimeModified */
+        case 2543:  /* 2543 = DataInterface.InterfaceModified */
+        case 2581:  /* 2581 = FunctionalObject.ParameterModified */
+        case 3737:  /* 3737 = ControllerArea.RuntimeModified */
+        case 3745:  /* 3745 = HWConfiguration.OfflineChange */
+        case 3746:  /* 3746 = PLCProgram.OfflineChange */
+        case 4704:  /* 4704 = TISDescription.JobModified */
+        case 7646:  /* 7646 = ContinuingTisJob.JobModified */
+        case 7649:  /* 7649 = MC_DB.TOAlarmReactionModified */
+        case 7650:  /* 7650 = TA_DB.TechnologicalUnitsModified */
+        case 7733:  /* 7733 = DB.StructureModified */
+        case 7945:  /* 7945 = EventDefinition.LastUserModified_Rid */
+        case 8067:  /* 8067 = SWObject.LastUserModified_Rid */
+        case 8068:  /* 8068 = TextContainer.LastUserModified_Rid */
+        case 8162:  /* 8162 = TA_DB.TechnologicalConnectionsModified_Rid */
+            offset = s7commp_decode_attrib_ulint_timestamp(tvb, tree, value_start_offset, datatype, length_of_value);
+            break;
+        case 2523:  /* 2523 = Block.BlockLanguage */
+            offset = s7commp_decode_attrib_blocklanguage(tvb, tree, value_start_offset, datatype, length_of_value);
+            break;
+        case 1805:  /* 1805 = SecurityKeyEncryptedKey */
+            offset = s7commp_decode_attrib_securitykeyencryptedkey(tvb, tree, value_start_offset, datatype, length_of_value);
+            break;
+        case 2449:  /* ASObjectES.IdentES */
+        case 2533:  /* Block.BodyDescription */
+        case 2544:  /* DataInterface.InterfaceDescription */
+        case 2545:  /* DataInterface.CompilerSwitches */
+        case 2546:  /* DataInterface.LineComments */
+        case 2583:  /* FunctionalObject.intRefData */
+        case 2584:  /* FunctionalObject.NetworkComments */
+        case 2585:  /* FunctionalObject.NetworkTitles */
+        case 2589:  /* FunctionalObject.DebugInfo */
+            offset = s7commp_decompress_blob(tvb, tree, value_start_offset, datatype, length_of_value, id_number);
+            break;
+    }
+    return offset;
+}
 /*******************************************************************************************************
  *
  * Decoding of a single value with datatype flags, datatype specifier and the value data
@@ -2804,7 +3252,8 @@ static guint32
 s7commp_decode_value(tvbuff_t *tvb,
                      proto_tree *data_item_tree,
                      guint32 offset,
-                     int* struct_level)
+                     int* struct_level,
+                     guint32 id_number)
 {
     guint8 octet_count = 0;
     guint8 datatype;
@@ -2836,6 +3285,7 @@ s7commp_decode_value(tvbuff_t *tvb,
 
     guint32 start_offset = 0;
     guint32 length_of_value = 0;
+    guint32 value_start_offset = 0;
 
     str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
     str_val[0] = '\0';
@@ -2918,38 +3368,45 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             case S7COMMP_ITEM_DATATYPE_BOOL:
                 length_of_value = 1;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", tvb_get_guint8(tvb, offset) ? "True" : "False");
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_USINT:
                 length_of_value = 1;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_UINT:
                 length_of_value = 2;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_UDINT:
+                value_start_offset = offset;
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_ULINT:
+                value_start_offset = offset;
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "u", uint64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_LINT:
+                value_start_offset = offset;
                 int64val = tvb_get_varint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "d", int64val);
                 break;
             case S7COMMP_ITEM_DATATYPE_SINT:
+                value_start_offset = offset;
                 uint8val = tvb_get_guint8(tvb, offset);
                 memcpy(&int8val, &uint8val, sizeof(int8val));
                 length_of_value = 1;
@@ -2957,6 +3414,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_INT:
+                value_start_offset = offset;
                 uint16val = tvb_get_ntohs(tvb, offset);
                 memcpy(&int16val, &uint16val, sizeof(int16val));
                 length_of_value = 2;
@@ -2964,6 +3422,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_DINT:
+                value_start_offset = offset;
                 int32val = tvb_get_varint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
@@ -2971,47 +3430,56 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             case S7COMMP_ITEM_DATATYPE_BYTE:
                 length_of_value = 1;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%02x", tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_WORD:
                 length_of_value = 2;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%04x", tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_STRUCT:
                 if (struct_level) *struct_level += 1; /* entering a new structure level */
                 length_of_value = 4;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_DWORD:
                 length_of_value = 4;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LWORD:
                 length_of_value = 8;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%016" G_GINT64_MODIFIER "x", tvb_get_ntoh64(tvb, offset));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_REAL:
                 length_of_value = 4;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_float(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LREAL:
                 length_of_value = 8;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_double(tvb, offset));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESTAMP:
                 length_of_value = 8;
+                value_start_offset = offset;
                 uint64val = tvb_get_ntoh64(tvb, offset);
                 s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESPAN:
+                value_start_offset = offset;
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
@@ -3019,10 +3487,12 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             case S7COMMP_ITEM_DATATYPE_RID:
                 length_of_value = 4;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_AID:
+                value_start_offset = offset;
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
@@ -3032,11 +3502,13 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(current_tree, hf_s7commp_itemval_stringactlen, tvb, offset, octet_count, length_of_value);
                 offset += octet_count;
+                value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s",
                        tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
                 offset += length_of_value;
                 break;
             case S7COMMP_ITEM_DATATYPE_VARIANT:
+                value_start_offset = offset;
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
@@ -3048,6 +3520,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, octet_count, length_of_value);
                 offset += octet_count;
+                value_start_offset = offset;
                 if (length_of_value > 0) {
                     g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
                 } else {
@@ -3089,6 +3562,8 @@ s7commp_decode_value(tvbuff_t *tvb,
                 proto_tree_add_text(array_item_tree, tvb, offset - length_of_value, length_of_value, "Value[%u]: %s", array_index, str_val);
             }
         }
+        /* Erweitertes Decodieren der Daten ausgewaehlter IDs */
+        s7commp_decode_value_extended(tvb, current_tree, value_start_offset, datatype, length_of_value, id_number);
     } /* for */
 
     if (strlen(str_arrval) == 0) {
@@ -3140,7 +3615,7 @@ static guint32
 s7commp_decode_id_value_list(tvbuff_t *tvb,
                              proto_tree *tree,
                              guint32 offset,
-                             gboolean looping)
+                             gboolean recursive)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -3163,35 +3638,11 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
             s7commp_proto_item_append_idname(data_item_tree, id_number, ": ID=");
             offset += octet_count;
             struct_level = 0;
-            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level, id_number);
             /* Extended decoding */
             switch (id_number) {
-                case 1048:  /* 1048 = SubscriptionReferenceList */
+                case 1048:  /* 1048 = SubscriptionReferenceList. An dieser Position weil Array of int */
                     s7commp_decode_attrib_subscriptionreflist(tvb, tree, start_offset + octet_count);
-                    break;
-                case 6:     /*    6 = TypeInfoModificationTime */
-                case 410:   /*  410 = VariableTypeTypeInfoReserveDataModified */
-                case 529:   /*  529 = VariableTypeStructModificationTime */
-                case 2453:  /* 2453 = ASObjectSimple.LastModified */
-                case 2529:  /* 2529 = Block.RuntimeModified */
-                case 2543:  /* 2543 = DataInterface.InterfaceModified */
-                case 2581:  /* 2581 = FunctionalObject.ParameterModified */
-                case 3737:  /* 3737 = ControllerArea.RuntimeModified */
-                case 3745:  /* 3745 = HWConfiguration.OfflineChange */
-                case 3746:  /* 3746 = PLCProgram.OfflineChange */
-                case 4704:  /* 4704 = TISDescription.JobModified */
-                case 7646:  /* 7646 = ContinuingTisJob.JobModified */
-                case 7649:  /* 7649 = MC_DB.TOAlarmReactionModified */
-                case 7650:  /* 7650 = TA_DB.TechnologicalUnitsModified */
-                case 7733:  /* 7733 = DB.StructureModified */
-                case 7945:  /* 7945 = EventDefinition.LastUserModified_Rid */
-                case 8067:  /* 8067 = SWObject.LastUserModified_Rid */
-                case 8068:  /* 8068 = TextContainer.LastUserModified_Rid */
-                case 8162:  /* 8162 = TA_DB.TechnologicalConnectionsModified_Rid */
-                    s7commp_decode_attrib_ulint_timestamp(tvb, tree, start_offset + octet_count);
-                    break;
-                case 2523:  /* 2523 = Block.BlockLanguage */
-                    s7commp_decode_attrib_blocklanguage(tvb, tree, start_offset + octet_count);
                     break;
             }
 
@@ -3203,7 +3654,7 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
                 return offset;
             }
         }
-    } while (looping);
+    } while (recursive);
     return offset;
 }
 /*******************************************************************************************************
@@ -3215,14 +3666,14 @@ static guint32
 s7commp_decode_id_value_list_in_new_tree(tvbuff_t *tvb,
                                          proto_tree *tree,
                                          guint32 offset,
-                                         gboolean looping)
+                                         gboolean recursive)
 {
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset = offset;
     list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
-    offset = s7commp_decode_id_value_list(tvb, list_item_tree, offset, looping);
+    offset = s7commp_decode_id_value_list(tvb, list_item_tree, offset, recursive);
     proto_item_set_len(list_item_tree, offset - list_start_offset);
     return offset;
 }
@@ -3235,7 +3686,7 @@ static guint32
 s7commp_decode_itemnumber_value_list(tvbuff_t *tvb,
                                      proto_tree *tree,
                                      guint32 offset,
-                                     gboolean looping)
+                                     gboolean recursive)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -3258,13 +3709,13 @@ s7commp_decode_itemnumber_value_list(tvbuff_t *tvb,
             proto_item_append_text(data_item_tree, " [%u]:", itemnumber);
             offset += octet_count;
             struct_level = 0;
-            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level, 0);
             if (struct_level > 0) {
                 offset = s7commp_decode_id_value_list(tvb, data_item_tree, offset, TRUE);
             }
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
-    } while (looping);
+    } while (recursive);
     return offset;
 }
 /*******************************************************************************************************
@@ -3276,14 +3727,14 @@ static guint32
 s7commp_decode_itemnumber_value_list_in_new_tree(tvbuff_t *tvb,
                                                  proto_tree *tree,
                                                  guint32 offset,
-                                                 gboolean looping)
+                                                 gboolean recursive)
 {
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset = offset;
     list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
-    offset = s7commp_decode_itemnumber_value_list(tvb, list_item_tree, offset, looping);
+    offset = s7commp_decode_itemnumber_value_list(tvb, list_item_tree, offset, recursive);
     proto_item_set_len(list_item_tree, offset - list_start_offset);
     return offset;
 }
@@ -4025,7 +4476,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
     s7commp_proto_item_append_idname(data_item_tree, id_number, ": ID=");
     s7commp_pinfo_append_idname(pinfo, id_number, NULL);
     offset += 4;
-    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level, id_number);
     proto_item_set_len(data_item_tree, offset - start_offset);
     /* es folgen noch 4 Null-Bytes */
     proto_tree_add_text(tree, tvb, offset, 4, "Unknown value 1: 0x%08x", tvb_get_ntohl(tvb, offset));
@@ -4682,7 +5133,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                                        packet_info *pinfo,
                                        proto_tree *tree,
                                        guint32 offset,
-                                       gboolean looping)
+                                       gboolean recursive)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -4726,13 +5177,13 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_refnumber, tvb, offset, 4, item_number);
                 offset += 4;
                 proto_item_append_text(data_item_tree, " [%u]:", item_number);
-                offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+                offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level, 0);
             } else if (item_return_value == 0x9b) {
                 item_number = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, item_number);
                 offset += octet_count;
                 proto_item_append_text(data_item_tree, " [%u]:", item_number);
-                offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+                offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level, 0);
             } else if (item_return_value == 0x9c) {
                 item_number = tvb_get_ntohl(tvb, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_unknown0x9c, tvb, offset, 4, item_number);
@@ -4754,7 +5205,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
             }
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
-    } while (looping);
+    } while (recursive);
 
     return offset;
 }
@@ -5009,63 +5460,6 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decoding of an ULInt value as timestamp
- *
- *******************************************************************************************************/
-static guint32
-s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
-                                      proto_tree *tree,
-                                      guint32 offset)
-{
-    guint64 uint64val = 0;
-    guint8 octet_count = 0;
-    gchar *str_val = NULL;
-    proto_item *pi = NULL;
-
-    if ((tvb_get_guint8(tvb, offset) != 0x0) || (tvb_get_guint8(tvb, offset+1) != S7COMMP_ITEM_DATATYPE_ULINT)) {
-        return offset;
-    }
-    offset += 2;
-
-    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
-    str_val[0] = '\0';
-
-    uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
-    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
-    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "Timestamp: %s", str_val);
-    offset += octet_count;
-
-    PROTO_ITEM_SET_GENERATED(pi);
-    return offset;
-}
-
-/*******************************************************************************************************
- *
- * Decoding if attribute Blocklanguage (ID 2523)
- *
- *******************************************************************************************************/
-static guint32
-s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
-                                   proto_tree *tree,
-                                   guint32 offset)
-{
-    guint16 blocklang;
-    proto_item *pi = NULL;
-
-    if ((tvb_get_guint8(tvb, offset) != 0x0) || (tvb_get_guint8(tvb, offset+1) != S7COMMP_ITEM_DATATYPE_UINT)) {
-        return offset;
-    }
-    offset += 2;
-
-    blocklang = tvb_get_ntohs(tvb, offset);
-    pi = proto_tree_add_text(tree, tvb, offset, 2, "Blocklanguage: %s", val_to_str(blocklang, attrib_blocklanguage_names, "Unknown Blocklanguage: %u"));
-    offset += 2;
-
-    PROTO_ITEM_SET_GENERATED(pi);
-    return offset;
-}
-/*******************************************************************************************************
- *
  * Request SetVariable
  *
  *******************************************************************************************************/
@@ -5176,7 +5570,7 @@ s7commp_decode_response_getvariable(tvbuff_t *tvb,
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
     start_offset = offset;
-    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level, 0);
     proto_item_set_len(data_item_tree, offset - start_offset);
 
     return offset;
@@ -5210,7 +5604,7 @@ s7commp_decode_request_getvarsubstr(tvbuff_t *tvb,
             proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);
             proto_item_append_text(data_item_tree, " [%u]:", id_number);
             offset += 4;
-            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+            offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level, id_number);
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
     } while (struct_level > 0);
@@ -5241,7 +5635,7 @@ s7commp_decode_response_getvarsubstr(tvbuff_t *tvb,
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
     start_offset = offset;
     /* This function should be possible to handle a Null-Value */
-    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level);
+    offset = s7commp_decode_value(tvb, data_item_tree, offset, &struct_level, 0);
     /* when a struct was entered, then id, flag, type are following until terminating null */
     if (struct_level > 0) {
         offset = s7commp_decode_id_value_list(tvb, data_item_tree, offset, TRUE);
@@ -5304,7 +5698,7 @@ s7commp_decode_request_setvarsubstr_stream(tvbuff_t *tvb,
     offset_save = offset;
     proto_tree_add_text(streamdata_tree, tvb, offset, 2, "Request SetVarSubStreamed unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
     offset += 2;
-    offset = s7commp_decode_value(tvb, streamdata_tree, offset, &struct_level);
+    offset = s7commp_decode_value(tvb, streamdata_tree, offset, &struct_level, 0);
     *dlength -= (offset - offset_save);
     proto_item_set_len(streamdata_tree, offset - offset_save);
 
@@ -5349,7 +5743,7 @@ s7commp_decode_request_setvarsubstr_stream_frag(tvbuff_t *tvb,
     if (has_trailer) {
         offset = s7commp_decode_integrity_wid(tvb, pinfo, tree, TRUE, protocolversion, dlength, offset);
         if (*dlength > 0) {
-            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, *dlength, tvb_get_ptr(tvb, offset, *dlength));
+            proto_tree_add_item(tree, hf_s7commp_data_data, tvb, offset, *dlength, ENC_NA);
             offset += *dlength;
         }
     }
@@ -5738,7 +6132,7 @@ s7commp_decode_objectqualifier(tvbuff_t *tvb,
         if (id == 0x4e8) {
             /* alles dazwischen mit Dummy-Bytes auffuellen */
             if ((offset+2 - offset_save) > 0) {
-                proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset_save, offset - offset_save, tvb_get_ptr(tvb, offset_save, offset - offset_save));
+                proto_tree_add_item(tree, hf_s7commp_data_data, tvb, offset_save, offset - offset_save, ENC_NA);
             }
             dlength = dlength - (offset - offset_save);
             offset_save = offset;
@@ -6038,7 +6432,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     }
     /* Show remaining undecoded data as raw bytes */
     if (dlength > 0) {
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, dlength, tvb_get_ptr(tvb, offset, dlength));
+        proto_tree_add_item(tree, hf_s7commp_data_data, tvb, offset, dlength, ENC_NA);
         offset += dlength;
     }
     return offset;
@@ -6389,7 +6783,7 @@ dissect_s7commp(tvbuff_t *tvb,
             /* main dissect data function */
             if (first_fragment || inner_fragment) {
                 col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS %s fragment)", first_fragment ? "first" : "inner" );
-                proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, tvb_get_ptr(next_tvb, offset, dlength));
+                proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, ENC_NA);
                 offset += dlength;
             } else {
                 if (last_fragment) {

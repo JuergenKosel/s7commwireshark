@@ -50,10 +50,9 @@
 void proto_reg_handoff_s7commp(void);
 void proto_register_s7commp(void);
 
-static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, guint32 offset, gboolean looping);
+static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, proto_tree *tree, guint32 offset, gboolean recursive);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
-/* #include <epan/dissectors/packet-wap.h>  Fuer variable length */
 //#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
@@ -2978,10 +2977,10 @@ s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
  *******************************************************************************************************/
 static guint32
 s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
-                                   proto_tree *tree,
-                                   guint32 offset,
-                                   guint8 datatype,
-                                   guint32 length_of_value)
+                                    proto_tree *tree,
+                                    guint32 offset,
+                                    guint8 datatype,
+                                    guint32 length_of_value)
 {
     guint16 blocklang;
     proto_item *pi = NULL;
@@ -3616,7 +3615,7 @@ static guint32
 s7commp_decode_id_value_list(tvbuff_t *tvb,
                              proto_tree *tree,
                              guint32 offset,
-                             gboolean looping)
+                             gboolean recursive)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -3655,7 +3654,7 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
                 return offset;
             }
         }
-    } while (looping);
+    } while (recursive);
     return offset;
 }
 /*******************************************************************************************************
@@ -3667,14 +3666,14 @@ static guint32
 s7commp_decode_id_value_list_in_new_tree(tvbuff_t *tvb,
                                          proto_tree *tree,
                                          guint32 offset,
-                                         gboolean looping)
+                                         gboolean recursive)
 {
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset = offset;
     list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
-    offset = s7commp_decode_id_value_list(tvb, list_item_tree, offset, looping);
+    offset = s7commp_decode_id_value_list(tvb, list_item_tree, offset, recursive);
     proto_item_set_len(list_item_tree, offset - list_start_offset);
     return offset;
 }
@@ -3687,7 +3686,7 @@ static guint32
 s7commp_decode_itemnumber_value_list(tvbuff_t *tvb,
                                      proto_tree *tree,
                                      guint32 offset,
-                                     gboolean looping)
+                                     gboolean recursive)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -3716,7 +3715,7 @@ s7commp_decode_itemnumber_value_list(tvbuff_t *tvb,
             }
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
-    } while (looping);
+    } while (recursive);
     return offset;
 }
 /*******************************************************************************************************
@@ -3728,14 +3727,14 @@ static guint32
 s7commp_decode_itemnumber_value_list_in_new_tree(tvbuff_t *tvb,
                                                  proto_tree *tree,
                                                  guint32 offset,
-                                                 gboolean looping)
+                                                 gboolean recursive)
 {
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset = offset;
     list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
-    offset = s7commp_decode_itemnumber_value_list(tvb, list_item_tree, offset, looping);
+    offset = s7commp_decode_itemnumber_value_list(tvb, list_item_tree, offset, recursive);
     proto_item_set_len(list_item_tree, offset - list_start_offset);
     return offset;
 }
@@ -5134,7 +5133,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                                        packet_info *pinfo,
                                        proto_tree *tree,
                                        guint32 offset,
-                                       gboolean looping)
+                                       gboolean recursive)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -5206,7 +5205,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
             }
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
-    } while (looping);
+    } while (recursive);
 
     return offset;
 }

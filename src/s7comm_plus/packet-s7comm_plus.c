@@ -3109,7 +3109,7 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     z_streamp streamp;
     guint32 uncomp_length;
     const char *dict = NULL;
-    size_t dict_size = 0;
+    guint32 dict_size = 0;
     guint8 *uncomp_blob = (guint8 *)wmem_alloc(wmem_packet_scope(), BLOB_DECOMPRESS_BUFSIZE);
     const guint8 *blobptr = tvb_get_ptr(tvb, offset + 4, length_of_value - 4);
 #endif
@@ -3128,8 +3128,9 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     offset += 4;
 
     /* +2 for skipped zlib header */
-    dict_id = tvb_get_ntohl(tvb, offset + 2);
-    pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset + 2, 4, dict_id);
+    offset += 2;
+    dict_id = tvb_get_ntohl(tvb, offset);
+    pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset, 4, dict_id);
     PROTO_ITEM_SET_GENERATED(pi);
     offset += 4;
 
@@ -3181,6 +3182,7 @@ DIAG_ON(cast-qual)
         inflateEnd(streamp);
 #endif
     }
+    offset += (length_of_value - 4 - 2);
     return offset;
 }
 /*******************************************************************************************************

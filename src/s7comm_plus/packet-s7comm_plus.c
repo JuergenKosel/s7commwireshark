@@ -1038,6 +1038,14 @@ static const value_string attrib_blocklanguage_names[] = {
     { 0,        NULL }
 };
 
+static const value_string attrib_serversessionrole[] = {
+    { 0x00000000,   "Undefined" },
+    { 0x00000001,   "ES" },
+    { 0x00000002,   "HMI" },
+    { 0x20000000,   "Response role 0x20000000 unknown (with Auth/Integrity?)" },
+    { 0,            NULL }
+};
+
 /* blob decompression dictionaries */
 #ifdef HAVE_ZLIB
 #define BLOB_DECOMPRESS_BUFSIZE     16384
@@ -2996,7 +3004,33 @@ s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
     PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
+/*******************************************************************************************************
+ *
+ * Decoding if attribute ServerSessionRole (ID 299)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_serversessionrole(tvbuff_t *tvb,
+                                        proto_tree *tree,
+                                        guint32 offset,
+                                        guint8 datatype,
+                                        guint32 length_of_value)
+{
+    guint32 role;
+    guint8 octet_count = 0;
+    proto_item *pi = NULL;
 
+    if (datatype != S7COMMP_ITEM_DATATYPE_UDINT) {
+        return offset;
+    }
+
+    role = tvb_get_varuint32(tvb, &octet_count, offset);
+    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "ServerSessionRole: %s", val_to_str(role, attrib_serversessionrole, "Unknown ServerSessionRole: 0x%08x"));
+    offset += octet_count;
+    PROTO_ITEM_SET_GENERATED(pi);
+
+    return offset;
+}
 /*******************************************************************************************************
  *
  * Decoding of attribute SecurityKeyEncryptedKey (ID 1805)
@@ -3222,6 +3256,9 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 8068:  /* 8068 = TextContainer.LastUserModified_Rid */
         case 8162:  /* 8162 = TA_DB.TechnologicalConnectionsModified_Rid */
             offset = s7commp_decode_attrib_ulint_timestamp(tvb, tree, value_start_offset, datatype, length_of_value);
+            break;
+        case 299:   /*  299 = ServerSessionRole */
+            offset = s7commp_decode_attrib_serversessionrole(tvb, tree, value_start_offset, datatype, length_of_value);
             break;
         case 2523:  /* 2523 = Block.BlockLanguage */
             offset = s7commp_decode_attrib_blocklanguage(tvb, tree, value_start_offset, datatype, length_of_value);

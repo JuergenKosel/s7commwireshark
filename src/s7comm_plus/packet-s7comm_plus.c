@@ -2840,7 +2840,7 @@ s7commp_decode_integrity(tvbuff_t *tvb,
      * To prevent malformed packet errors, check this.
      */
     if (integrity_len == 32) {
-        proto_tree_add_bytes(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, tvb_get_ptr(tvb, offset, integrity_len));
+        proto_tree_add_item(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, ENC_NA);
         offset += integrity_len;
     } else {
         proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
@@ -3027,59 +3027,59 @@ s7commp_decode_attrib_securitykeyencryptedkey(tvbuff_t *tvb,
     PROTO_ITEM_SET_GENERATED(pi);
     subtree = proto_item_add_subtree(pi, ett_s7commp_securitykeyencryptedkey);
 
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_magic, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_magic, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 4;
 
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_length, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_length, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 4;
 
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_unknown1, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_unknown1, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 4;
 
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_unknown2, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_unknown2, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 4;
 
     /* next 3 are the same as the SecurityKeySymmetricKeyID earlier in the frame */
-    subpi = proto_tree_add_uint64(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum, tvb, offset, 8, tvb_get_letoh64(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeychecksum, tvb, offset, 8, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 8;
 
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 4;
 
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_symmetrickeyflags_internal, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 4;
 
     /* next 3 are the same as the SecurityKeyPublicKeyID earlier in the frame */
-    subpi = proto_tree_add_uint64(subtree, hf_s7commp_securitykeyencryptedkey_publickeychecksum, tvb, offset, 8, tvb_get_letoh64(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_publickeychecksum, tvb, offset, 8, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 8;
 
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 4;
 
-    subpi = proto_tree_add_uint(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags_internal, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+    subpi = proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_publickeyflags_internal, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 4;
 
     /* this field has variable length, I have seen 0x3C and 0x50 */
     varsize = blobsize - 0x30 - 0x48;
-    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_random_seed, tvb, offset, varsize, tvb_get_ptr(tvb, offset, varsize));
+    proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_random_seed, tvb, offset, varsize, ENC_NA);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += varsize;
 
-    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encryption_init_vector, tvb, offset, 0x10, tvb_get_ptr(tvb, offset, 0x10));
+    proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_encryption_init_vector, tvb, offset, 0x10, ENC_NA);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 0x10;
 
-    subpi = proto_tree_add_bytes(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_challenge, tvb, offset, 0x38, tvb_get_ptr(tvb, offset, 0x38));
+    proto_tree_add_item(subtree, hf_s7commp_securitykeyencryptedkey_encrypted_challenge, tvb, offset, 0x38, ENC_NA);
     PROTO_ITEM_SET_GENERATED(subpi);
     offset += 0x38;
 
@@ -5743,7 +5743,7 @@ s7commp_decode_request_setvarsubstr_stream_frag(tvbuff_t *tvb,
     if (has_trailer) {
         offset = s7commp_decode_integrity_wid(tvb, pinfo, tree, TRUE, protocolversion, dlength, offset);
         if (*dlength > 0) {
-            proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, *dlength, tvb_get_ptr(tvb, offset, *dlength));
+            proto_tree_add_item(tree, hf_s7commp_data_data, tvb, offset, *dlength, ENC_NA);
             offset += *dlength;
         }
     }
@@ -6132,7 +6132,7 @@ s7commp_decode_objectqualifier(tvbuff_t *tvb,
         if (id == 0x4e8) {
             /* alles dazwischen mit Dummy-Bytes auffuellen */
             if ((offset+2 - offset_save) > 0) {
-                proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset_save, offset - offset_save, tvb_get_ptr(tvb, offset_save, offset - offset_save));
+                proto_tree_add_item(tree, hf_s7commp_data_data, tvb, offset_save, offset - offset_save, ENC_NA);
             }
             dlength = dlength - (offset - offset_save);
             offset_save = offset;
@@ -6432,7 +6432,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     }
     /* Show remaining undecoded data as raw bytes */
     if (dlength > 0) {
-        proto_tree_add_bytes(tree, hf_s7commp_data_data, tvb, offset, dlength, tvb_get_ptr(tvb, offset, dlength));
+        proto_tree_add_item(tree, hf_s7commp_data_data, tvb, offset, dlength, ENC_NA);
         offset += dlength;
     }
     return offset;
@@ -6783,7 +6783,7 @@ dissect_s7commp(tvbuff_t *tvb,
             /* main dissect data function */
             if (first_fragment || inner_fragment) {
                 col_append_fstr(pinfo->cinfo, COL_INFO, " (S7COMM-PLUS %s fragment)", first_fragment ? "first" : "inner" );
-                proto_tree_add_bytes(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, tvb_get_ptr(next_tvb, offset, dlength));
+                proto_tree_add_item(s7commp_data_tree, hf_s7commp_data_data, next_tvb, offset, dlength, ENC_NA);
                 offset += dlength;
             } else {
                 if (last_fragment) {

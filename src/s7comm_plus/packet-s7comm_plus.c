@@ -42,6 +42,11 @@
 #include <epan/proto_data.h>
 #include <wsutil/utf8_entities.h>
 
+#ifdef HAVE_ZLIB
+#define ZLIB_CONST
+#include <zlib.h>
+#endif
+
 void proto_reg_handoff_s7commp(void);
 void proto_register_s7commp(void);
 
@@ -1034,6 +1039,50 @@ static const value_string attrib_blocklanguage_names[] = {
     { 0,        NULL }
 };
 
+/* blob decompression dictionaries */
+#ifdef HAVE_ZLIB
+#define BLOB_DECOMPRESS_BUFSIZE     16384
+#endif
+
+static const char s7commp_dict_NWT_98000001[] = {
+    0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x44, 0x69, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x61,
+    0x72, 0x79, 0x3e, 0x3c, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x54, 0x69, 0x74, 0x6c, 0x65,
+    0x73, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x3c, 0x44, 0x69, 0x63, 0x74, 0x45,
+    0x6e, 0x74, 0x72, 0x79, 0x20, 0x52, 0x65, 0x66, 0x49, 0x44, 0x3d, 0x22, 0x20, 0x4c, 0x61, 0x6e,
+    0x67, 0x75, 0x61, 0x67, 0x65, 0x3d, 0x22, 0x3d, 0x22, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65,
+    0x6e, 0x74, 0x44, 0x69, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x61, 0x72, 0x79, 0x3e, 0x3c, 0x4e, 0x65,
+    0x74, 0x77, 0x6f, 0x72, 0x6b, 0x54, 0x69, 0x74, 0x6c, 0x65, 0x73, 0x3e, 0x3c, 0x2f, 0x43, 0x6f,
+    0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x20, 0x52,
+    0x65, 0x66, 0x49, 0x44, 0x3d, 0x22, 0x30, 0x22, 0x3e, 0x3c, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e,
+    0x74, 0x72, 0x79, 0x20, 0x4c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x3d, 0x22, 0x64, 0x65,
+    0x2d, 0x44, 0x45, 0x22, 0x3e, 0x20, 0x22, 0x4d, 0x61, 0x69, 0x6e, 0x20, 0x50, 0x72, 0x6f, 0x67,
+    0x72, 0x61, 0x6d, 0x20, 0x53, 0x77, 0x65, 0x65, 0x70, 0x20, 0x28, 0x43, 0x79, 0x63, 0x6c, 0x65,
+    0x29, 0x22, 0x3c, 0x2f, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x3e, 0x3c, 0x2f,
+    0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74,
+    0x20, 0x52, 0x65, 0x66, 0x49, 0x44, 0x3d, 0x22, 0x32, 0x22, 0x3e, 0x3c, 0x44, 0x69, 0x63, 0x74,
+    0x45, 0x6e, 0x74, 0x72, 0x79, 0x20, 0x4c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x3d, 0x22,
+    0x66, 0x72, 0x2d, 0x46, 0x52, 0x22, 0x3e, 0x3c, 0x2f, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74,
+    0x72, 0x79, 0x3e, 0x3c, 0x2f, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x43, 0x6f,
+    0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x20, 0x52, 0x65, 0x66, 0x49, 0x44, 0x3d, 0x22, 0x31, 0x36, 0x22,
+    0x3e, 0x3c, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x20, 0x4c, 0x61, 0x6e, 0x67,
+    0x75, 0x61, 0x67, 0x65, 0x3d, 0x22, 0x69, 0x74, 0x2d, 0x49, 0x54, 0x22, 0x3e, 0x74, 0x68, 0x69,
+    0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x74, 0x68, 0x65, 0x20, 0x69, 0x6e, 0x20, 0x74, 0x6f,
+    0x20, 0x61, 0x6e, 0x20, 0x63, 0x61, 0x6e, 0x20, 0x62, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x20, 0x61,
+    0x72, 0x65, 0x20, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x20, 0x61, 0x6e, 0x64, 0x3c, 0x2f,
+    0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x3e, 0x3c, 0x2f, 0x43, 0x6f, 0x6d, 0x6d,
+    0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x20, 0x52, 0x65, 0x66,
+    0x49, 0x44, 0x3d, 0x22, 0x32, 0x36, 0x22, 0x3e, 0x3c, 0x44, 0x69, 0x63, 0x74, 0x45, 0x6e, 0x74,
+    0x72, 0x79, 0x20, 0x4c, 0x61, 0x6e, 0x67, 0x75, 0x61, 0x67, 0x65, 0x3d, 0x22, 0x65, 0x6e, 0x2d,
+    0x55, 0x53, 0x22, 0x3e, 0x64, 0x69, 0x65, 0x73, 0x20, 0x69, 0x73, 0x74, 0x20, 0x65, 0x69, 0x6e,
+    0x20, 0x64, 0x65, 0x72, 0x20, 0x64, 0x69, 0x65, 0x20, 0x64, 0x61, 0x73, 0x20, 0x69, 0x6d, 0x20,
+    0x6e, 0x61, 0x63, 0x68, 0x20, 0x65, 0x69, 0x6e, 0x65, 0x6e, 0x20, 0x6b, 0x61, 0x6e, 0x6e, 0x20,
+    0x73, 0x65, 0x69, 0x6e, 0x20, 0x66, 0xc3, 0xbc, 0x72, 0x20, 0x73, 0x69, 0x6e, 0x64, 0x20, 0x4e,
+    0x65, 0x74, 0x7a, 0x77, 0x65, 0x72, 0x6b, 0x20, 0x75, 0x6e, 0x64, 0x3c, 0x2f, 0x44, 0x69, 0x63,
+    0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x3e, 0x3c, 0x2f, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b,
+    0x54, 0x69, 0x74, 0x6c, 0x65, 0x73, 0x3e, 0x3c, 0x2f, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74,
+    0x44, 0x69, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x61, 0x72, 0x79, 0x3e
+};
+
 /**************************************************************************
  **************************************************************************/
 /* Header Block */
@@ -1381,6 +1430,13 @@ static gint hf_s7commp_securitykeyencryptedkey_encrypted_random_seed = -1;
 static gint hf_s7commp_securitykeyencryptedkey_encryption_init_vector = -1;
 static gint hf_s7commp_securitykeyencryptedkey_encrypted_challenge = -1;
 
+/* zlib compressed blob */
+static gint hf_s7commp_compressedblob = -1;
+static gint ett_s7commp_compressedblob = -1;
+static gint hf_s7commp_compressedblob_dictionary_version = -1;
+static gint hf_s7commp_compressedblob_dictionary_id = -1;
+static gint hf_s7commp_compressedblob_uncompressed = -1;
+
 /* Getlink */
 static gint hf_s7commp_getlink_requnknown1 = -1;
 static gint hf_s7commp_getlink_requnknown2 = -1;
@@ -1470,6 +1526,11 @@ typedef struct {
 
 /* options */
 static gboolean s7commp_reassemble = TRUE;
+#ifdef HAVE_ZLIB
+static gboolean s7commp_opt_decompress_blobs = TRUE;
+#else
+static gboolean s7commp_opt_decompress_blobs = FALSE;
+#endif
 
 /*
  * reassembly of S7COMMP
@@ -2335,6 +2396,20 @@ proto_register_s7commp (void)
           { "Encrypted challenge", "s7comm-plus.securitykeyencryptedkey.encrypted_challenge", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
 
+        /* zlib compressed blob */
+        { &hf_s7commp_compressedblob,
+          { "zlib compressed blob", "s7comm-plus.compressedblob", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_compressedblob_dictionary_version,
+          { "Dictionary version", "s7comm-plus.compressedblob.dictionary_version", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_compressedblob_dictionary_id,
+          { "Dictionary checksum (Adler-32)", "s7comm-plus.compressedblob.dictionary_id", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_compressedblob_uncompressed,
+          { "Uncompressed", "s7comm-plus.compressedblob.uncompressed", FT_STRING, STR_UNICODE, NULL, 0x0,
+            NULL, HFILL }},
+
         /* Getlink */
         { &hf_s7commp_getlink_requnknown1,
           { "Request unknown 1", "s7comm-plus.getlink.requnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -2479,7 +2554,8 @@ proto_register_s7commp (void)
         &ett_s7commp_streamdata,
         &ett_s7commp_subscrreflist,
         &ett_s7commp_subscrreflist_item_head,
-        &ett_s7commp_securitykeyencryptedkey
+        &ett_s7commp_securitykeyencryptedkey,
+        &ett_s7commp_compressedblob
     };
 
     module_t *s7commp_module;
@@ -2501,6 +2577,11 @@ proto_register_s7commp (void)
                                    "Whether segmented S7COMM-PLUS telegrams should be "
                                    "reassembled.",
                                    &s7commp_reassemble);
+
+    prefs_register_bool_preference(s7commp_module, "decompress_blobs",
+                                   "Uncompress S7COMM-PLUS blobs",
+                                   "Whether to uncompress S7COMM-PLUS blobs ",
+                                   &s7commp_opt_decompress_blobs);
 
     /* Register the init routine. */
     register_init_routine(s7commp_defragment_init);
@@ -3007,6 +3088,103 @@ s7commp_decode_attrib_securitykeyencryptedkey(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Decompress a zlib compressed blob with dictionary
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decompress_blob(tvbuff_t *tvb,
+                        proto_tree *tree,
+                        guint32 offset,
+                        guint8 datatype,
+                        guint32 length_of_value,
+                        guint32 id_number)
+{
+    guint32 version;
+    guint32 dict_id;
+    proto_item *pi = NULL;
+    proto_tree *subtree = NULL;
+
+#ifdef HAVE_ZLIB
+    int retcode;
+    z_streamp streamp;
+    guint32 uncomp_length;
+    const char *dict = NULL;
+    size_t dict_size = 0;
+    guint8 *uncomp_blob = (guint8 *)wmem_alloc(wmem_packet_scope(), BLOB_DECOMPRESS_BUFSIZE);
+    const guint8 *blobptr = tvb_get_ptr(tvb, offset + 4, length_of_value - 4);
+#endif
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB) {
+        return offset;
+    }
+
+    pi = proto_tree_add_item(tree, hf_s7commp_compressedblob, tvb, offset, length_of_value, FALSE);
+    PROTO_ITEM_SET_GENERATED(pi);
+    subtree = proto_item_add_subtree(pi, ett_s7commp_compressedblob);
+
+    version = tvb_get_ntohl(tvb, offset);
+    pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_version, tvb, offset, 4, version);
+    PROTO_ITEM_SET_GENERATED(pi);
+    offset += 4;
+
+    /* +2 for skipped zlib header */
+    dict_id = tvb_get_ntohl(tvb, offset + 2);
+    pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset + 2, 4, dict_id);
+    PROTO_ITEM_SET_GENERATED(pi);
+    offset += 4;
+
+    if (s7commp_opt_decompress_blobs) {
+#ifdef HAVE_ZLIB
+        streamp = wmem_new0(wmem_packet_scope(), z_stream);
+        retcode = inflateInit(streamp);
+        streamp->avail_in = length_of_value - 4;
+#ifdef z_const
+        streamp->next_in = (z_const Bytef *)blobptr;
+#else
+DIAG_OFF(cast-qual)
+        streamp->next_in = (Bytef *)blobptr;
+DIAG_ON(cast-qual)
+#endif
+        streamp->next_out = uncomp_blob;
+        streamp->avail_out = BLOB_DECOMPRESS_BUFSIZE;
+
+        retcode = inflate(streamp, Z_NO_FLUSH);
+
+        if (retcode == Z_NEED_DICT) {
+            switch (dict_id) {
+                case 0x845fc605:
+                    dict = s7commp_dict_NWT_98000001;
+                    dict_size = sizeof(s7commp_dict_NWT_98000001);
+                    break;
+                default:
+                    proto_item_append_text(subtree, ", Error: Blob decompression failed, no dictionary found");
+                    break;
+            }
+            if (dict) {
+                retcode = inflateSetDictionary(streamp, dict, dict_size);
+                if (retcode == Z_OK) {
+                    retcode = inflate(streamp, Z_NO_FLUSH);
+                    /* retcode is Z_OK or Z_STREAM_END */
+                }
+                if (uncomp_blob == NULL) {
+                    proto_item_append_text(subtree, ", Error: Blob decompression failed");
+                }
+            }
+        }
+        uncomp_length = BLOB_DECOMPRESS_BUFSIZE - streamp->avail_out;
+
+        if (uncomp_length > 0) {
+            uncomp_blob[uncomp_length] = '\0';
+            pi = proto_tree_add_string(subtree, hf_s7commp_compressedblob_uncompressed, tvb, offset, length_of_value - 4, uncomp_blob);
+            PROTO_ITEM_SET_GENERATED(pi);
+        }
+        inflateEnd(streamp);
+#endif
+    }
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Extended decoding of some id-values
  *
  *******************************************************************************************************/
@@ -3049,6 +3227,17 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
             break;
         case 1805:  /* 1805 = SecurityKeyEncryptedKey */
             offset = s7commp_decode_attrib_securitykeyencryptedkey(tvb, tree, value_start_offset, datatype, length_of_value);
+            break;
+        case 2449:  /* ASObjectES.IdentES */
+        case 2533:  /* Block.BodyDescription */
+        case 2544:  /* DataInterface.InterfaceDescription */
+        case 2545:  /* DataInterface.CompilerSwitches */
+        case 2546:  /* DataInterface.LineComments */
+        case 2583:  /* FunctionalObject.intRefData */
+        case 2584:  /* FunctionalObject.NetworkComments */
+        case 2585:  /* FunctionalObject.NetworkTitles */
+        case 2589:  /* FunctionalObject.DebugInfo */
+            offset = s7commp_decompress_blob(tvb, tree, value_start_offset, datatype, length_of_value, id_number);
             break;
     }
     return offset;

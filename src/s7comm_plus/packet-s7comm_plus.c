@@ -1190,6 +1190,7 @@ static gint ett_s7commp_objectqualifier = -1;           /* Subtree for object qu
 static gint ett_s7commp_integrity = -1;                 /* Subtree for integrity block */
 
 static gint ett_s7commp_streamdata = -1;                /* Subtree for stream data in setvarsubstream */
+static gint ett_s7commp_attrib_general = -1;            /* Subtree for attributes */
 
 /* Item Address */
 static gint hf_s7commp_item_count = -1;
@@ -1443,6 +1444,23 @@ static gint ett_s7commp_compressedblob = -1;
 static gint hf_s7commp_compressedblob_dictionary_version = -1;
 static gint hf_s7commp_compressedblob_dictionary_id = -1;
 static gint hf_s7commp_compressedblob_uncompressed = -1;
+
+/* MultipleStai */
+static gint hf_s7commp_multiplestai = -1;
+static gint hf_s7commp_multiplestai_alid = -1;
+static gint hf_s7commp_multiplestai_alarmdomain = -1;
+static gint hf_s7commp_multiplestai_messagetype = -1;
+static gint hf_s7commp_multiplestai_alarmenabled = -1;
+static gint hf_s7commp_multiplestai_hmiinfo_length = -1;
+static gint hf_s7commp_multiplestai_lidcount = -1;
+static gint hf_s7commp_multiplestai_lid = -1;
+
+/* HmiInfo */
+static gint hf_s7commp_hmiinfo = -1;
+static gint hf_s7commp_hmiinfo_syntaxid = -1;
+static gint hf_s7commp_hmiinfo_version = -1;
+static gint hf_s7commp_hmiinfo_clientalarmid = -1;
+static gint hf_s7commp_hmiinfo_priority = -1;
 
 /* Getlink */
 static gint hf_s7commp_getlink_requnknown1 = -1;
@@ -2417,6 +2435,49 @@ proto_register_s7commp (void)
           { "Uncompressed", "s7comm-plus.compressedblob.uncompressed", FT_STRING, STR_UNICODE, NULL, 0x0,
             NULL, HFILL }},
 
+        /* MultipleStai */
+        { &hf_s7commp_multiplestai,
+          { "MultipleStai", "s7comm-plus.multiplestai", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_multiplestai_alid,
+          { "Alid", "s7comm-plus.multiplestai.alid", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_multiplestai_alarmdomain,
+          { "AlarmDomain", "s7comm-plus.multiplestai.alarmdomain", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_multiplestai_messagetype,
+          { "MessageType", "s7comm-plus.multiplestai.messagetype", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_multiplestai_alarmenabled,
+          { "AlarmEnabled", "s7comm-plus.multiplestai.alarmenabled", FT_UINT8, BASE_DEC, VALS(no_yes_names), 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_multiplestai_hmiinfo_length,
+          { "HmiInfo length", "s7comm-plus.multiplestai.hmiinfo_length", FT_UINT16, BASE_DEC, NULL, 0x0,
+            "HmiInfo length, constant 9", HFILL }},
+        { &hf_s7commp_multiplestai_lidcount,
+          { "LidCount", "s7comm-plus.multiplestai.lidcount", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_multiplestai_lid,
+          { "Lids", "s7comm-plus.multiplestai.lids", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+
+        /* HmiInfo */
+        { &hf_s7commp_hmiinfo,
+          { "HmiInfo", "s7comm-plus.hmiinfo", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_syntaxid,
+          { "SyntaxId", "s7comm-plus.hmiinfo.syntaxid", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_version,
+          { "Version", "s7comm-plus.hmiinfo.version", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_clientalarmid,
+          { "ClientAlarmId", "s7comm-plus.hmiinfo.clientalarmid", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_priority,
+          { "Priority", "s7comm-plus.hmiinfo.priority", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+
         /* Getlink */
         { &hf_s7commp_getlink_requnknown1,
           { "Request unknown 1", "s7comm-plus.getlink.requnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -2562,7 +2623,8 @@ proto_register_s7commp (void)
         &ett_s7commp_subscrreflist,
         &ett_s7commp_subscrreflist_item_head,
         &ett_s7commp_securitykeyencryptedkey,
-        &ett_s7commp_compressedblob
+        &ett_s7commp_compressedblob,
+        &ett_s7commp_attrib_general
     };
 
     module_t *s7commp_module;
@@ -3033,6 +3095,90 @@ s7commp_decode_attrib_serversessionrole(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Decoding of attribute DAI.HmiInfo (7813)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_hmiinfo(tvbuff_t *tvb,
+                              proto_tree *tree,
+                              guint32 offset,
+                              guint8 datatype,
+                              guint32 length_of_value)
+{
+    proto_item *pi = NULL;
+    proto_tree *subtree = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB || length_of_value != 9) {
+        return offset;
+    }
+
+    pi = proto_tree_add_item(tree, hf_s7commp_hmiinfo, tvb, offset, 9, FALSE);
+    PROTO_ITEM_SET_GENERATED(pi);
+    subtree = proto_item_add_subtree(pi, ett_s7commp_attrib_general);
+
+    proto_tree_add_item(subtree, hf_s7commp_hmiinfo_syntaxid, tvb, offset, 2, ENC_NA);
+    offset += 2;
+    proto_tree_add_item(subtree, hf_s7commp_hmiinfo_version, tvb, offset, 2, ENC_NA);
+    offset += 2;
+    proto_tree_add_item(subtree, hf_s7commp_hmiinfo_clientalarmid, tvb, offset, 4, ENC_NA);
+    offset += 4;
+    proto_tree_add_item(subtree, hf_s7commp_hmiinfo_priority, tvb, offset, 1, ENC_NA);
+    offset += 1;
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decoding Of attribute MultipleSTAI.STAIs (ID 7859)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset,
+                                    guint8 datatype,
+                                    guint32 length_of_value)
+{
+    proto_item *pi = NULL;
+    proto_tree *subtree = NULL;
+    int lidcount, i;
+    guint16 hmiinfo_length;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB || length_of_value < 20) {
+        return offset;
+    }
+
+    pi = proto_tree_add_item(tree, hf_s7commp_multiplestai, tvb, offset, length_of_value, FALSE);
+    PROTO_ITEM_SET_GENERATED(pi);
+    subtree = proto_item_add_subtree(pi, ett_s7commp_attrib_general);
+
+    proto_tree_add_item(subtree, hf_s7commp_multiplestai_alid, tvb, offset, 2, ENC_NA);
+    offset += 2;
+    proto_tree_add_item(subtree, hf_s7commp_multiplestai_alarmdomain, tvb, offset, 2, ENC_NA);
+    offset += 2;
+    proto_tree_add_item(subtree, hf_s7commp_multiplestai_messagetype, tvb, offset, 2, ENC_NA);
+    offset += 2;
+    proto_tree_add_item(subtree, hf_s7commp_multiplestai_alarmenabled, tvb, offset, 1, ENC_NA);
+    offset += 1;
+
+    hmiinfo_length = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_item(subtree, hf_s7commp_multiplestai_hmiinfo_length, tvb, offset, 2, ENC_NA);
+    offset += 2;
+    offset = s7commp_decode_attrib_hmiinfo(tvb, subtree, offset, S7COMMP_ITEM_DATATYPE_BLOB, hmiinfo_length);
+
+    lidcount = tvb_get_ntohs(tvb, offset);
+    proto_tree_add_item(subtree, hf_s7commp_multiplestai_lidcount, tvb, offset, 2, ENC_NA);
+    offset += 2;
+
+    for (i = 0; i < lidcount; i++) {
+        pi = proto_tree_add_item(subtree, hf_s7commp_multiplestai_lid, tvb, offset, 4, ENC_NA);
+        offset += 4;
+    }
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decoding of attribute SecurityKeyEncryptedKey (ID 1805)
  *
  *******************************************************************************************************/
@@ -3276,6 +3422,11 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 2585:  /* FunctionalObject.NetworkTitles */
         case 2589:  /* FunctionalObject.DebugInfo */
             offset = s7commp_decompress_blob(tvb, tree, value_start_offset, datatype, length_of_value, id_number);
+        case 7813:  /* DAI.HmiInfo */
+            offset = s7commp_decode_attrib_hmiinfo(tvb, tree, value_start_offset, datatype, length_of_value);
+            break;
+        case 7859:  /* MultipleSTAI.STAIs */
+            offset = s7commp_decode_attrib_multiplestais(tvb, tree, value_start_offset, datatype, length_of_value);
             break;
     }
     return offset;

@@ -1455,6 +1455,16 @@ static gint hf_s7commp_multiplestai_hmiinfo_length = -1;
 static gint hf_s7commp_multiplestai_lidcount = -1;
 static gint hf_s7commp_multiplestai_lid = -1;
 
+/* Message types in MultipleStai */
+static const value_string multiplestai_messagetypes[] = {
+    { 0,            "Invalid AP" },
+    { 1,            "Alarm AP" },
+    { 2,            "Notify AP" },
+    { 3,            "Info Report AP" },
+    { 4,            "Event Ack AP" },
+    { 0,            NULL }
+};
+
 /* HmiInfo */
 static gint hf_s7commp_hmiinfo = -1;
 static gint hf_s7commp_hmiinfo_syntaxid = -1;
@@ -2446,7 +2456,7 @@ proto_register_s7commp (void)
           { "AlarmDomain", "s7comm-plus.multiplestai.alarmdomain", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_multiplestai_messagetype,
-          { "MessageType", "s7comm-plus.multiplestai.messagetype", FT_UINT16, BASE_DEC, NULL, 0x0,
+          { "MessageType", "s7comm-plus.multiplestai.messagetype", FT_UINT16, BASE_DEC, VALS(multiplestai_messagetypes), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_multiplestai_alarmenabled,
           { "AlarmEnabled", "s7comm-plus.multiplestai.alarmenabled", FT_UINT8, BASE_DEC, VALS(no_yes_names), 0x0,

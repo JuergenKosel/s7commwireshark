@@ -1465,6 +1465,30 @@ static const value_string multiplestai_messagetypes[] = {
     { 0,            NULL }
 };
 
+/* "Anzeigeklasse" / "Display class" when using Program_Alarm in plc program */
+static const value_string multiplestai_alarmdomains[] = {
+    { 1,            "Systemdiagnose" },
+    { 3,            "Security" },
+    { 256,          "UserClass_0" },
+    { 257,          "UserClass_1" },
+    { 258,          "UserClass_2" },
+    { 259,          "UserClass_3" },
+    { 260,          "UserClass_4" },
+    { 261,          "UserClass_5" },
+    { 262,          "UserClass_6" },
+    { 263,          "UserClass_7" },
+    { 264,          "UserClass_8" },
+    { 265,          "UserClass_9" },
+    { 266,          "UserClass_10" },
+    { 267,          "UserClass_11" },
+    { 268,          "UserClass_12" },
+    { 269,          "UserClass_13" },
+    { 270,          "UserClass_14" },
+    { 271,          "UserClass_15" },
+    { 272,          "UserClass_16" },
+    { 0,            NULL }
+};
+
 /* HmiInfo */
 static gint hf_s7commp_hmiinfo = -1;
 static gint hf_s7commp_hmiinfo_syntaxid = -1;
@@ -2453,8 +2477,8 @@ proto_register_s7commp (void)
           { "Alid", "s7comm-plus.multiplestai.alid", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_multiplestai_alarmdomain,
-          { "AlarmDomain", "s7comm-plus.multiplestai.alarmdomain", FT_UINT16, BASE_DEC, NULL, 0x0,
-            NULL, HFILL }},
+          { "AlarmDomain", "s7comm-plus.multiplestai.alarmdomain", FT_UINT16, BASE_DEC, VALS(multiplestai_alarmdomains), 0x0,
+            "AlarmDomain: Alarm was created by... When user, then with display class", HFILL }},
         { &hf_s7commp_multiplestai_messagetype,
           { "MessageType", "s7comm-plus.multiplestai.messagetype", FT_UINT16, BASE_DEC, VALS(multiplestai_messagetypes), 0x0,
             NULL, HFILL }},
@@ -2483,10 +2507,10 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_hmiinfo_clientalarmid,
           { "ClientAlarmId", "s7comm-plus.hmiinfo.clientalarmid", FT_UINT32, BASE_DEC, NULL, 0x0,
-            NULL, HFILL }},
+            "ClientAlarmId: CPU oriented unique alarm ID", HFILL }},
         { &hf_s7commp_hmiinfo_priority,
           { "Priority", "s7comm-plus.hmiinfo.priority", FT_UINT8, BASE_DEC, NULL, 0x0,
-            NULL, HFILL }},
+            "Priority of the alarm", HFILL }},
 
         /* Getlink */
         { &hf_s7commp_getlink_requnknown1,

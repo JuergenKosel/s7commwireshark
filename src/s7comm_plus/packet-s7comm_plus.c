@@ -3313,7 +3313,6 @@ s7commp_decompress_blob(tvbuff_t *tvb,
                         guint32 id_number)
 {
     guint32 version;
-    guint32 dict_id;
     proto_item *pi = NULL;
     proto_tree *subtree = NULL;
 
@@ -3323,11 +3322,11 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     guint32 uncomp_length;
     const char *dict = NULL;
     guint32 dict_size = 0;
-    guint8 *uncomp_blob = (guint8 *)wmem_alloc(wmem_packet_scope(), BLOB_DECOMPRESS_BUFSIZE);
-    const guint8 *blobptr = tvb_get_ptr(tvb, offset + 4, length_of_value - 4);
+    guint8 *uncomp_blob;
+    const guint8 *blobptr;
 #endif
 
-    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB) {
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB || length_of_value < 10) {
         return offset;
     }
 
@@ -3340,15 +3339,11 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     PROTO_ITEM_SET_GENERATED(pi);
     offset += 4;
 
-    /* +2 for skipped zlib header */
-    offset += 2;
-    dict_id = tvb_get_ntohl(tvb, offset);
-    pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset, 4, dict_id);
-    PROTO_ITEM_SET_GENERATED(pi);
-    offset += 4;
-
     if (s7commp_opt_decompress_blobs) {
 #ifdef HAVE_ZLIB
+        uncomp_blob = (guint8 *)wmem_alloc(wmem_packet_scope(), BLOB_DECOMPRESS_BUFSIZE);
+        blobptr = tvb_get_ptr(tvb, offset, length_of_value - 4);
+
         streamp = wmem_new0(wmem_packet_scope(), z_stream);
         retcode = inflateInit(streamp);
         streamp->avail_in = length_of_value - 4;
@@ -3365,7 +3360,9 @@ DIAG_ON(cast-qual)
         retcode = inflate(streamp, Z_NO_FLUSH);
 
         if (retcode == Z_NEED_DICT) {
-            switch (dict_id) {
+            pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset + 2, 4, streamp->adler);
+            PROTO_ITEM_SET_GENERATED(pi);
+            switch (streamp->adler) {
                 case 0x845fc605:
                     dict = s7commp_dict_NWT_98000001;
                     dict_size = sizeof(s7commp_dict_NWT_98000001);
@@ -3395,7 +3392,7 @@ DIAG_ON(cast-qual)
         inflateEnd(streamp);
 #endif
     }
-    offset += (length_of_value - 4 - 2);
+    offset += (length_of_value - 4);
     return offset;
 }
 /*******************************************************************************************************

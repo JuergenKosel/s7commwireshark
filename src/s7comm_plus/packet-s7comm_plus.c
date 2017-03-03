@@ -5025,10 +5025,14 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     PROTO_ITEM_SET_GENERATED(pi);
     subtree = proto_item_add_subtree(pi, ett_s7commp_compressedblob);
 
-    version = tvb_get_ntohl(tvb, offset);
-    pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_version, tvb, offset, 4, version);
-    PROTO_ITEM_SET_GENERATED(pi);
-    offset += 4;
+    /* There are blobs which don't use a dictionary. These haven't the 4-byte version header.
+     * Alternative?: Check for version <= 0x90000000 ? */
+    if (id_number != 4275) {  /* ConstantsGlobal.Symbolics */
+        version = tvb_get_ntohl(tvb, offset);
+        pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_version, tvb, offset, 4, version);
+        PROTO_ITEM_SET_GENERATED(pi);
+        offset += 4;
+    }
 
     if (s7commp_opt_decompress_blobs) {
 #ifdef HAVE_ZLIB
@@ -5226,6 +5230,7 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 2584:  /* FunctionalObject.NetworkComments */
         case 2585:  /* FunctionalObject.NetworkTitles */
         case 2589:  /* FunctionalObject.DebugInfo */
+        case 4275:  /* ConstantsGlobal.Symbolics */
             offset = s7commp_decompress_blob(tvb, tree, value_start_offset, datatype, length_of_value, id_number);
         case 7813:  /* DAI.HmiInfo */
             offset = s7commp_decode_attrib_hmiinfo(tvb, tree, value_start_offset, datatype, length_of_value);

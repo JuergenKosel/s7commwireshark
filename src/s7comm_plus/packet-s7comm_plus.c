@@ -6384,7 +6384,8 @@ static guint32
 s7commp_decode_object(tvbuff_t *tvb,
                       packet_info *pinfo,
                       proto_tree *tree,
-                      guint32 offset)
+                      guint32 offset,
+                      gboolean append_class)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -6410,7 +6411,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset += 4;
                 uint32_value_clsid = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_object_classid, tvb, offset, octet_count, uint32_value_clsid);
-                if (pinfo != NULL) {
+                if ((pinfo != NULL) && append_class) {
                     s7commp_pinfo_append_idname(pinfo, uint32_value_clsid, NULL);
                     s7commp_pinfo_append_idname(pinfo, uint32_value, " / ");
                 }
@@ -6430,7 +6431,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                     proto_tree_add_uint(data_item_tree, hf_s7commp_object_attributeidflags, tvb, offset, octet_count, uint32_value);
                     offset += octet_count;
                 }
-                offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset);
+                offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, append_class);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
             case S7COMMP_ITEMVAL_ELEMENTID_TERMOBJECT:               /* 0xa2 */
@@ -6542,7 +6543,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
         proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-CreateObject: %u", value);
         offset += octet_count;
     }
-    return s7commp_decode_object(tvb, pinfo, tree, offset);
+    return s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
 }
 /*******************************************************************************************************
  *
@@ -6580,7 +6581,7 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
     }
     /* Ein Daten-Objekt gibt es nur beim Connect */
     if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
-        offset = s7commp_decode_object(tvb, NULL, tree, offset);
+        offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
     return offset;
 }
@@ -7361,7 +7362,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
                 proto_tree_add_item(tree, hf_s7commp_notification_p2_unknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
                 offset += 1;
                 if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-                    offset =  s7commp_decode_object(tvb, pinfo, tree, offset);
+                    offset =  s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
                 }
             }
         }
@@ -7407,7 +7408,7 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
     offset += 2;
     proto_tree_add_text(tree, tvb, offset, 1, "Notification v1, Unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
-    offset = s7commp_decode_object(tvb, NULL, tree, offset);
+    offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
 
     return offset;
 }
@@ -7902,7 +7903,7 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
             proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 2, ENC_BIG_ENDIAN);
             offset += 2;
         }
-        offset = s7commp_decode_object(tvb, pinfo, tree, offset);
+        offset = s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
     } else {
         id = tvb_get_ntohl(tvb, offset);
         s7commp_pinfo_append_idname(pinfo, id, " Id=");
@@ -8156,7 +8157,7 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
      * zur Terminierung der Liste eingefuegt werden.
      */
     if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-        offset = s7commp_decode_object(tvb, NULL, tree, offset);
+        offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
     return offset;
 }

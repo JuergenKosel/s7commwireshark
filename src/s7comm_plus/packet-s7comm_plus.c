@@ -5020,6 +5020,8 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     guint8 *uncomp_blob;
     const guint8 *blobptr;
     tvbuff_t *next_tvb;
+    gboolean dissected;
+    guint32 length_comp_blob;
 #endif
 
     if (datatype != S7COMMP_ITEM_DATATYPE_BLOB || length_of_value < 10) {
@@ -5030,6 +5032,7 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     PROTO_ITEM_SET_GENERATED(pi);
     subtree = proto_item_add_subtree(pi, ett_s7commp_compressedblob);
 
+    length_comp_blob = length_of_value;
     /* There are blobs which don't use a dictionary. These haven't the 4-byte version header.
      * Alternative?: Check for version <= 0x90000000 ? */
     if (id_number != 4275) {  /* ConstantsGlobal.Symbolics */
@@ -5037,16 +5040,18 @@ s7commp_decompress_blob(tvbuff_t *tvb,
         pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_version, tvb, offset, 4, version);
         PROTO_ITEM_SET_GENERATED(pi);
         offset += 4;
+        length_comp_blob -= 4;
     }
 
     if (s7commp_opt_decompress_blobs) {
 #ifdef HAVE_ZLIB
+        uncomp_length = BLOB_DECOMPRESS_BUFSIZE;
         uncomp_blob = (guint8 *)wmem_alloc(wmem_packet_scope(), BLOB_DECOMPRESS_BUFSIZE);
-        blobptr = tvb_get_ptr(tvb, offset, length_of_value - 4);
+        blobptr = tvb_get_ptr(tvb, offset, length_comp_blob);
 
         streamp = wmem_new0(wmem_packet_scope(), z_stream);
         retcode = inflateInit(streamp);
-        streamp->avail_in = length_of_value - 4;
+        streamp->avail_in = length_comp_blob;
 #ifdef z_const
         streamp->next_in = (z_const Bytef *)blobptr;
 #else
@@ -5057,7 +5062,7 @@ DIAG_ON(cast-qual)
         streamp->next_out = uncomp_blob;
         streamp->avail_out = BLOB_DECOMPRESS_BUFSIZE;
 
-        retcode = inflate(streamp, Z_NO_FLUSH);
+        retcode = inflate(streamp, Z_FINISH);
 
         if (retcode == Z_NEED_DICT) {
             pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset + 2, 4, streamp->adler);
@@ -5157,33 +5162,60 @@ DIAG_ON(cast-qual)
             if (dict) {
                 retcode = inflateSetDictionary(streamp, dict, dict_size);
                 if (retcode == Z_OK) {
-                    retcode = inflate(streamp, Z_NO_FLUSH);
+                    retcode = inflate(streamp, Z_FINISH);
                     /* retcode is Z_OK or Z_STREAM_END */
-                }
-                if (uncomp_blob == NULL) {
-                    proto_item_append_text(subtree, ", Error: Blob decompression failed");
                 }
             }
         }
-        uncomp_length = BLOB_DECOMPRESS_BUFSIZE - streamp->avail_out;
-
-        if (uncomp_length > 0) {
-            uncomp_blob[uncomp_length] = '\0';
-            /* keep this for possible non-xml blobs */
-            /*
-            pi = proto_tree_add_string(subtree, hf_s7commp_compressedblob_uncompressed, tvb, offset, length_of_value - 4, uncomp_blob);
-            PROTO_ITEM_SET_GENERATED(pi);
-            */
-            /* make new tvb and call xml subdissector, as all compressed data are (so far) xml */
-            next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
-            if (xml_handle != NULL) {
-                call_dissector(xml_handle, next_tvb, pinfo, subtree);
+        while (retcode == Z_OK) {
+            /* Z_OK -> made progress, but did not finish */
+            if (streamp->avail_out == 0) {
+                /* need more memory */
+                /* TODO: maybe add memory limit */
+                uncomp_blob = (guint8 *)wmem_realloc(wmem_packet_scope(), uncomp_blob, uncomp_length + BLOB_DECOMPRESS_BUFSIZE);
+                streamp->next_out = uncomp_blob + uncomp_length;
+                streamp->avail_out = BLOB_DECOMPRESS_BUFSIZE;
+            } else {
+                /* incomplete input, abort */
+                break;
             }
+            retcode = inflate(streamp, Z_FINISH);
+        }
+        if (retcode == Z_STREAM_END) {
+            uncomp_length = uncomp_length - streamp->avail_out;
+
+            if (uncomp_length > 0) {
+                if (streamp->avail_out == 0) {
+                    /* need one more byte for string null terminator */
+                    uncomp_blob = (guint8 *)wmem_realloc(wmem_packet_scope(), uncomp_blob, uncomp_length + 1);
+                }
+
+                next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
+                add_new_data_source(pinfo, next_tvb, "Decompressed Data");
+
+                uncomp_blob[uncomp_length] = '\0';
+                /* keep this for possible non-xml blobs */
+                /*
+                pi = proto_tree_add_string(subtree, hf_s7commp_compressedblob_uncompressed, next_tvb, 0, uncomp_length, uncomp_blob);
+                PROTO_ITEM_SET_GENERATED(pi);
+                */
+                /* make new tvb and call xml subdissector, as all compressed data are (so far) xml */
+                next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
+                if (xml_handle != NULL) {
+                    dissected = call_dissector_only(xml_handle, next_tvb, pinfo, subtree, NULL);
+                    if (!dissected) {
+                        /* expert_add_info(pinfo, http_tree, &ei_http_subdissector_failed); */
+                        proto_tree_add_text(subtree, next_tvb, 0, -1, "XML subdissector failed");
+                    }
+                }
+            }
+        } else {
+            proto_item_append_text(subtree, ", Error: Blob decompression failed");
         }
         inflateEnd(streamp);
 #endif
     }
-    offset += (length_of_value - 4);
+    offset += length_comp_blob;
     return offset;
 }
 /*******************************************************************************************************

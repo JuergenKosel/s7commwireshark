@@ -5023,6 +5023,8 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     guint8 *uncomp_blob;
     const guint8 *blobptr;
     tvbuff_t *next_tvb;
+    gboolean dissected;
+    guint32 length_comp_blob;
 #endif
 
     if (datatype != S7COMMP_ITEM_DATATYPE_BLOB || length_of_value < 10) {
@@ -5033,6 +5035,7 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     PROTO_ITEM_SET_GENERATED(pi);
     subtree = proto_item_add_subtree(pi, ett_s7commp_compressedblob);
 
+    length_comp_blob = length_of_value;
     /* There are blobs which don't use a dictionary. These haven't the 4-byte version header.
      * Alternative?: Check for version <= 0x90000000 ? */
     if (id_number != 4275) {  /* ConstantsGlobal.Symbolics */
@@ -5040,16 +5043,18 @@ s7commp_decompress_blob(tvbuff_t *tvb,
         pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_version, tvb, offset, 4, version);
         PROTO_ITEM_SET_GENERATED(pi);
         offset += 4;
+        length_comp_blob -= 4;
     }
 
     if (s7commp_opt_decompress_blobs) {
 #ifdef HAVE_ZLIB
+        uncomp_length = BLOB_DECOMPRESS_BUFSIZE;
         uncomp_blob = (guint8 *)wmem_alloc(wmem_packet_scope(), BLOB_DECOMPRESS_BUFSIZE);
-        blobptr = tvb_get_ptr(tvb, offset, length_of_value - 4);
+        blobptr = tvb_get_ptr(tvb, offset, length_comp_blob);
 
         streamp = wmem_new0(wmem_packet_scope(), z_stream);
         retcode = inflateInit(streamp);
-        streamp->avail_in = length_of_value - 4;
+        streamp->avail_in = length_comp_blob;
 #ifdef z_const
         streamp->next_in = (z_const Bytef *)blobptr;
 #else
@@ -5060,7 +5065,7 @@ DIAG_ON(cast-qual)
         streamp->next_out = uncomp_blob;
         streamp->avail_out = BLOB_DECOMPRESS_BUFSIZE;
 
-        retcode = inflate(streamp, Z_NO_FLUSH);
+        retcode = inflate(streamp, Z_FINISH);
 
         if (retcode == Z_NEED_DICT) {
             pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset + 2, 4, streamp->adler);
@@ -5160,33 +5165,60 @@ DIAG_ON(cast-qual)
             if (dict) {
                 retcode = inflateSetDictionary(streamp, dict, dict_size);
                 if (retcode == Z_OK) {
-                    retcode = inflate(streamp, Z_NO_FLUSH);
+                    retcode = inflate(streamp, Z_FINISH);
                     /* retcode is Z_OK or Z_STREAM_END */
-                }
-                if (uncomp_blob == NULL) {
-                    proto_item_append_text(subtree, ", Error: Blob decompression failed");
                 }
             }
         }
-        uncomp_length = BLOB_DECOMPRESS_BUFSIZE - streamp->avail_out;
-
-        if (uncomp_length > 0) {
-            uncomp_blob[uncomp_length] = '\0';
-            /* keep this for possible non-xml blobs */
-            /*
-            pi = proto_tree_add_string(subtree, hf_s7commp_compressedblob_uncompressed, tvb, offset, length_of_value - 4, uncomp_blob);
-            PROTO_ITEM_SET_GENERATED(pi);
-            */
-            /* make new tvb and call xml subdissector, as all compressed data are (so far) xml */
-            next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
-            if (xml_handle != NULL) {
-                call_dissector(xml_handle, next_tvb, pinfo, subtree);
+        while (retcode == Z_OK) {
+            /* Z_OK -> made progress, but did not finish */
+            if (streamp->avail_out == 0) {
+                /* need more memory */
+                /* TODO: maybe add memory limit */
+                uncomp_blob = (guint8 *)wmem_realloc(wmem_packet_scope(), uncomp_blob, uncomp_length + BLOB_DECOMPRESS_BUFSIZE);
+                streamp->next_out = uncomp_blob + uncomp_length;
+                streamp->avail_out = BLOB_DECOMPRESS_BUFSIZE;
+            } else {
+                /* incomplete input, abort */
+                break;
             }
+            retcode = inflate(streamp, Z_FINISH);
+        }
+        if (retcode == Z_STREAM_END) {
+            uncomp_length = uncomp_length - streamp->avail_out;
+
+            if (uncomp_length > 0) {
+                if (streamp->avail_out == 0) {
+                    /* need one more byte for string null terminator */
+                    uncomp_blob = (guint8 *)wmem_realloc(wmem_packet_scope(), uncomp_blob, uncomp_length + 1);
+                }
+
+                next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
+                add_new_data_source(pinfo, next_tvb, "Decompressed Data");
+
+                uncomp_blob[uncomp_length] = '\0';
+                /* keep this for possible non-xml blobs */
+                /*
+                pi = proto_tree_add_string(subtree, hf_s7commp_compressedblob_uncompressed, next_tvb, 0, uncomp_length, uncomp_blob);
+                PROTO_ITEM_SET_GENERATED(pi);
+                */
+                /* make new tvb and call xml subdissector, as all compressed data are (so far) xml */
+                next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
+                if (xml_handle != NULL) {
+                    dissected = call_dissector_only(xml_handle, next_tvb, pinfo, subtree, NULL);
+                    if (!dissected) {
+                        /* expert_add_info(pinfo, http_tree, &ei_http_subdissector_failed); */
+                        proto_tree_add_text(subtree, next_tvb, 0, -1, "XML subdissector failed");
+                    }
+                }
+            }
+        } else {
+            proto_item_append_text(subtree, ", Error: Blob decompression failed");
         }
         inflateEnd(streamp);
 #endif
     }
-    offset += (length_of_value - 4);
+    offset += length_comp_blob;
     return offset;
 }
 /*******************************************************************************************************
@@ -6355,7 +6387,8 @@ static guint32
 s7commp_decode_object(tvbuff_t *tvb,
                       packet_info *pinfo,
                       proto_tree *tree,
-                      guint32 offset)
+                      guint32 offset,
+                      gboolean append_class)
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
@@ -6381,7 +6414,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset += 4;
                 uint32_value_clsid = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_object_classid, tvb, offset, octet_count, uint32_value_clsid);
-                if (pinfo != NULL) {
+                if ((pinfo != NULL) && append_class) {
                     s7commp_pinfo_append_idname(pinfo, uint32_value_clsid, NULL);
                     s7commp_pinfo_append_idname(pinfo, uint32_value, " / ");
                 }
@@ -6401,7 +6434,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                     proto_tree_add_uint(data_item_tree, hf_s7commp_object_attributeidflags, tvb, offset, octet_count, uint32_value);
                     offset += octet_count;
                 }
-                offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset);
+                offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, append_class);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
             case S7COMMP_ITEMVAL_ELEMENTID_TERMOBJECT:               /* 0xa2 */
@@ -6513,7 +6546,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
         proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-CreateObject: %u", value);
         offset += octet_count;
     }
-    return s7commp_decode_object(tvb, pinfo, tree, offset);
+    return s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
 }
 /*******************************************************************************************************
  *
@@ -6551,7 +6584,7 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
     }
     /* Ein Daten-Objekt gibt es nur beim Connect */
     if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
-        offset = s7commp_decode_object(tvb, NULL, tree, offset);
+        offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
     return offset;
 }
@@ -7332,7 +7365,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
                 proto_tree_add_item(tree, hf_s7commp_notification_p2_unknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
                 offset += 1;
                 if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-                    offset =  s7commp_decode_object(tvb, pinfo, tree, offset);
+                    offset =  s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
                 }
             }
         }
@@ -7378,7 +7411,7 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
     offset += 2;
     proto_tree_add_text(tree, tvb, offset, 1, "Notification v1, Unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
-    offset = s7commp_decode_object(tvb, NULL, tree, offset);
+    offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
 
     return offset;
 }
@@ -7873,7 +7906,7 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
             proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 2, ENC_BIG_ENDIAN);
             offset += 2;
         }
-        offset = s7commp_decode_object(tvb, pinfo, tree, offset);
+        offset = s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
     } else {
         id = tvb_get_ntohl(tvb, offset);
         s7commp_pinfo_append_idname(pinfo, id, " Id=");
@@ -8127,7 +8160,7 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
      * zur Terminierung der Liste eingefuegt werden.
      */
     if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-        offset = s7commp_decode_object(tvb, NULL, tree, offset);
+        offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
     return offset;
 }

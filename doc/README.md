@@ -30,8 +30,13 @@ Therrefore run the following commands:
 ## Build
 
 Finally follow the build instructions of the Wireshark project.
-E.g.
+E.g. for Linux with autoconf, automake and libtool installed:
 
    ./autogen.sh
    ./configure
    make -j`nproc`
+
+To build on Windows, including the installer is described at:
+https://www.wireshark.org/docs/wsdg_html_chunked/ChSetupWin32.html .
+A template script to build on Windows is available in:
+https://github.com/JuergenKosel/wireshark/blob/s7commwireshark/build4windows.bat

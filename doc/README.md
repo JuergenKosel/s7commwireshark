@@ -32,9 +32,9 @@ Therrefore run the following commands:
 Finally follow the build instructions of the Wireshark project.
 E.g. for Linux with autoconf, automake and libtool installed:
 
-   ./autogen.sh
-   ./configure
-   make -j`nproc`
+    ./autogen.sh
+    ./configure
+    make -j`nproc`
 
 To build on Windows, including the installer is described at:
 https://www.wireshark.org/docs/wsdg_html_chunked/ChSetupWin32.html .

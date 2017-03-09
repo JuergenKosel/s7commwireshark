@@ -24,12 +24,12 @@ Then follow the build instructions of the Wireshark project.
 
 ## Update from upstream subversion
 
-Contrary to https://git-scm.com/docs/git-svn , it is possible to run 'git svn init' inside an already exisiting git repository. So you could turn your clone of this git repository into a git-svn repository and fetch updates from the upstream svn repository. Therefore run the following commands:
+It is not obvious in https://git-scm.com/docs/git-svn , but it is possible to run 'git svn init' inside an already exisiting git repository. So you could turn your clone of this git repository into a git-svn repository and fetch updates from the upstream svn repository. Therefore run the following commands:
 
     git config --add svn.addAuthorFrom true
     git config --add svn.useLogAuthor true
     git config --add svn.pushmergeinfo true
-    git svn init -s ​svn://svn.code.sf.net/p/s7commwireshark/code
+    git svn init -s ​svn://svn.code.sf.net/p/s7commwireshark/code --prefix=upstream-svn/
 
 Create a local branch named trunk from the origin/trunk branch if you have not done so far and check it out:
 

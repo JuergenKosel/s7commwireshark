@@ -191,7 +191,7 @@ static const value_string data_functioncode_names[] = {
 #define S7COMMP_ITEM_DATATYPE_REAL              0x0e        /* REAL: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_LREAL             0x0f        /* LREAL: fix 8 Bytes */
 #define S7COMMP_ITEM_DATATYPE_TIMESTAMP         0x10        /* TIMESTAMP: e.g reading CPU from TIA portal, fix 8 Bytes */
-#define S7COMMP_ITEM_DATATYPE_TIMESPAN          0x11        /* TIMESPAN: e.g. reading cycle time from TIA portal, varuint64 */
+#define S7COMMP_ITEM_DATATYPE_TIMESPAN          0x11        /* TIMESPAN: e.g. reading cycle time from TIA portal, varint64 */
 #define S7COMMP_ITEM_DATATYPE_RID               0x12        /* RID: fix 4 Bytes */
 #define S7COMMP_ITEM_DATATYPE_AID               0x13        /* AID: varuint32*/
 #define S7COMMP_ITEM_DATATYPE_BLOB              0x14
@@ -4598,6 +4598,48 @@ s7commp_get_timestring_from_uint64(guint64 timestamp, char *str, gint max)
 }
 /*******************************************************************************************************
  *
+ * Timespan (LT / LTIME) is interpreted as nanoseconds.
+ * Use the display style from programming software:
+ * LT#-106751d_23h_47m_16s_854ms_775us_808ns
+ * LT#+106751d_23h_47m_16s_854ms_775us_807ns
+ * Needs at least 42 chars.
+ *
+ *******************************************************************************************************/
+static void
+s7commp_get_timespan_from_int64(gint64 timespan, char *str, gint max)
+{
+    gchar sval[8];
+    gint64 divs[] = { 86400000000000LL, 3600000000000LL, 60000000000LL, 1000000000LL, 1000000LL, 1000LL, 1LL};
+    gchar *vfmt[] = { "%dd", "%02dh", "%02dm", "%02ds", "%03dms", "%03dus", "%03dns"};
+    gint64 val;
+    int i;
+
+    if (timespan == 0) {
+        g_strlcpy(str, "LT#000ns", max);
+        return;
+    }
+
+    if (timespan < 0) {
+        g_strlcpy(str, "LT#-", max);
+        timespan *= -1;
+    } else {
+        g_strlcpy(str, "LT#", max);
+    }
+
+    for (i = 0; i <= 7; i++) {
+        val = timespan / divs[i];
+        timespan -= val * divs[i];
+        if (val > 0) {
+            g_snprintf(sval, 8, vfmt[i], (gint32)val);
+            g_strlcat(str, sval, max);
+            if (timespan > 0) {
+                g_strlcat(str, "_", max);
+            }
+        }
+    }
+}
+/*******************************************************************************************************
+ *
  * Decode the integrity part
  *
  *******************************************************************************************************/
@@ -5528,10 +5570,10 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESPAN:
                 value_start_offset = offset;
-                uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
+                int64val = tvb_get_varint64(tvb, &octet_count, offset);
                 offset += octet_count;
                 length_of_value = octet_count;
-                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "u ns", uint64val);
+                s7commp_get_timespan_from_int64(int64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
                 break;
             case S7COMMP_ITEM_DATATYPE_RID:
                 length_of_value = 4;

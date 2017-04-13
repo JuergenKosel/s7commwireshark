@@ -6659,17 +6659,26 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
                                      gboolean *has_integrity_id)
 {
     guint32 object_id;
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, NULL);
+    guint16 errorcode = 0;
+
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
     object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_object_deleteobjid, tvb, offset, 4, object_id);
+    offset += 4;
     col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+    /* Seen this on a 1200 FW2.2: When deleteobject fails (e.g. active WebDb datablock object), an object with ResponseExtensions is following.
+     * Maybe this is every time when an error occurs?
+     */
+    if (errorcode != 0) {
+        offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
+    }
     /* If the id is < 0x7000000 there is no integrity-id in integrity dataset at the end (only for 1500) */
     if (object_id > 0x70000000) {
         *has_integrity_id = TRUE;
     } else {
         *has_integrity_id = FALSE;
     }
-    offset += 4;
+
     return offset;
 }
 

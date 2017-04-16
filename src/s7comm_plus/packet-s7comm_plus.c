@@ -4626,7 +4626,7 @@ s7commp_get_timespan_from_int64(gint64 timespan, char *str, gint max)
         g_strlcpy(str, "LT#", max);
     }
 
-    for (i = 0; i <= 7; i++) {
+    for (i = 0; i < 7; i++) {
         val = timespan / divs[i];
         timespan -= val * divs[i];
         if (val > 0) {

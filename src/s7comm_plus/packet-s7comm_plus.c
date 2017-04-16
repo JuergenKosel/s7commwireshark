@@ -4786,8 +4786,7 @@ static guint32
 s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
                                       proto_tree *tree,
                                       guint32 offset,
-                                      guint8 datatype,
-                                      guint32 length_of_value)
+                                      guint8 datatype)
 {
     guint64 uint64val = 0;
     guint8 octet_count = 0;
@@ -4819,8 +4818,7 @@ static guint32
 s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset,
-                                    guint8 datatype,
-                                    guint32 length_of_value)
+                                    guint8 datatype)
 {
     guint16 blocklang;
     proto_item *pi = NULL;
@@ -4845,8 +4843,7 @@ static guint32
 s7commp_decode_attrib_serversessionrole(tvbuff_t *tvb,
                                         proto_tree *tree,
                                         guint32 offset,
-                                        guint8 datatype,
-                                        guint32 length_of_value)
+                                        guint8 datatype)
 {
     guint32 role;
     guint8 octet_count = 0;
@@ -5298,13 +5295,13 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 8067:  /* 8067 = SWObject.LastUserModified_Rid */
         case 8068:  /* 8068 = TextContainer.LastUserModified_Rid */
         case 8162:  /* 8162 = TA_DB.TechnologicalConnectionsModified_Rid */
-            offset = s7commp_decode_attrib_ulint_timestamp(tvb, tree, value_start_offset, datatype, length_of_value);
+            offset = s7commp_decode_attrib_ulint_timestamp(tvb, tree, value_start_offset, datatype);
             break;
         case 299:   /*  299 = ServerSessionRole */
-            offset = s7commp_decode_attrib_serversessionrole(tvb, tree, value_start_offset, datatype, length_of_value);
+            offset = s7commp_decode_attrib_serversessionrole(tvb, tree, value_start_offset, datatype);
             break;
         case 2523:  /* 2523 = Block.BlockLanguage */
-            offset = s7commp_decode_attrib_blocklanguage(tvb, tree, value_start_offset, datatype, length_of_value);
+            offset = s7commp_decode_attrib_blocklanguage(tvb, tree, value_start_offset, datatype);
             break;
         case 1805:  /* 1805 = SecurityKeyEncryptedKey */
             offset = s7commp_decode_attrib_securitykeyencryptedkey(tvb, tree, value_start_offset, datatype, length_of_value);

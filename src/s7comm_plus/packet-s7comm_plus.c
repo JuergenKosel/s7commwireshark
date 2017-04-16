@@ -4752,7 +4752,8 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
                            packet_info *pinfo,
                            proto_tree *tree,
                            guint32 offset,
-                           gint16 *errorcode_out)
+                           gint16 *errorcode_out,
+                           gboolean *errorextension_out)
 {
     guint64 return_value;
     guint8 octet_count = 0;
@@ -4767,6 +4768,9 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
     offset += octet_count;
     if (errorcode_out) {        /* return errorcode if needed outside */
         *errorcode_out = errorcode;
+    }
+    if (errorextension_out) {
+        *errorextension_out = ((return_value & G_GUINT64_CONSTANT(0x4000000000000000)) > 0);
     }
 
     /* add info about return value to info column */
@@ -5844,6 +5848,7 @@ s7commp_decode_itemnumber_errorvalue_list(tvbuff_t *tvb,
     guint32 item_number;
     guint8 octet_count = 0;
     gint16 errorcode = 0;
+    gboolean errorextension = FALSE;
 
     guint32 start_offset = offset;
     guint32 list_start_offset = offset;
@@ -5862,7 +5867,7 @@ s7commp_decode_itemnumber_errorvalue_list(tvbuff_t *tvb,
             data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
             proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_itemnumber, tvb, offset, octet_count, item_number);
             offset += octet_count;
-            offset = s7commp_decode_returnvalue(tvb, NULL, data_item_tree, offset, &errorcode);
+            offset = s7commp_decode_returnvalue(tvb, NULL, data_item_tree, offset, &errorcode, &errorextension);
             proto_item_append_text(data_item_tree, " [%u]: Error code: %s (%d)", item_number, val64_to_str_const(errorcode, errorcode_names, "Unknown"), errorcode);
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
@@ -6600,8 +6605,10 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
     guint8 octet_count = 0;
     guint32 object_id = 0;
     int i;
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, NULL);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     object_id_count = tvb_get_guint8(tvb, offset);
     /* TODO: hier die gleiche ID wie beim Request, d.h. aus der Liste? */
     proto_tree_add_uint(tree, hf_s7commp_object_createobjidcount, tvb, offset, 1, object_id_count);
@@ -6618,7 +6625,9 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
             col_append_fstr(pinfo->cinfo, COL_INFO, ",0x%08x", object_id);
         }
     }
-    /* Ein Daten-Objekt gibt es nur beim Connect */
+    /* Ein Daten-Objekt gibt es nur beim Connect.
+     * Das Vorhandensein an errorextension feststellen scheitert.
+     */
     if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
@@ -6657,16 +6666,15 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
 {
     guint32 object_id;
     guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_object_deleteobjid, tvb, offset, 4, object_id);
     offset += 4;
     col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
-    /* Seen this on a 1200 FW2.2: When deleteobject fails (e.g. active WebDb datablock object), an object with ResponseExtensions is following.
-     * Maybe this is every time when an error occurs?
-     */
-    if (errorcode != 0) {
+
+    if (errorextension) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
     /* If the id is < 0x7000000 there is no integrity-id in integrity dataset at the end (only for 1500) */
@@ -7196,7 +7204,10 @@ s7commp_decode_response_getmultivar(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset)
 {
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, NULL);
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
+
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     offset = s7commp_decode_itemnumber_value_list_in_new_tree(tvb, pinfo, tree, offset, TRUE);
     offset = s7commp_decode_itemnumber_errorvalue_list(tvb, tree, offset);
 
@@ -7213,11 +7224,13 @@ s7commp_decode_response_setmultivar(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset)
 {
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
     /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
      * Ein erfolgreiches Schreiben einzelner Werte scheint nicht extra bestaetigt zu werden.
      */
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, NULL);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     offset = s7commp_decode_itemnumber_errorvalue_list(tvb, tree, offset);
     return offset;
 }
@@ -7603,7 +7616,10 @@ s7commp_decode_response_setvariable(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset)
 {
-    return s7commp_decode_returnvalue(tvb, pinfo, tree, offset, NULL);
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
+
+    return s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
 }
 /*******************************************************************************************************
  *
@@ -7663,8 +7679,10 @@ s7commp_decode_response_getvariable(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     guint32 start_offset;
     int struct_level = 0;
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, NULL);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
     start_offset = offset;
@@ -7725,9 +7743,10 @@ s7commp_decode_response_getvarsubstr(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     int struct_level = 0;
     guint32 start_offset;
-    guint16 errorcode;
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     proto_tree_add_text(tree, tvb, offset, 1, "Response unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
     offset += 1;
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
@@ -7770,9 +7789,10 @@ s7commp_decode_response_setvarsubstr(tvbuff_t *tvb,
                                      proto_tree *tree,
                                      guint32 offset)
 {
-    guint16 errorcode;
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
 
     return offset;
 }
@@ -7894,12 +7914,13 @@ s7commp_decode_response_getlink(tvbuff_t *tvb,
                                 proto_tree *tree,
                                 guint32 offset)
 {
-    guint16 errorcode;
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
     guint8 number_of_items;
     guint32 linkid;
     int i;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
 
     number_of_items = tvb_get_guint8(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_getlink_linkidcount, tvb, offset, 1, number_of_items);
@@ -7972,9 +7993,10 @@ s7commp_decode_response_beginsequence(tvbuff_t *tvb,
                                       proto_tree *tree,
                                       guint32 offset)
 {
-    guint16 errorcode;
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset += 2;
     proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
@@ -8008,9 +8030,10 @@ s7commp_decode_response_endsequence(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset)
 {
-    guint16 errorcode;
+    guint16 errorcode = 0;
+    gboolean errorextension = FALSE;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     return offset;
 }
 /*******************************************************************************************************
@@ -8046,10 +8069,11 @@ s7commp_decode_response_invoke(tvbuff_t *tvb,
                                guint32 offset)
 {
     guint16 errorcode;
+    gboolean errorextension;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     /* Ein Panel TPxy mit V14 schiebt hier bei der Antwort noch ein Null-Byte ein.
      * Solange es anschliessend keine leere ValueList gibt, funktioniert das auch. */
     if (tvb_get_guint8(tvb, offset) == 0) {
@@ -8173,11 +8197,12 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
 {
     guint32 id_number;
     gint16 errorcode = 0;
+    gboolean errorextension = FALSE;
     guint8 octet_count = 0;
     guint32 resseqinteg;
     guint8 nextb;
 
-    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode);
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
 
     id_number = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_data_id_number, tvb, offset, 4, id_number);

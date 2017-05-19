@@ -5322,6 +5322,7 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 2589:  /* FunctionalObject.DebugInfo */
         case 4275:  /* ConstantsGlobal.Symbolics */
             offset = s7commp_decompress_blob(tvb, pinfo, tree, value_start_offset, datatype, length_of_value, id_number);
+            break;
         case 7813:  /* DAI.HmiInfo */
             offset = s7commp_decode_attrib_hmiinfo(tvb, tree, value_start_offset, datatype, length_of_value);
             break;

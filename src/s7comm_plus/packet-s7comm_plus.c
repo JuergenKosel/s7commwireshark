@@ -5089,7 +5089,7 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     if (s7commp_opt_decompress_blobs) {
 #ifdef HAVE_ZLIB
         uncomp_length = BLOB_DECOMPRESS_BUFSIZE;
-        uncomp_blob = (guint8 *)wmem_alloc(wmem_packet_scope(), BLOB_DECOMPRESS_BUFSIZE);
+        uncomp_blob = (guint8 *)wmem_alloc(pinfo->pool, BLOB_DECOMPRESS_BUFSIZE);
         blobptr = tvb_get_ptr(tvb, offset, length_comp_blob);
 
         streamp = wmem_new0(wmem_packet_scope(), z_stream);
@@ -5210,14 +5210,16 @@ DIAG_ON(cast-qual)
                 }
             }
         }
-        while (retcode == Z_OK) {
-            /* Z_OK -> made progress, but did not finish */
+        while ((retcode == Z_OK) || (retcode == Z_BUF_ERROR)) {
+            /* Z_OK -> made progress, but did not finish
+             * Z_BUF_ERROR -> output buffer full
+             */
             if (streamp->avail_out == 0) {
                 /* need more memory */
-                /* TODO: maybe add memory limit */
-                uncomp_blob = (guint8 *)wmem_realloc(wmem_packet_scope(), uncomp_blob, uncomp_length + BLOB_DECOMPRESS_BUFSIZE);
+                uncomp_blob = (guint8 *)wmem_realloc(pinfo->pool, uncomp_blob, uncomp_length + BLOB_DECOMPRESS_BUFSIZE);
                 streamp->next_out = uncomp_blob + uncomp_length;
                 streamp->avail_out = BLOB_DECOMPRESS_BUFSIZE;
+                uncomp_length += BLOB_DECOMPRESS_BUFSIZE;
             } else {
                 /* incomplete input, abort */
                 break;
@@ -5230,7 +5232,7 @@ DIAG_ON(cast-qual)
             if (uncomp_length > 0) {
                 if (streamp->avail_out == 0) {
                     /* need one more byte for string null terminator */
-                    uncomp_blob = (guint8 *)wmem_realloc(wmem_packet_scope(), uncomp_blob, uncomp_length + 1);
+                    uncomp_blob = (guint8 *)wmem_realloc(pinfo->pool, uncomp_blob, uncomp_length + 1);
                 }
 
                 next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
@@ -5243,7 +5245,6 @@ DIAG_ON(cast-qual)
                 PROTO_ITEM_SET_GENERATED(pi);
                 */
                 /* make new tvb and call xml subdissector, as all compressed data are (so far) xml */
-                next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
                 if (xml_handle != NULL) {
                     dissected = call_dissector_only(xml_handle, next_tvb, pinfo, subtree, NULL);
                     if (!dissected) {
@@ -5253,7 +5254,7 @@ DIAG_ON(cast-qual)
                 }
             }
         } else {
-            proto_item_append_text(subtree, ", Error: Blob decompression failed");
+            proto_item_append_text(subtree, ", Error: Blob decompression failed, retcode %d", retcode);
         }
         inflateEnd(streamp);
 #endif

@@ -2921,6 +2921,14 @@ static gint hf_s7commp_itemval_datatype = -1;
 static gint hf_s7commp_itemval_arraysize = -1;
 static gint hf_s7commp_itemval_value = -1;
 
+/* Get/Set a packed struct */
+static gint ett_s7commp_packedstruct = -1;
+static gint hf_s7commp_packedstruct = -1;
+static gint hf_s7commp_packedstruct_interfacetimestamp = -1;
+static gint hf_s7commp_packedstruct_transpsize = -1;
+static gint hf_s7commp_packedstruct_elementcount = -1;
+static gint hf_s7commp_packedstruct_data = -1;
+
 /* List elements */
 static gint hf_s7commp_listitem_terminator = -1;
 static gint hf_s7commp_errorvaluelist_terminator = -1;
@@ -3586,6 +3594,23 @@ proto_register_s7commp (void)
             "varuint32: Number of values of the specified datatype following", HFILL }},
         { &hf_s7commp_itemval_value,
           { "Value", "s7comm-plus.item.val.value", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+
+        /* Get/Set a packed struct */
+        { &hf_s7commp_packedstruct,
+          { "Packed struct", "s7comm-plus.item.packedstruct", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_packedstruct_interfacetimestamp,
+          { "Interface timestamp", "s7comm-plus.item.packedstruct.interfacetimestamp", FT_STRING, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_packedstruct_transpsize,
+          { "Unknown (Transport size?)", "s7comm-plus.item.packedstruct.transpsize", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_packedstruct_elementcount,
+          { "Element count", "s7comm-plus.item.packedstruct.elementcount", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_packedstruct_data,
+          { "Packed struct data", "s7comm-plus.item.packedstruct.data", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
 
         /* List elements */
@@ -4332,6 +4357,7 @@ proto_register_s7commp (void)
         &ett_s7commp_itemaddr_area,
         &ett_s7commp_itemval_datatype_flags,
         &ett_s7commp_itemval_array,
+        &ett_s7commp_packedstruct,
         &ett_s7commp_tagdescr_attributeflags,
         &ett_s7commp_tagdescr_offsetinfo,
         &ett_s7commp_element_object,
@@ -5264,6 +5290,55 @@ DIAG_ON(cast-qual)
 }
 /*******************************************************************************************************
  *
+ * Decoding of a packed struct value
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_packed_struct(tvbuff_t *tvb,
+                             proto_tree *tree,
+                             guint32 offset)
+{
+    guint32 start_offset = 0;
+    guint64 uint64val = 0;
+    guint32 element_count;
+    gchar *str_val = NULL;
+    guint8 octet_count = 0;
+    proto_item *value_item = NULL;
+    proto_tree *value_item_tree = NULL;
+
+    start_offset = offset;
+    value_item = proto_tree_add_item(tree, hf_s7commp_packedstruct, tvb, offset, -1, FALSE);
+    value_item_tree = proto_item_add_subtree(value_item, ett_s7commp_packedstruct);
+
+    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
+    str_val[0] = '\0';
+
+    uint64val = tvb_get_ntoh64(tvb, offset);
+    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
+    proto_tree_add_string_format(value_item_tree, hf_s7commp_packedstruct_interfacetimestamp, tvb, offset, 8,
+        str_val, "Interface timestamp: %s", str_val);
+    offset += 8;
+
+    /* Bisher war an dieser Stelle immer eine 2, was theoretisch fuer USint stehen koennte.
+     * Wenn das eine Transportgroesse ist, muesste die Elementanzahl entsprechend umgerechnet werden.
+     * Solange kein solches Paket gesichtet wurde, ohne Umrechnung belassen.
+     */
+    proto_tree_add_uint(value_item_tree, hf_s7commp_packedstruct_transpsize, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    offset += 1;
+
+    element_count = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(value_item_tree, hf_s7commp_packedstruct_elementcount, tvb, offset, octet_count, element_count);
+    offset += octet_count;
+
+    proto_tree_add_item(value_item_tree, hf_s7commp_packedstruct_data, tvb, offset, element_count, ENC_NA);
+    offset += element_count;
+
+    proto_item_set_len(value_item_tree, offset - start_offset);
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Extended decoding of some id-values
  *
  *******************************************************************************************************/
@@ -5376,6 +5451,8 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint32 start_offset = 0;
     guint32 length_of_value = 0;
     guint32 value_start_offset = 0;
+
+    guint32 struct_value = 0;
 
     str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
     str_val[0] = '\0';
@@ -5534,7 +5611,8 @@ s7commp_decode_value(tvbuff_t *tvb,
                 if (struct_level) *struct_level += 1; /* entering a new structure level */
                 length_of_value = 4;
                 value_start_offset = offset;
-                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_ntohl(tvb, offset));
+                struct_value = tvb_get_ntohl(tvb, offset);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", struct_value);
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_DWORD:
@@ -5692,6 +5770,17 @@ s7commp_decode_value(tvbuff_t *tvb,
             proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
         }
         proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_val);
+    }
+    /* Sonderbehandlung bei Datentyp struct bestimmten IDs:
+     * Es werden die struct-Elemente nicht einzeln sondern gepackt uebertragen (z.B. DTL-Struct).
+     * Der ID-Bereich in dem dieses moeglich ist, ist nur vermutet (Type Info).
+     * Die Auswertung an dieser Stelle funktioniert nur, solange hier nicht auch Arrays erlaubt sind.
+     */
+    if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT &&
+        ((struct_value > 0x90000000 && struct_value < 0x9fffffff) ||
+         (struct_value > 0x02000000 && struct_value < 0x02ffffff)) ) {
+        offset = s7commp_decode_packed_struct(tvb, current_tree, offset);
+        if (struct_level) *struct_level -= 1; /* in diesem Fall keine neue Strukturebene, da auch keine terminierende Null */
     }
     return offset;
 }

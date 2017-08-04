@@ -133,6 +133,7 @@ static const value_string opcode_names_short[] = {
 /**************************************************************************
  * Function codes in data part.
  */
+#define S7COMMP_FUNCTIONCODE_ERROR              0x04b1
 #define S7COMMP_FUNCTIONCODE_EXPLORE            0x04bb
 #define S7COMMP_FUNCTIONCODE_CREATEOBJECT       0x04ca
 #define S7COMMP_FUNCTIONCODE_DELETEOBJECT       0x04d4
@@ -152,6 +153,7 @@ static const value_string opcode_names_short[] = {
 #define S7COMMP_FUNCTIONCODE_ABORT              0x059a      /* not decoded yet */
 
 static const value_string data_functioncode_names[] = {
+    { S7COMMP_FUNCTIONCODE_ERROR,               "Error" },
     { S7COMMP_FUNCTIONCODE_EXPLORE,             "Explore" },
     { S7COMMP_FUNCTIONCODE_CREATEOBJECT,        "CreateObject" },
     { S7COMMP_FUNCTIONCODE_DELETEOBJECT,        "DeleteObject" },
@@ -8327,6 +8329,26 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * General error message, response
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_error(tvbuff_t *tvb,
+                              packet_info *pinfo,
+                              proto_tree *tree,
+                              guint32 offset)
+{
+    gint16 errorcode = 0;
+    gboolean errorextension = FALSE;
+
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
+
+    // this opcode has no data after the error code
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decode the object qualifier
  *
  *******************************************************************************************************/
@@ -8614,6 +8636,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                     case S7COMMP_FUNCTIONCODE_INVOKE:
                         offset = s7commp_decode_response_invoke(tvb, pinfo, item_tree, offset);
                         break;
+                    case S7COMMP_FUNCTIONCODE_ERROR:
+                         offset = s7commp_decode_response_error(tvb, pinfo, item_tree, offset);
+                         break;
                 }
                 proto_item_set_len(item_tree, offset - offset_save);
                 dlength = dlength - (offset - offset_save);

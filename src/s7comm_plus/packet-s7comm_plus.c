@@ -7353,6 +7353,8 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
      * Folgende Rueckgabewerte wurden gesichtet:
      *  0x03 -> Fehler bei einer Adresse (S7-1500 - Plcsim)
      *  0x13 -> Fehler bei einer Adresse (S7-1200) und 1500-Plcsim
+     *  0x81 -> Standard Objekt beginnend mit 0xa1 (nur bei Protokoll-Version v1?)
+     *  0x83 -> Standard value Aufbau, dann notification value-list (nur bei Protokoll-Version v1?)
      *  0x92 -> Erfolg (S7-1200)
      *  0x9b -> Bei 1500 und 1200 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
      *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
@@ -7399,6 +7401,10 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
                 offset += 4;
                 n_access_errors++;
+            } else if (item_return_value == 0x81) {     /* Vermutlich nur in Protokoll Version v1*/
+                offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, FALSE);
+            } else if (item_return_value == 0x83) {     /* Vermutlich nur in Protokoll Version v1*/
+                offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, 0);
             } else {
                 proto_item_append_text(data_item_tree, " Don't know how to decode the values with return code 0x%02x, stop decoding", item_return_value);
                 proto_item_set_len(data_item_tree, offset - start_offset);
@@ -7547,6 +7553,7 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
                                guint32 offset)
 {
     guint32 subscr_object_id;
+    guint32 list_start_offset;
 
     /* 4 Bytes Subscription Object Id -> scheint hier nicht der Fall zu sein? */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
@@ -7556,13 +7563,20 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
 
     proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));
     offset += 4;
-    proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 3: 0x%08x", tvb_get_ntohl(tvb, offset));
-    offset += 4;
-    proto_tree_add_text(tree, tvb, offset, 2, "Notification v1, Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
-    proto_tree_add_text(tree, tvb, offset, 1, "Notification v1, Unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
-    offset += 1;
-    offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
+    /* Alle folgenden Werte sind nur vorhanden, wenn hier keine 4 Null-Bytes folgen.
+     * Der Wert an dieser Stelle ist meistens um 2 oder 3 hoeher als die obige Object Id.
+     */
+    if (tvb_get_ntohl(tvb, offset) != 0) {
+        proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 3: 0x%08x", tvb_get_ntohl(tvb, offset));
+        offset += 4;
+        proto_tree_add_text(tree, tvb, offset, 2, "Notification v1, Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
+        offset += 2;
+        list_start_offset = offset;
+        offset = s7commp_decode_notification_value_list(tvb, pinfo, tree, offset, TRUE);
+        if (offset - list_start_offset > 1) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " <Contains values>");
+        }
+    }
 
     return offset;
 }

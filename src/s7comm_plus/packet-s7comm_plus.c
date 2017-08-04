@@ -8052,7 +8052,8 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
                                      packet_info *pinfo,
                                      proto_tree *tree,
                                      gint16 dlength _U_,
-                                     guint32 offset)
+                                     guint32 offset,
+                                     guint8 protocolversion)
 {
     guint8 type;
     guint16 valtype;
@@ -8061,30 +8062,32 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
     type = tvb_get_guint8(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_beginseq_transactiontype, tvb, offset, 1, type);
     offset += 1;
-    valtype = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
+    if (protocolversion != S7COMMP_PROTOCOLVERSION_1) {
+        valtype = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
+        offset += 2;
 
-    /* Ob ein Objekt oder anderer weiterer Wert folgt, scheint abhaengig vom 2./3. Byte zu sein.
-     * Wenn 1 dann Objekt, wenn 18 dann ID. Andere Werte als 1 und 18 bisher noch nicht gesichtet.
-     */
-    if (valtype == 1) {
-        /* Die 1200 mit V2 laesst hier gelegentlich 1 Byte aus. Die Antwort zeigt aber keine
-         * Fehlermeldung, d.h. dies scheint toleriert zu werden.
+        /* Ob ein Objekt oder anderer weiterer Wert folgt, scheint abhaengig vom 2./3. Byte zu sein.
+         * Wenn 1 dann Objekt, wenn 18 dann ID. Andere Werte als 1 und 18 bisher noch nicht gesichtet.
          */
-        if (tvb_get_guint8(tvb, offset + 1) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-            proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 1, ENC_BIG_ENDIAN);
-            offset += 1;
+        if (valtype == 1) {
+            /* Die 1200 mit V2 laesst hier gelegentlich 1 Byte aus. Die Antwort zeigt aber keine
+             * Fehlermeldung, d.h. dies scheint toleriert zu werden.
+             */
+            if (tvb_get_guint8(tvb, offset + 1) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
+                proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 1, ENC_BIG_ENDIAN);
+                offset += 1;
+            } else {
+                proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 2, ENC_BIG_ENDIAN);
+                offset += 2;
+            }
+            offset = s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
         } else {
-            proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 2, ENC_BIG_ENDIAN);
-            offset += 2;
+            id = tvb_get_ntohl(tvb, offset);
+            s7commp_pinfo_append_idname(pinfo, id, " Id=");
+            proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
+            offset += 4;
         }
-        offset = s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
-    } else {
-        id = tvb_get_ntohl(tvb, offset);
-        s7commp_pinfo_append_idname(pinfo, id, " Id=");
-        proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
-        offset += 4;
     }
 
     return offset;
@@ -8098,16 +8101,19 @@ static guint32
 s7commp_decode_response_beginsequence(tvbuff_t *tvb,
                                       packet_info *pinfo,
                                       proto_tree *tree,
-                                      guint32 offset)
+                                      guint32 offset,
+                                      guint8 protocolversion)
 {
     guint16 errorcode = 0;
     gboolean errorextension = FALSE;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
-    proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
-    proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
-    offset += 4;
+    if (protocolversion != S7COMMP_PROTOCOLVERSION_1) {
+        proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
+        offset += 2;
+        proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
+        offset += 4;
+    }
 
     return offset;
 }
@@ -8590,7 +8596,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                         offset = s7commp_decode_request_getlink(tvb, pinfo, item_tree, offset);
                         break;
                     case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
-                        offset = s7commp_decode_request_beginsequence(tvb, pinfo, item_tree, dlength, offset);
+                        offset = s7commp_decode_request_beginsequence(tvb, pinfo, item_tree, dlength, offset, protocolversion);
                         break;
                     case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
                         offset = s7commp_decode_request_endsequence(tvb, item_tree, offset);
@@ -8642,7 +8648,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                         offset = s7commp_decode_response_getlink(tvb, pinfo, item_tree, offset);
                         break;
                     case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
-                        offset = s7commp_decode_response_beginsequence(tvb, pinfo, item_tree, offset);
+                        offset = s7commp_decode_response_beginsequence(tvb, pinfo, item_tree, offset, protocolversion);
                         break;
                     case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
                         offset = s7commp_decode_response_endsequence(tvb, pinfo, item_tree, offset);

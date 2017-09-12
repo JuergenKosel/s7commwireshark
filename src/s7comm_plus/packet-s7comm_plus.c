@@ -8873,11 +8873,11 @@ dissect_s7commp(tvbuff_t *tvb,
 
                 conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
                                                  pinfo->ptype, pinfo->destport,
-                                                 0, NO_PORT_B);
+                                                 pinfo->srcport, 0);
                 if (conversation == NULL) {
                     conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
                                                     pinfo->ptype, pinfo->destport,
-                                                    0, NO_PORT2);
+                                                    pinfo->srcport, 0);
                     #ifdef DEBUG_REASSEMBLING
                     printf(" NewConv" );
                     #endif

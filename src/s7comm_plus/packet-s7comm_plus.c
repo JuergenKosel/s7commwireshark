@@ -8867,17 +8867,20 @@ dissect_s7commp(tvbuff_t *tvb,
                 #ifdef DEBUG_REASSEMBLING
                 printf("Reassembling pass 1: Frame=%3d HasTrailer=%d", pinfo->fd->num, has_trailer);
                 #endif
-                /* evtl. find_or_create_conversation verwenden?
-                 * conversation = find_or_create_conversation(pinfo);
+                /* Conversation: 
+                 * find_conversation() ist dazu gedacht eine Konversation in beiden Richtungen zu finden.
+                 * D.h. es wurde z.B. Port 2000->102 wie auch 102->2000 gefunden. Das ist an dieser Stelle jedoch
+                 * nicht gewuenscht, und kann auch durch den Parameter option nicht verhindert werden.
+                 * Aus dem Grund wird aus Quell- und Zielport eine eindeutige Portnummer generiert.
+                 * Destport/srcport sind vom Typ guint32, erlaubte Portnummern sind jedoch nur 0..65535.
                  */
-
                 conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                 pinfo->ptype, pinfo->destport,
-                                                 pinfo->srcport, 0);
+                                                 pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
+                                                 0, NO_PORT_B);
                 if (conversation == NULL) {
                     conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                    pinfo->ptype, pinfo->destport,
-                                                    pinfo->srcport, 0);
+                                                    pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
+                                                    0, NO_PORT2);
                     #ifdef DEBUG_REASSEMBLING
                     printf(" NewConv" );
                     #endif

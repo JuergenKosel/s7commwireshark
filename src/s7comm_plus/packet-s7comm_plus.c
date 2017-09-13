@@ -40,6 +40,7 @@
 #include <epan/reassemble.h>
 #include <epan/conversation.h>
 #include <epan/proto_data.h>
+#include <epan/expert.h>
 #include <wsutil/utf8_entities.h>
 
 #ifdef HAVE_ZLIB
@@ -3238,6 +3239,11 @@ static gint hf_s7commp_reassembled_length = -1;
 static gint ett_s7commp_fragment = -1;
 static gint ett_s7commp_fragments = -1;
 
+/* Expert info handles */
+static expert_field ei_s7commp_blobdecompression_failed = EI_INIT;
+static expert_field ei_s7commp_blobdecompression_nodictionary = EI_INIT;
+static expert_field ei_s7commp_blobdecompression_xmlsubdissector_failed = EI_INIT;
+
 static dissector_handle_t xml_handle;
 
 static const fragment_items s7commp_frag_items = {
@@ -4346,6 +4352,15 @@ proto_register_s7commp (void)
              NULL, HFILL }}
     };
 
+    static ei_register_info ei[] = {
+        { &ei_s7commp_blobdecompression_nodictionary,
+          { "s7comm-plus.blobdecompression.dictionary.not_found", PI_UNDECODED, PI_WARN, "Blob decompression no dictionary found", EXPFILL }},
+        { &ei_s7commp_blobdecompression_xmlsubdissector_failed,
+          { "s7comm-plus.blobdecompression.xmlsubdissector.failed", PI_UNDECODED, PI_WARN, "Blob decompression XML subdissector failed", EXPFILL }},
+        { &ei_s7commp_blobdecompression_failed,
+          { "s7comm-plus.blobdecompression.failed", PI_UNDECODED, PI_WARN, "Blob decompression failed", EXPFILL }}
+    };
+
     static gint *ett[] = {
         &ett_s7commp,
         &ett_s7commp_header,
@@ -4384,6 +4399,7 @@ proto_register_s7commp (void)
     };
 
     module_t *s7commp_module;
+    expert_module_t * expert_s7commp;
 
     proto_s7commp = proto_register_protocol (
         "S7 Communication Plus",            /* name */
@@ -4392,8 +4408,9 @@ proto_register_s7commp (void)
     );
 
     proto_register_field_array(proto_s7commp, hf, array_length (hf));
-
     proto_register_subtree_array(ett, array_length (ett));
+    expert_s7commp = expert_register_protocol(proto_s7commp);
+    expert_register_field_array(expert_s7commp, ei, array_length(ei));
 
     s7commp_module = prefs_register_protocol(proto_s7commp, NULL);
 
@@ -5226,7 +5243,8 @@ DIAG_ON(cast-qual)
                         dict_size = sizeof(s7commp_dict_CompilerSettings_90000001);
                         break;
                     default:
-                        proto_item_append_text(subtree, ", Error: Blob decompression failed, no dictionary found");
+                        expert_add_info_format(pinfo, subtree, &ei_s7commp_blobdecompression_nodictionary, "Unknown dictionary 0x%08x", streamp->adler);
+                        //proto_item_append_text(subtree, ", Error: Blob decompression failed, no dictionary found");
                         break;
                 }
             }
@@ -5276,13 +5294,14 @@ DIAG_ON(cast-qual)
                 if (xml_handle != NULL) {
                     dissected = call_dissector_only(xml_handle, next_tvb, pinfo, subtree, NULL);
                     if (!dissected) {
-                        /* expert_add_info(pinfo, http_tree, &ei_http_subdissector_failed); */
-                        proto_tree_add_text(subtree, next_tvb, 0, -1, "XML subdissector failed");
+                        expert_add_info(pinfo, subtree, &ei_s7commp_blobdecompression_xmlsubdissector_failed);
+                        //proto_tree_add_text(subtree, next_tvb, 0, -1, "XML subdissector failed");
                     }
                 }
             }
         } else {
-            proto_item_append_text(subtree, ", Error: Blob decompression failed, retcode %d", retcode);
+            expert_add_info(pinfo, subtree, &ei_s7commp_blobdecompression_failed);
+            //proto_item_append_text(subtree, ", Error: Blob decompression failed, retcode %d", retcode);
         }
         inflateEnd(streamp);
 #endif
@@ -8867,7 +8886,7 @@ dissect_s7commp(tvbuff_t *tvb,
                 #ifdef DEBUG_REASSEMBLING
                 printf("Reassembling pass 1: Frame=%3d HasTrailer=%d", pinfo->fd->num, has_trailer);
                 #endif
-                /* Conversation: 
+                /* Conversation:
                  * find_conversation() ist dazu gedacht eine Konversation in beiden Richtungen zu finden.
                  * D.h. es wurde z.B. Port 2000->102 wie auch 102->2000 gefunden. Das ist an dieser Stelle jedoch
                  * nicht gewuenscht, und kann auch durch den Parameter option nicht verhindert werden.

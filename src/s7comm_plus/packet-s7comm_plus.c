@@ -3243,6 +3243,10 @@ static gint ett_s7commp_fragments = -1;
 static expert_field ei_s7commp_blobdecompression_failed = EI_INIT;
 static expert_field ei_s7commp_blobdecompression_nodictionary = EI_INIT;
 static expert_field ei_s7commp_blobdecompression_xmlsubdissector_failed = EI_INIT;
+static expert_field ei_s7commp_integrity_digestlen_error = EI_INIT;
+static expert_field ei_s7commp_value_unknown_type = EI_INIT;
+static expert_field ei_s7commp_notification_returnvalue_unknown = EI_INIT;
+static expert_field ei_s7commp_data_opcode_unknown = EI_INIT;
 
 static dissector_handle_t xml_handle;
 
@@ -4358,7 +4362,15 @@ proto_register_s7commp (void)
         { &ei_s7commp_blobdecompression_xmlsubdissector_failed,
           { "s7comm-plus.blobdecompression.xmlsubdissector.failed", PI_UNDECODED, PI_WARN, "Blob decompression XML subdissector failed", EXPFILL }},
         { &ei_s7commp_blobdecompression_failed,
-          { "s7comm-plus.blobdecompression.failed", PI_UNDECODED, PI_WARN, "Blob decompression failed", EXPFILL }}
+          { "s7comm-plus.blobdecompression.failed", PI_UNDECODED, PI_WARN, "Blob decompression failed", EXPFILL }},
+        { &ei_s7commp_integrity_digestlen_error,
+          { "s7comm-plus.integrity.digestlen.error", PI_PROTOCOL, PI_WARN, "Integrity digest length not 32", EXPFILL }},
+        { &ei_s7commp_value_unknown_type,
+          { "s7comm-plus.item.val.unknowntype_error", PI_UNDECODED, PI_WARN, "Unknown value datatype", EXPFILL }},
+        { &ei_s7commp_notification_returnvalue_unknown,
+          { "s7comm-plus.notification.vl.retval.unknown_error", PI_UNDECODED, PI_WARN, "Notification unknown return value", EXPFILL }},
+        { &ei_s7commp_data_opcode_unknown,
+          { "s7comm-plus.data.opcode.unknown_error", PI_UNDECODED, PI_WARN, "Unknown Opcode", EXPFILL }}
     };
 
     static gint *ett[] = {
@@ -4728,6 +4740,7 @@ s7commp_decode_integrity(tvbuff_t *tvb,
         proto_tree_add_item(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, ENC_NA);
         offset += integrity_len;
     } else {
+        expert_add_info(pinfo, integrity_tree, &ei_s7commp_integrity_digestlen_error);
         proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
         col_append_fstr(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that something went wrong */
     }
@@ -5244,7 +5257,6 @@ DIAG_ON(cast-qual)
                         break;
                     default:
                         expert_add_info_format(pinfo, subtree, &ei_s7commp_blobdecompression_nodictionary, "Unknown dictionary 0x%08x", streamp->adler);
-                        //proto_item_append_text(subtree, ", Error: Blob decompression failed, no dictionary found");
                         break;
                 }
             }
@@ -5295,13 +5307,11 @@ DIAG_ON(cast-qual)
                     dissected = call_dissector_only(xml_handle, next_tvb, pinfo, subtree, NULL);
                     if (!dissected) {
                         expert_add_info(pinfo, subtree, &ei_s7commp_blobdecompression_xmlsubdissector_failed);
-                        //proto_tree_add_text(subtree, next_tvb, 0, -1, "XML subdissector failed");
                     }
                 }
             }
         } else {
-            expert_add_info(pinfo, subtree, &ei_s7commp_blobdecompression_failed);
-            //proto_item_append_text(subtree, ", Error: Blob decompression failed, retcode %d", retcode);
+            expert_add_info_format(pinfo, subtree, &ei_s7commp_blobdecompression_failed, "Blob decompression failed, retcode = %d", retcode);
         }
         inflateEnd(streamp);
 #endif
@@ -5719,6 +5729,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             default:
                 unknown_type_occured = TRUE;
+                expert_add_info(pinfo, current_tree, &ei_s7commp_value_unknown_type);
                 g_strlcpy(str_val, "Unknown Type occured. Could not interpret value!", S7COMMP_ITEMVAL_STR_VAL_MAX);
                 break;
         } /* switch */
@@ -7425,7 +7436,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
             } else if (item_return_value == 0x83) {     /* Vermutlich nur in Protokoll Version v1*/
                 offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, 0);
             } else {
-                proto_item_append_text(data_item_tree, " Don't know how to decode the values with return code 0x%02x, stop decoding", item_return_value);
+                expert_add_info_format(pinfo, data_item_tree, &ei_s7commp_notification_returnvalue_unknown, "Notification unknown return value: 0x%02x", item_return_value);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
             }
@@ -8710,6 +8721,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         offset = s7commp_decode_integrity_wid(tvb, pinfo, tree, has_integrity_id, protocolversion, &dlength, offset);
     } else {
         /* unknown opcode */
+        expert_add_info_format(pinfo, tree, &ei_s7commp_data_opcode_unknown, "Unknown Opcode: 0x%02x", opcode);
         proto_item_append_text(tree, ": Unknown Opcode: 0x%02x", opcode);
         col_append_fstr(pinfo->cinfo, COL_INFO, " Unknown Opcode: 0x%02x", opcode);
     }

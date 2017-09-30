@@ -2915,7 +2915,7 @@ static const int *s7commp_itemval_datatype_flags_fields[] = {
     NULL
 };
 static gint hf_s7commp_itemval_sparsearray_term = -1;
-static gint hf_s7commp_itemval_sparsearray_varianttypeid = -1;
+static gint hf_s7commp_itemval_varianttypeid = -1;
 static gint hf_s7commp_itemval_sparsearray_key = -1;
 static gint hf_s7commp_itemval_stringactlen = -1;
 static gint hf_s7commp_itemval_blobreserved = -1;
@@ -3582,9 +3582,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_sparsearray_term,
           { "Sparsearray key terminating Null", "s7comm-plus.item.val.sparsearray_term", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_itemval_sparsearray_varianttypeid,
-          { "Sparsearray Variant Type-ID", "s7comm-plus.item.val.sparsearray_varianttypeid", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ", HFILL }},
+        { &hf_s7commp_itemval_varianttypeid,
+          { "Variant Type-ID", "s7comm-plus.item.val.varianttypeid", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_itemval_sparsearray_key,
           { "Sparsearray key", "s7comm-plus.item.val.sparsearray_key", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ", HFILL }},
@@ -5453,6 +5453,7 @@ s7commp_decode_value(tvbuff_t *tvb,
 {
     guint8 octet_count = 0;
     guint8 datatype;
+    guint8 datatype_of_value;
     guint8 datatype_flags;
     gboolean is_array = FALSE;
     gboolean is_address_array = FALSE;
@@ -5510,6 +5511,7 @@ s7commp_decode_value(tvbuff_t *tvb,
      * sondern es wird pro Array Element die Zerlegefunktion fuer eine ID/Value Liste aufgerufen.
      */
 
+    datatype_of_value = datatype;
     if (is_array || is_address_array || is_sparsearray) {
         if (is_sparsearray) {
             /* Bei diesem Array-Typ gibt es keine Angabe ueber die Anzahl. Das Array ist Null-terminiert.
@@ -5551,15 +5553,32 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             } else {
                 if (datatype == S7COMMP_ITEM_DATATYPE_VARIANT) {
-                    proto_tree_add_uint(current_tree, hf_s7commp_itemval_sparsearray_varianttypeid, tvb, offset, octet_count, sparsearray_key);
+                    proto_tree_add_uint(current_tree, hf_s7commp_itemval_varianttypeid, tvb, offset, octet_count, sparsearray_key);
                 } else {
                     proto_tree_add_uint(current_tree, hf_s7commp_itemval_sparsearray_key, tvb, offset, octet_count, sparsearray_key);
                 }
                 offset += octet_count;
             }
+        } else {
+            /* Sonderbehandung Adressarray (ausschliesslich?) mit datatype VARIANT
+             * TODO: Dieses ist nur eine vorlaeufige Auswertung, da zur Bestimmung des Aufbaus
+             *       noch zu wenige Aufzeichnungen vorliegen. Wenn der Aufbau feststeht, sollte diese
+             *       gesamte Funktion ueberarbeitet werden (Datentyp-Auswertung und Array-Verarbeitung trennen).
+             * Erste Vermutung: 1. Byte datatype flags (unbestaetigt) 
+             *                  2. Byte Type-ID, dann weiter mit Wert anhand der Typ-ID.
+             * Bei einem Sparsearray scheint der Aufbau anders zu sein.
+             */
+            if (datatype == S7COMMP_ITEM_DATATYPE_VARIANT) {
+                proto_tree_add_bitmask(current_tree, tvb, offset, hf_s7commp_itemval_datatype_flags,
+                    ett_s7commp_itemval_datatype_flags, s7commp_itemval_datatype_flags_fields, ENC_BIG_ENDIAN);
+                offset += 1;
+                datatype_of_value = tvb_get_guint8(tvb, offset);    /* Datentyp fuer switch-Auswertung aendern */
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_varianttypeid, tvb, offset, 1, datatype_of_value);
+                offset += 1;
+            }
         }
 
-        switch (datatype) {
+        switch (datatype_of_value) {
             case S7COMMP_ITEM_DATATYPE_NULL:
                 g_strlcpy(str_val, "<Null>", S7COMMP_ITEMVAL_STR_VAL_MAX);
                 length_of_value = 0;

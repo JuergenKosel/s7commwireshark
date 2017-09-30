@@ -2943,7 +2943,6 @@ static gint hf_s7commp_explore_req_parents = -1;
 static gint hf_s7commp_explore_objectcount = -1;
 static gint hf_s7commp_explore_addresscount = -1;
 static gint hf_s7commp_explore_structvalue = -1;
-static gint hf_s7commp_explore_subidcount = -1;
 static gint hf_s7commp_explore_resseqinteg = -1;
 
 /* Explore result, variable (tag) description */
@@ -3647,16 +3646,13 @@ proto_register_s7commp (void)
           { "Explore parents", "s7comm-plus.explore.req_parents", FT_UINT8, BASE_DEC, VALS(no_yes_names), 0x0,
             "Explore parents up to root", HFILL }},
         { &hf_s7commp_explore_objectcount,
-          { "Number of following Objects", "s7comm-plus.explore.objectcount", FT_UINT8, BASE_DEC, NULL, 0x0,
+          { "Number of following Objects (or object type? / unknown)", "s7comm-plus.explore.objectcount", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_explore_addresscount,
           { "Number of following Addresses (IDs)", "s7comm-plus.explore.addresscount", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_explore_structvalue,
           { "Value", "s7comm-plus.explore.structvalue", FT_UINT32, BASE_DEC, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_explore_subidcount,
-          { "Number of following Sub-Ids", "s7comm-plus.explore.subidcount", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_explore_resseqinteg,
           { "Explore Seq+IntegrId from Request", "s7comm-plus.explore.resseqinteg", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -8260,13 +8256,12 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
 {
     int number_of_objects = 0;
     int number_of_ids = 0;
-    int i, j;
+    int i;
     guint32 start_offset;
     guint32 id_number = 0;
     guint32 uint32value;
     guint8 octet_count = 0;
     guint8 datatype;
-    int id_count = 0;
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
 
@@ -8292,20 +8287,19 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
     offset += 1;
     proto_tree_add_item(tree, hf_s7commp_explore_req_parents, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
-    number_of_objects = tvb_get_guint8(tvb, offset);
-    proto_tree_add_uint(tree, hf_s7commp_explore_objectcount, tvb, offset, 1, number_of_objects);
-    offset += 1;
-    number_of_ids = tvb_get_guint8(tvb, offset);
-    proto_tree_add_uint(tree, hf_s7commp_explore_addresscount, tvb, offset, 1, number_of_ids);
-    offset += 1;
+    do {
+        number_of_objects = tvb_get_guint8(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_explore_objectcount, tvb, offset, 1, number_of_objects);
+        offset += 1;
+        number_of_ids = tvb_get_guint8(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_explore_addresscount, tvb, offset, 1, number_of_ids);
+        offset += 1;
 
-    if (number_of_objects > 0) {
-        start_offset = offset;
-        data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
-        data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
-        proto_item_append_text(data_item_tree, " (Objects with (type, value))");
-        for (i = 0; i < number_of_objects; i++) {
-            /* Hier gibt es nur eine Typ-Kennung und den Wert, ohne Flags. Meistens (immer?) ist es eine Struct */
+        if (number_of_objects > 0) {
+            start_offset = offset;
+            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+            proto_item_append_text(data_item_tree, " (Objects with (type, value))");
             datatype = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
             offset += 1;
@@ -8313,36 +8307,23 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
                 proto_tree_add_item(data_item_tree, hf_s7commp_explore_structvalue, tvb, offset, 4, ENC_BIG_ENDIAN);
                 offset += 4;
                 offset = s7commp_decode_id_value_list(tvb, pinfo, data_item_tree, offset, TRUE);
-                /* Dann folgt nochmal eine Anzahl an IDs, 2 Bytes */
-                id_count = tvb_get_ntohs(tvb, offset);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_explore_subidcount, tvb, offset, 2, id_count);
-                offset += 2;
-                for (j = 0; j < id_count; j++) {
-                    id_number = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
-                    offset += octet_count;
-                }
-            } else {
-                proto_tree_add_text(data_item_tree, tvb, offset, 0, "TODO, don't know how to handle this.");
-                break;
             }
+            proto_item_set_len(data_item_tree, offset - start_offset);
         }
-        proto_item_set_len(data_item_tree, offset - start_offset);
-    }
 
-    if (number_of_ids > 0) {
-        start_offset = offset;
-        data_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
-        data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_addresslist);
-        proto_item_append_text(data_item_tree, " (ID Numbers)");
-        for (i = 0; i < number_of_ids; i++) {
-            id_number = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
-            offset += octet_count;
+        if (number_of_ids > 0) {
+            start_offset = offset;
+            data_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_addresslist);
+            proto_item_append_text(data_item_tree, " (ID Numbers)");
+            for (i = 0; i < number_of_ids; i++) {
+                id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+                offset += octet_count;
+            }
+            proto_item_set_len(data_item_tree, offset - start_offset);
         }
-        proto_item_set_len(data_item_tree, offset - start_offset);
-    }
-
+    } while (number_of_objects > 0);
     return offset;
 }
 /*******************************************************************************************************

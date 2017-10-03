@@ -1049,6 +1049,22 @@ static const value_string attrib_serversessionrole[] = {
     { 0,            NULL }
 };
 
+static const value_string attrib_filteroperation[] = {
+    { 1,            "Equal" },
+    { 2,            "Unequal" },
+    { 3,            "LessThan" },
+    { 4,            "LessOrEqual" },
+    { 5,            "GreaterThan" },
+    { 6,            "GreaterOrEqual" },
+    { 8,            "InstanceOf" },
+    { 10,           "ResolveAddress" },
+    { 12,           "ValueIsInSet" },
+    { 13,           "DeliverResultSubset" },
+    { 14,           "OrDivider" },
+    { 15,           "LinkedToOtherObjects" },
+    { 0,            NULL }
+};
+
 /* blob decompression dictionaries */
 #ifdef HAVE_ZLIB
 #define BLOB_DECOMPRESS_BUFSIZE     16384
@@ -5004,6 +5020,32 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * Decoding of attribute FilterOperation (1247)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_filteroperation(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset,
+                                    guint8 datatype)
+{
+    gint32 operation;
+    guint8 octet_count = 0;
+    proto_item *pi = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_DINT) {
+        return offset;
+    }
+
+    operation = tvb_get_varint32(tvb, &octet_count, offset);
+    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "FilterOperation: %s", val_to_str(operation, attrib_filteroperation, "Unknown operation: %d"));
+    offset += octet_count;
+
+    PROTO_ITEM_SET_GENERATED(pi);
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decoding of attribute SecurityKeyEncryptedKey (ID 1805)
  *
  *******************************************************************************************************/
@@ -5406,6 +5448,9 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
             break;
         case 299:   /*  299 = ServerSessionRole */
             offset = s7commp_decode_attrib_serversessionrole(tvb, tree, value_start_offset, datatype);
+            break;
+        case 1247:  /* 1247 = FilterOperation */
+            offset = s7commp_decode_attrib_filteroperation(tvb, tree, value_start_offset, datatype);
             break;
         case 2523:  /* 2523 = Block.BlockLanguage */
             offset = s7commp_decode_attrib_blocklanguage(tvb, tree, value_start_offset, datatype);

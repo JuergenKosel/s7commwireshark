@@ -5258,6 +5258,8 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
                               proto_tree *tree,
                               guint32 value_start_offset,           /* offset to start of the value */
                               guint8 datatype,
+                              guint8 datatype_flags,
+                              guint32 sparsearray_key,
                               guint32 length_of_value,  /* length of the value in bytes */
                               guint32 id_number)
 {
@@ -5309,7 +5311,14 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 2585:  /* FunctionalObject.NetworkTitles */
         case 2589:  /* FunctionalObject.DebugInfo */
         case 4275:  /* ConstantsGlobal.Symbolics */
-            offset = s7commp_decompress_blob(tvb, pinfo, tree, value_start_offset, datatype, length_of_value, id_number);
+            /* Spezial-Ausnahme: Sparsearray Elemente mit einem Sparsearray-Key >= 0x80000000 sind nicht,
+             * oder wenn dann anders komprimiert.
+             */
+            if ((datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY) && (sparsearray_key & 0x80000000)) {
+                break;
+            } else {
+                offset = s7commp_decompress_blob(tvb, pinfo, tree, value_start_offset, datatype, length_of_value, id_number);
+            }
             break;
         case 7813:  /* DAI.HmiInfo */
             offset = s7commp_decode_attrib_hmiinfo(tvb, tree, value_start_offset, datatype, length_of_value);
@@ -5446,7 +5455,7 @@ s7commp_decode_value(tvbuff_t *tvb,
              * TODO: Dieses ist nur eine vorlaeufige Auswertung, da zur Bestimmung des Aufbaus
              *       noch zu wenige Aufzeichnungen vorliegen. Wenn der Aufbau feststeht, sollte diese
              *       gesamte Funktion ueberarbeitet werden (Datentyp-Auswertung und Array-Verarbeitung trennen).
-             * Erste Vermutung: 1. Byte datatype flags (unbestaetigt) 
+             * Erste Vermutung: 1. Byte datatype flags (unbestaetigt)
              *                  2. Byte Type-ID, dann weiter mit Wert anhand der Typ-ID.
              * Bei einem Sparsearray scheint der Aufbau anders zu sein.
              */
@@ -5664,7 +5673,7 @@ s7commp_decode_value(tvbuff_t *tvb,
             }
         }
         /* Erweitertes Decodieren der Daten ausgewaehlter IDs */
-        s7commp_decode_value_extended(tvb, pinfo, current_tree, value_start_offset, datatype, length_of_value, id_number);
+        s7commp_decode_value_extended(tvb, pinfo, current_tree, value_start_offset, datatype, datatype_flags, sparsearray_key, length_of_value, id_number);
     } /* for */
 
     if (strlen(str_arrval) == 0) {

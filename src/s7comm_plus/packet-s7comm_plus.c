@@ -3025,13 +3025,19 @@ static gint hf_s7commp_multiplestai_lidcount = -1;
 static gint hf_s7commp_multiplestai_lid = -1;
 
 /* Message types in MultipleStai */
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_INVALIDAP      0
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_ALARMAP        1
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_NOTIFYAP       2
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_INFOREPORTAP   3
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_EVENTACKAP     4
+
 static const value_string multiplestai_messagetypes[] = {
-    { 0,            "Invalid AP" },
-    { 1,            "Alarm AP" },
-    { 2,            "Notify AP" },
-    { 3,            "Info Report AP" },
-    { 4,            "Event Ack AP" },
-    { 0,            NULL }
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_INVALIDAP,       "Invalid AP" },
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_ALARMAP,         "Alarm AP" },
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_NOTIFYAP,        "Notify AP" },
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_INFOREPORTAP,    "Info Report AP" },
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_EVENTACKAP,      "Event Ack AP" },
+    { 0,                                                NULL }
 };
 
 /* "Anzeigeklasse" / "Display class" when using Program_Alarm in plc program */
@@ -4836,6 +4842,7 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
     proto_tree *subtree = NULL;
     int lidcount, i;
     guint16 hmiinfo_length;
+    guint16 messagetype;
 
     if (datatype != S7COMMP_ITEM_DATATYPE_BLOB || length_of_value < 20) {
         return offset;
@@ -4849,6 +4856,7 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
     offset += 2;
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_alarmdomain, tvb, offset, 2, ENC_NA);
     offset += 2;
+    messagetype = tvb_get_ntohs(tvb, offset);
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_messagetype, tvb, offset, 2, ENC_NA);
     offset += 2;
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_alarmenabled, tvb, offset, 1, ENC_NA);
@@ -4857,17 +4865,22 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
     hmiinfo_length = tvb_get_ntohs(tvb, offset);
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_hmiinfo_length, tvb, offset, 2, ENC_NA);
     offset += 2;
-    offset = s7commp_decode_attrib_hmiinfo(tvb, subtree, offset, S7COMMP_ITEM_DATATYPE_BLOB, hmiinfo_length);
+    /* hmiinfo erkennt z.Zt. nur korrekt Alarm AP mit length = 9 */
+    if (messagetype == S7COMMP_MULTIPLESTAI_MESSAGETYPE_ALARMAP && hmiinfo_length == 9) {
+        offset = s7commp_decode_attrib_hmiinfo(tvb, subtree, offset, S7COMMP_ITEM_DATATYPE_BLOB, hmiinfo_length);
 
-    lidcount = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_item(subtree, hf_s7commp_multiplestai_lidcount, tvb, offset, 2, ENC_NA);
-    offset += 2;
+        lidcount = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_item(subtree, hf_s7commp_multiplestai_lidcount, tvb, offset, 2, ENC_NA);
+        offset += 2;
 
-    for (i = 0; i < lidcount; i++) {
-        pi = proto_tree_add_item(subtree, hf_s7commp_multiplestai_lid, tvb, offset, 4, ENC_NA);
-        offset += 4;
+        for (i = 0; i < lidcount; i++) {
+            pi = proto_tree_add_item(subtree, hf_s7commp_multiplestai_lid, tvb, offset, 4, ENC_NA);
+            offset += 4;
+        }
+    } else {
+        /* TODO */
+        offset += hmiinfo_length;
     }
-
     return offset;
 }
 /*******************************************************************************************************

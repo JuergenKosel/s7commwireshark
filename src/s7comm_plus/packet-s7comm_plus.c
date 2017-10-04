@@ -2786,7 +2786,7 @@ static gint hf_s7commp_itemval_sparsearray_term = -1;
 static gint hf_s7commp_itemval_varianttypeid = -1;
 static gint hf_s7commp_itemval_sparsearray_key = -1;
 static gint hf_s7commp_itemval_stringactlen = -1;
-static gint hf_s7commp_itemval_blobreserved = -1;
+static gint hf_s7commp_itemval_blobrootid = -1;
 static gint hf_s7commp_itemval_blobsize = -1;
 static gint hf_s7commp_itemval_datatype = -1;
 static gint hf_s7commp_itemval_arraysize = -1;
@@ -3458,9 +3458,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_stringactlen,
           { "String actual length", "s7comm-plus.item.val.stringactlen", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ", HFILL }},
-        { &hf_s7commp_itemval_blobreserved,
-          { "Blob Reserved", "s7comm-plus.item.val.blobreserved", FT_UINT8, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
+        { &hf_s7commp_itemval_blobrootid,
+          { "Blob root ID", "s7comm-plus.item.val.blobrootid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
+            "If 0 then standard format. If >0 then special format similar to struct", HFILL }},
         { &hf_s7commp_itemval_blobsize,
           { "Blob size", "s7comm-plus.item.val.blobsize", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ", HFILL }},
@@ -5624,18 +5624,32 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_BLOB:
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobreserved, tvb, offset, 1, tvb_get_guint8(tvb, offset));
-                offset += 1;
-                length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, octet_count, length_of_value);
+                uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobrootid, tvb, offset, octet_count, uint32val);
                 offset += octet_count;
-                value_start_offset = offset;
-                if (length_of_value > 0) {
-                    g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
+                /* Wenn Wert > 0 dann Spezialformat, welches im Prinzip bis auf die 9 eingeschobenen Bytes
+                 * identisch zum Aufbau einer Struct ist. Verwendung z.B. mit ID 1848.
+                 */
+                if (uint32val > 0) {
+                    g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "<Blob special for ID: %u>", uint32val);
+                    proto_tree_add_text(current_tree, tvb, offset, 9, "Blob special unknown 9 bytes (always zero?)");
+                    offset += 9;
+                    value_start_offset = offset;
+                    /* Sub-Elemente rekursiv abarbeiten. Bisher sind hier immer nur zwei Standard-Blobs enthalten. */
+                    offset = s7commp_decode_id_value_list(tvb, pinfo, current_tree, offset, TRUE);
+                    length_of_value = 0;
                 } else {
-                    g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
+                    length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, octet_count, length_of_value);
+                    offset += octet_count;
+                    value_start_offset = offset;
+                    if (length_of_value > 0) {
+                        g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
+                    } else {
+                        g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
+                    }
+                    offset += length_of_value;
                 }
-                offset += length_of_value;
                 break;
             default:
                 unknown_type_occured = TRUE;

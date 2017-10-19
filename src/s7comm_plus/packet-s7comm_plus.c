@@ -40,6 +40,7 @@
 #include <epan/reassemble.h>
 #include <epan/conversation.h>
 #include <epan/proto_data.h>
+#include <epan/expert.h>
 #include <wsutil/utf8_entities.h>
 
 #ifdef HAVE_ZLIB
@@ -133,6 +134,7 @@ static const value_string opcode_names_short[] = {
 /**************************************************************************
  * Function codes in data part.
  */
+#define S7COMMP_FUNCTIONCODE_ERROR              0x04b1
 #define S7COMMP_FUNCTIONCODE_EXPLORE            0x04bb
 #define S7COMMP_FUNCTIONCODE_CREATEOBJECT       0x04ca
 #define S7COMMP_FUNCTIONCODE_DELETEOBJECT       0x04d4
@@ -152,6 +154,7 @@ static const value_string opcode_names_short[] = {
 #define S7COMMP_FUNCTIONCODE_ABORT              0x059a      /* not decoded yet */
 
 static const value_string data_functioncode_names[] = {
+    { S7COMMP_FUNCTIONCODE_ERROR,               "Error" },
     { S7COMMP_FUNCTIONCODE_EXPLORE,             "Explore" },
     { S7COMMP_FUNCTIONCODE_CREATEOBJECT,        "CreateObject" },
     { S7COMMP_FUNCTIONCODE_DELETEOBJECT,        "DeleteObject" },
@@ -1046,6 +1049,22 @@ static const value_string attrib_serversessionrole[] = {
     { 0,            NULL }
 };
 
+static const value_string attrib_filteroperation[] = {
+    { 1,            "Equal" },
+    { 2,            "Unequal" },
+    { 3,            "LessThan" },
+    { 4,            "LessOrEqual" },
+    { 5,            "GreaterThan" },
+    { 6,            "GreaterOrEqual" },
+    { 8,            "InstanceOf" },
+    { 10,           "ResolveAddress" },
+    { 12,           "ValueIsInSet" },
+    { 13,           "DeliverResultSubset" },
+    { 14,           "OrDivider" },
+    { 15,           "LinkedToOtherObjects" },
+    { 0,            NULL }
+};
+
 /* blob decompression dictionaries */
 #ifdef HAVE_ZLIB
 #define BLOB_DECOMPRESS_BUFSIZE     16384
@@ -1395,8 +1414,8 @@ static const char s7commp_dict_DebugInfo_90000001[] = {
     0x6f, 0x63, 0x6b, 0x44, 0x65, 0x62, 0x75, 0x67, 0x49, 0x6e, 0x66, 0x6f, 0x3e
 };
 
-#define S7COMMP_DICTID_DebugInfo_98000001   0x66052b13
-static const char s7commp_dict_DebugInfo_98000001[] = {
+#define S7COMMP_DICTID_DebugInfo_IntfDesc_98000001   0x66052b13
+static const char s7commp_dict_DebugInfo_IntfDesc_98000001[] = {
     0x3c, 0x49, 0x64, 0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x42, 0x61, 0x73, 0x65, 0x3c, 0x46, 0x42, 0x54,
     0x20, 0x52, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x64, 0x54, 0x79, 0x70, 0x65, 0x73,
     0x49, 0x6e, 0x64, 0x65, 0x78, 0x3d, 0x22, 0x20, 0x43, 0x6c, 0x61, 0x73, 0x73, 0x69, 0x63, 0x53,
@@ -2248,154 +2267,6 @@ static const char s7commp_dict_IntfDesc_90000001[] = {
     0x6c, 0x6f, 0x63, 0x6b, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x3e
 };
 
-#define S7COMMP_DICTID_IntfDesc_98000001  0x66052b13
-static const char s7commp_dict_IntfDesc_98000001[] = {
-    0x3c, 0x49, 0x64, 0x65, 0x6e, 0x74, 0x3e, 0x3c, 0x42, 0x61, 0x73, 0x65, 0x3c, 0x46, 0x42, 0x54,
-    0x20, 0x52, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x64, 0x54, 0x79, 0x70, 0x65, 0x73,
-    0x49, 0x6e, 0x64, 0x65, 0x78, 0x3d, 0x22, 0x20, 0x43, 0x6c, 0x61, 0x73, 0x73, 0x69, 0x63, 0x53,
-    0x6c, 0x6f, 0x74, 0x3d, 0x22, 0x20, 0x56, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6c, 0x65, 0x53, 0x6c,
-    0x6f, 0x74, 0x3d, 0x22, 0x20, 0x52, 0x65, 0x74, 0x61, 0x69, 0x6e, 0x53, 0x6c, 0x6f, 0x74, 0x3d,
-    0x22, 0x3c, 0x43, 0x6f, 0x6d, 0x70, 0x69, 0x6c, 0x65, 0x55, 0x6e, 0x69, 0x74, 0x49, 0x64, 0x65,
-    0x6e, 0x74, 0x3e, 0x3c, 0x4d, 0x66, 0x62, 0x55, 0x44, 0x54, 0x20, 0x49, 0x64, 0x65, 0x6e, 0x74,
-    0x52, 0x65, 0x66, 0x49, 0x44, 0x3d, 0x22, 0x20, 0x52, 0x65, 0x74, 0x61, 0x69, 0x6e, 0x50, 0x61,
-    0x72, 0x61, 0x6d, 0x65, 0x74, 0x65, 0x72, 0x3d, 0x22, 0x20, 0x56, 0x6f, 0x6c, 0x61, 0x74, 0x69,
-    0x6c, 0x65, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x65, 0x74, 0x65, 0x72, 0x3d, 0x22, 0x20, 0x43, 0x6c,
-    0x61, 0x73, 0x73, 0x69, 0x63, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x65, 0x74, 0x65, 0x72, 0x3d, 0x22,
-    0x3c, 0x4d, 0x75, 0x6c, 0x74, 0x69, 0x69, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x3c, 0x49,
-    0x64, 0x65, 0x6e, 0x74, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x3e, 0x3c, 0x49,
-    0x64, 0x65, 0x6e, 0x74, 0x3c, 0x43, 0x72, 0x6f, 0x73, 0x73, 0x52, 0x65, 0x66, 0x49, 0x6e, 0x66,
-    0x6f, 0x3e, 0x3c, 0x41, 0x63, 0x63, 0x65, 0x73, 0x73, 0x3e, 0x20, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
-    0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x3d, 0x22, 0x20, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x54, 0x79,
-    0x70, 0x65, 0x3d, 0x22, 0x20, 0x54, 0x79, 0x70, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x3d, 0x22, 0x20,
-    0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x75, 0x72, 0x65, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x69, 0x65,
-    0x64, 0x54, 0x53, 0x3d, 0x22, 0x20, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x4d,
-    0x6f, 0x64, 0x69, 0x66, 0x69, 0x65, 0x64, 0x54, 0x53, 0x3d, 0x22, 0x20, 0x54, 0x79, 0x70, 0x65,
-    0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x49, 0x64, 0x3d, 0x22, 0x20, 0x56, 0x65, 0x72, 0x73, 0x69,
-    0x6f, 0x6e, 0x49, 0x64, 0x3d, 0x22, 0x20, 0x54, 0x79, 0x70, 0x65, 0x52, 0x49, 0x64, 0x3d, 0x22,
-    0x20, 0x52, 0x49, 0x64, 0x3d, 0x22, 0x20, 0x4d, 0x49, 0x52, 0x65, 0x74, 0x61, 0x69, 0x6e, 0x50,
-    0x61, 0x64, 0x64, 0x65, 0x64, 0x42, 0x69, 0x74, 0x53, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x4d,
-    0x49, 0x56, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6c, 0x65, 0x50, 0x61, 0x64, 0x64, 0x65, 0x64, 0x42,
-    0x69, 0x74, 0x53, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x4d, 0x49, 0x43, 0x6c, 0x61, 0x73, 0x73,
-    0x69, 0x63, 0x50, 0x61, 0x64, 0x64, 0x65, 0x64, 0x42, 0x69, 0x74, 0x53, 0x69, 0x7a, 0x65, 0x3d,
-    0x22, 0x20, 0x4d, 0x49, 0x52, 0x65, 0x74, 0x61, 0x69, 0x6e, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69,
-    0x76, 0x65, 0x42, 0x69, 0x74, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x3d, 0x22, 0x20, 0x4d, 0x49,
-    0x56, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x76, 0x65,
-    0x42, 0x69, 0x74, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x3d, 0x22, 0x20, 0x4d, 0x49, 0x43, 0x6c,
-    0x61, 0x73, 0x73, 0x69, 0x63, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x76, 0x65, 0x42, 0x69, 0x74,
-    0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x3d, 0x22, 0x20, 0x53, 0x63, 0x6f, 0x70, 0x65, 0x3d, 0x22,
-    0x20, 0x52, 0x65, 0x66, 0x49, 0x64, 0x3d, 0x22, 0x3c, 0x58, 0x52, 0x65, 0x66, 0x49, 0x74, 0x65,
-    0x6d, 0x3c, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x20, 0x55, 0x49, 0x64, 0x3d, 0x22, 0x20, 0x55, 0x73,
-    0x61, 0x67, 0x65, 0x3d, 0x22, 0x20, 0x49, 0x6e, 0x73, 0x74, 0x72, 0x75, 0x63, 0x74, 0x69, 0x6f,
-    0x6e, 0x3d, 0x22, 0x20, 0x4e, 0x65, 0x74, 0x49, 0x64, 0x3d, 0x22, 0x20, 0x58, 0x52, 0x65, 0x66,
-    0x48, 0x69, 0x64, 0x64, 0x65, 0x6e, 0x3d, 0x22, 0x20, 0x53, 0x6c, 0x6f, 0x74, 0x4e, 0x75, 0x6d,
-    0x62, 0x65, 0x72, 0x3d, 0x22, 0x3c, 0x45, 0x78, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x54, 0x79,
-    0x70, 0x65, 0x73, 0x3c, 0x44, 0x61, 0x74, 0x61, 0x74, 0x79, 0x70, 0x65, 0x20, 0x43, 0x6c, 0x61,
-    0x73, 0x73, 0x69, 0x63, 0x42, 0x69, 0x74, 0x73, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x52, 0x65,
-    0x74, 0x61, 0x69, 0x6e, 0x42, 0x69, 0x74, 0x73, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x56, 0x6f,
-    0x6c, 0x61, 0x74, 0x69, 0x6c, 0x65, 0x42, 0x69, 0x74, 0x73, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x3c,
-    0x45, 0x78, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x54, 0x79, 0x70, 0x65, 0x3c, 0x49, 0x64, 0x65,
-    0x6e, 0x74, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x3e, 0x3c, 0x50, 0x61, 0x72, 0x74, 0x3e,
-    0x20, 0x4d, 0x75, 0x6c, 0x74, 0x69, 0x69, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x5f, 0x53,
-    0x74, 0x61, 0x72, 0x74, 0x4f, 0x66, 0x52, 0x65, 0x74, 0x61, 0x69, 0x6e, 0x50, 0x61, 0x72, 0x74,
-    0x3d, 0x22, 0x20, 0x4d, 0x75, 0x6c, 0x74, 0x69, 0x69, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65,
-    0x5f, 0x53, 0x74, 0x61, 0x72, 0x74, 0x4f, 0x66, 0x56, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6c, 0x65,
-    0x50, 0x61, 0x72, 0x74, 0x3d, 0x22, 0x20, 0x4d, 0x75, 0x6c, 0x74, 0x69, 0x69, 0x6e, 0x73, 0x74,
-    0x61, 0x6e, 0x63, 0x65, 0x5f, 0x53, 0x74, 0x61, 0x72, 0x74, 0x4f, 0x66, 0x43, 0x6c, 0x61, 0x73,
-    0x73, 0x69, 0x63, 0x50, 0x61, 0x72, 0x74, 0x3d, 0x22, 0x3c, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x73,
-    0x20, 0x57, 0x69, 0x64, 0x65, 0x73, 0x74, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x42, 0x69, 0x74,
-    0x73, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x50, 0x61, 0x64, 0x64, 0x65, 0x64, 0x45, 0x6c, 0x65,
-    0x6d, 0x65, 0x6e, 0x74, 0x42, 0x69, 0x74, 0x73, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x49, 0x64,
-    0x65, 0x6e, 0x74, 0x52, 0x65, 0x66, 0x49, 0x64, 0x3d, 0x22, 0x20, 0x4f, 0x70, 0x65, 0x72, 0x61,
-    0x6e, 0x64, 0x54, 0x79, 0x70, 0x65, 0x3d, 0x22, 0x20, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x4d,
-    0x6f, 0x64, 0x69, 0x66, 0x69, 0x65, 0x64, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70,
-    0x3d, 0x22, 0x20, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x43, 0x6f, 0x6d, 0x70, 0x69, 0x6c, 0x65,
-    0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x3d, 0x22, 0x3c, 0x43, 0x61, 0x6c, 0x6c,
-    0x53, 0x74, 0x61, 0x63, 0x6b, 0x55, 0x73, 0x61, 0x67, 0x65, 0x20, 0x55, 0x73, 0x65, 0x41, 0x6e,
-    0x6e, 0x6f, 0x74, 0x61, 0x74, 0x65, 0x64, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x73, 0x3d, 0x22,
-    0x3c, 0x3f, 0x78, 0x6d, 0x6c, 0x20, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x3d, 0x22, 0x31,
-    0x2e, 0x30, 0x22, 0x20, 0x65, 0x6e, 0x63, 0x6f, 0x64, 0x69, 0x6e, 0x67, 0x3d, 0x22, 0x75, 0x74,
-    0x66, 0x2d, 0x31, 0x36, 0x22, 0x3f, 0x3e, 0x3c, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x49, 0x6e, 0x74,
-    0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x3c, 0x55, 0x73, 0x61, 0x67, 0x65, 0x20, 0x4c, 0x69, 0x62,
-    0x52, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x3d, 0x22, 0x78, 0x6d, 0x6c, 0x6e, 0x73,
-    0x3d, 0x22, 0x68, 0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x73,
-    0x2e, 0x73, 0x69, 0x65, 0x6d, 0x65, 0x6e, 0x73, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x53, 0x69, 0x6d,
-    0x61, 0x74, 0x69, 0x63, 0x2f, 0x45, 0x53, 0x2f, 0x31, 0x31, 0x2f, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
-    0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65, 0x2f, 0x53, 0x6f, 0x75, 0x72, 0x63, 0x65,
-    0x2f, 0x56, 0x31, 0x31, 0x5f, 0x30, 0x31, 0x2e, 0x78, 0x73, 0x64, 0x20, 0x54, 0x79, 0x70, 0x65,
-    0x49, 0x6e, 0x66, 0x6f, 0x52, 0x75, 0x6e, 0x74, 0x69, 0x6d, 0x65, 0x49, 0x64, 0x3d, 0x22, 0x3c,
-    0x52, 0x6f, 0x6f, 0x74, 0x3c, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x20,
-    0x58, 0x6d, 0x6c, 0x50, 0x61, 0x72, 0x74, 0x49, 0x44, 0x3d, 0x22, 0x20, 0x42, 0x6c, 0x6f, 0x63,
-    0x6b, 0x54, 0x79, 0x70, 0x65, 0x46, 0x61, 0x6d, 0x69, 0x6c, 0x79, 0x3d, 0x22, 0x20, 0x42, 0x69,
-    0x74, 0x53, 0x6c, 0x6f, 0x74, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x3d, 0x22, 0x20, 0x53, 0x6c, 0x6f,
-    0x74, 0x38, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x3d, 0x22, 0x20, 0x53, 0x6c, 0x6f, 0x74, 0x31, 0x36,
-    0x43, 0x6f, 0x75, 0x6e, 0x74, 0x3d, 0x22, 0x20, 0x53, 0x6c, 0x6f, 0x74, 0x33, 0x32, 0x43, 0x6f,
-    0x75, 0x6e, 0x74, 0x3d, 0x22, 0x20, 0x53, 0x6c, 0x6f, 0x74, 0x36, 0x34, 0x43, 0x6f, 0x75, 0x6e,
-    0x74, 0x3d, 0x22, 0x20, 0x53, 0x6c, 0x6f, 0x74, 0x53, 0x69, 0x6e, 0x67, 0x6c, 0x65, 0x44, 0x6f,
-    0x75, 0x62, 0x6c, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x3d, 0x22, 0x20, 0x53, 0x6c, 0x6f, 0x74,
-    0x50, 0x6f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x3d, 0x22, 0x3c, 0x53,
-    0x75, 0x62, 0x50, 0x61, 0x72, 0x74, 0x73, 0x3e, 0x20, 0x52, 0x49, 0x64, 0x53, 0x6c, 0x6f, 0x74,
-    0x73, 0x3d, 0x22, 0x20, 0x49, 0x64, 0x65, 0x6e, 0x74, 0x55, 0x49, 0x44, 0x3d, 0x22, 0x20, 0x50,
-    0x61, 0x72, 0x61, 0x6d, 0x65, 0x74, 0x65, 0x72, 0x3d, 0x22, 0x20, 0x49, 0x6e, 0x74, 0x65, 0x72,
-    0x66, 0x61, 0x63, 0x65, 0x47, 0x75, 0x69, 0x64, 0x3d, 0x22, 0x20, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
-    0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x49, 0x44, 0x3d, 0x22, 0x20, 0x56, 0x65, 0x72, 0x73, 0x69,
-    0x6f, 0x6e, 0x47, 0x75, 0x69, 0x64, 0x3d, 0x22, 0x3c, 0x44, 0x61, 0x74, 0x61, 0x74, 0x79, 0x70,
-    0x65, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x3c, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x44, 0x61,
-    0x74, 0x61, 0x4d, 0x61, 0x70, 0x20, 0x48, 0x69, 0x67, 0x68, 0x65, 0x73, 0x74, 0x41, 0x73, 0x73,
-    0x69, 0x67, 0x6e, 0x65, 0x64, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x49, 0x64, 0x3d, 0x22, 0x3c, 0x50,
-    0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x20, 0x4c, 0x53, 0x74,
-    0x61, 0x63, 0x6b, 0x42, 0x69, 0x74, 0x73, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x49, 0x6e, 0x66,
-    0x6f, 0x5f, 0x43, 0x6c, 0x61, 0x73, 0x73, 0x69, 0x63, 0x50, 0x61, 0x72, 0x74, 0x53, 0x69, 0x7a,
-    0x65, 0x3d, 0x22, 0x20, 0x49, 0x6e, 0x66, 0x6f, 0x5f, 0x56, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6c,
-    0x65, 0x50, 0x61, 0x72, 0x74, 0x53, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x49, 0x6e, 0x66, 0x6f,
-    0x5f, 0x52, 0x65, 0x74, 0x61, 0x69, 0x6e, 0x50, 0x61, 0x72, 0x74, 0x53, 0x69, 0x7a, 0x65, 0x3d,
-    0x22, 0x3c, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x4c, 0x61, 0x79, 0x6f, 0x75, 0x74, 0x20, 0x41,
-    0x63, 0x63, 0x65, 0x73, 0x73, 0x69, 0x62, 0x69, 0x6c, 0x69, 0x74, 0x79, 0x3d, 0x22, 0x20, 0x49,
-    0x6e, 0x66, 0x6f, 0x5f, 0x41, 0x72, 0x72, 0x61, 0x79, 0x5f, 0x50, 0x61, 0x64, 0x64, 0x65, 0x64,
-    0x53, 0x75, 0x62, 0x74, 0x79, 0x70, 0x65, 0x53, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x49, 0x6e,
-    0x66, 0x6f, 0x5f, 0x41, 0x72, 0x72, 0x61, 0x79, 0x5f, 0x53, 0x75, 0x62, 0x74, 0x79, 0x70, 0x65,
-    0x53, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x43, 0x6c, 0x61, 0x73, 0x73, 0x69, 0x63, 0x42, 0x69,
-    0x74, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x3d, 0x22, 0x20, 0x4e, 0x65, 0x6e, 0x61, 0x42, 0x69,
-    0x74, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x3d, 0x22, 0x20, 0x4f, 0x66, 0x66, 0x73, 0x65, 0x74,
-    0x53, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x3d, 0x22, 0x3c,
-    0x53, 0x69, 0x7a, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x3c, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x65, 0x74,
-    0x65, 0x72, 0x50, 0x61, 0x73, 0x73, 0x69, 0x6e, 0x67, 0x3c, 0x4c, 0x69, 0x62, 0x72, 0x61, 0x72,
-    0x79, 0x49, 0x6e, 0x66, 0x6f, 0x3e, 0x20, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x4d, 0x65, 0x6d, 0x62,
-    0x65, 0x72, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x3d, 0x22, 0x20, 0x4d, 0x46, 0x6c, 0x61, 0x67, 0x73,
-    0x3d, 0x22, 0x20, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x76, 0x65, 0x42, 0x69, 0x74, 0x6f, 0x66,
-    0x66, 0x73, 0x65, 0x74, 0x3d, 0x22, 0x20, 0x52, 0x65, 0x6d, 0x61, 0x6e, 0x65, 0x6e, 0x63, 0x65,
-    0x3d, 0x22, 0x3c, 0x50, 0x61, 0x72, 0x74, 0x3c, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x3e,
-    0x3c, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x20, 0x50, 0x65,
-    0x6e, 0x61, 0x6c, 0x74, 0x79, 0x42, 0x79, 0x74, 0x65, 0x73, 0x49, 0x6e, 0x42, 0x69, 0x74, 0x73,
-    0x3d, 0x22, 0x20, 0x48, 0x69, 0x67, 0x68, 0x65, 0x73, 0x74, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e,
-    0x65, 0x64, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x49, 0x64, 0x3d, 0x22, 0x20, 0x53,
-    0x75, 0x62, 0x50, 0x61, 0x72, 0x74, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x3d, 0x22, 0x20, 0x49, 0x6e,
-    0x66, 0x6f, 0x5f, 0x57, 0x69, 0x64, 0x65, 0x73, 0x74, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x3d,
-    0x22, 0x20, 0x50, 0x61, 0x64, 0x64, 0x65, 0x64, 0x42, 0x69, 0x74, 0x73, 0x69, 0x7a, 0x65, 0x3d,
-    0x22, 0x3c, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x20, 0x4b, 0x69, 0x6e, 0x64, 0x3d, 0x22, 0x20, 0x56,
-    0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x3d, 0x22, 0x32, 0x2e, 0x30, 0x22, 0x20, 0x78, 0x6d, 0x6c,
-    0x6e, 0x73, 0x3d, 0x22, 0x3c, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x20, 0x43, 0x68, 0x61, 0x6e,
-    0x67, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x3d, 0x22, 0x20, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x3d,
-    0x22, 0x20, 0x52, 0x65, 0x70, 0x72, 0x65, 0x73, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e,
-    0x53, 0x69, 0x7a, 0x65, 0x3d, 0x22, 0x20, 0x50, 0x61, 0x73, 0x73, 0x65, 0x64, 0x41, 0x73, 0x3d,
-    0x22, 0x20, 0x52, 0x49, 0x44, 0x3d, 0x22, 0x20, 0x4c, 0x49, 0x44, 0x3d, 0x22, 0x20, 0x54, 0x79,
-    0x70, 0x65, 0x3d, 0x22, 0x53, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x42, 0x23, 0x31, 0x36,
-    0x23, 0x57, 0x23, 0x31, 0x36, 0x23, 0x52, 0x65, 0x74, 0x5f, 0x56, 0x61, 0x6c, 0x46, 0x75, 0x6e,
-    0x63, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x4c, 0x41, 0x53, 0x53, 0x49, 0x43, 0x5f, 0x50, 0x4c, 0x45,
-    0x41, 0x53, 0x45, 0x4e, 0x45, 0x4e, 0x41, 0x5f, 0x50, 0x4c, 0x45, 0x41, 0x53, 0x45, 0x56, 0x6f,
-    0x69, 0x64, 0x54, 0x72, 0x75, 0x65, 0x74, 0x72, 0x75, 0x65, 0x46, 0x61, 0x6c, 0x73, 0x65, 0x66,
-    0x61, 0x6c, 0x73, 0x65, 0x53, 0x37, 0x5f, 0x56, 0x69, 0x73, 0x69, 0x62, 0x6c, 0x65, 0x33, 0x32,
-    0x35, 0x31, 0x3a, 0x35, 0x32, 0x3a, 0x35, 0x33, 0x3a, 0x35, 0x34, 0x3a, 0x35, 0x35, 0x3a, 0x35,
-    0x38, 0x44, 0x54, 0x4c, 0x55, 0x53, 0x49, 0x6e, 0x74, 0x75, 0x6e, 0x64, 0x65, 0x66, 0x55, 0x6e,
-    0x64, 0x65, 0x66, 0x52, 0x65, 0x61, 0x6c, 0x48, 0x4d, 0x49, 0x5f, 0x56, 0x69, 0x73, 0x69, 0x62,
-    0x6c, 0x65, 0x30, 0x78, 0x30, 0x32, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31, 0x57, 0x6f, 0x72, 0x64,
-    0x52, 0x65, 0x74, 0x61, 0x69, 0x6e, 0x30, 0x78, 0x30, 0x30, 0x30, 0x30, 0x46, 0x46, 0x46, 0x46,
-    0x4d, 0x61, 0x6e, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x79, 0x3c, 0x44, 0x61, 0x74, 0x61, 0x20, 0x49,
-    0x44, 0x3d, 0x22, 0x20, 0x4e, 0x61, 0x6d, 0x65, 0x3d, 0x22, 0x20, 0x42, 0x61, 0x73, 0x65, 0x3d,
-    0x22, 0x20, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x76, 0x65, 0x3d, 0x22, 0x20, 0x53, 0x69, 0x7a,
-    0x65, 0x3d, 0x22, 0x20, 0x50, 0x61, 0x64, 0x64, 0x65, 0x64, 0x53, 0x69, 0x7a, 0x65, 0x3d, 0x22,
-    0x20, 0x50, 0x61, 0x74, 0x68, 0x3d, 0x22, 0x3d, 0x22, 0x3e
-};
-
 #define S7COMMP_DICTID_TagLineComm_90000001  0xe2729ea1
 static const char s7commp_dict_TagLineComm_90000001[] = {
     0x3c, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x44, 0x69, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x61,
@@ -2912,14 +2783,22 @@ static const int *s7commp_itemval_datatype_flags_fields[] = {
     NULL
 };
 static gint hf_s7commp_itemval_sparsearray_term = -1;
-static gint hf_s7commp_itemval_sparsearray_varianttypeid = -1;
+static gint hf_s7commp_itemval_varianttypeid = -1;
 static gint hf_s7commp_itemval_sparsearray_key = -1;
 static gint hf_s7commp_itemval_stringactlen = -1;
-static gint hf_s7commp_itemval_blobreserved = -1;
+static gint hf_s7commp_itemval_blobrootid = -1;
 static gint hf_s7commp_itemval_blobsize = -1;
 static gint hf_s7commp_itemval_datatype = -1;
 static gint hf_s7commp_itemval_arraysize = -1;
 static gint hf_s7commp_itemval_value = -1;
+
+/* Get/Set a packed struct */
+static gint ett_s7commp_packedstruct = -1;
+static gint hf_s7commp_packedstruct = -1;
+static gint hf_s7commp_packedstruct_interfacetimestamp = -1;
+static gint hf_s7commp_packedstruct_transpsize = -1;
+static gint hf_s7commp_packedstruct_elementcount = -1;
+static gint hf_s7commp_packedstruct_data = -1;
 
 /* List elements */
 static gint hf_s7commp_listitem_terminator = -1;
@@ -2932,7 +2811,6 @@ static gint hf_s7commp_explore_req_parents = -1;
 static gint hf_s7commp_explore_objectcount = -1;
 static gint hf_s7commp_explore_addresscount = -1;
 static gint hf_s7commp_explore_structvalue = -1;
-static gint hf_s7commp_explore_subidcount = -1;
 static gint hf_s7commp_explore_resseqinteg = -1;
 
 /* Explore result, variable (tag) description */
@@ -3147,13 +3025,19 @@ static gint hf_s7commp_multiplestai_lidcount = -1;
 static gint hf_s7commp_multiplestai_lid = -1;
 
 /* Message types in MultipleStai */
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_INVALIDAP      0
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_ALARMAP        1
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_NOTIFYAP       2
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_INFOREPORTAP   3
+#define S7COMMP_MULTIPLESTAI_MESSAGETYPE_EVENTACKAP     4
+
 static const value_string multiplestai_messagetypes[] = {
-    { 0,            "Invalid AP" },
-    { 1,            "Alarm AP" },
-    { 2,            "Notify AP" },
-    { 3,            "Info Report AP" },
-    { 4,            "Event Ack AP" },
-    { 0,            NULL }
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_INVALIDAP,       "Invalid AP" },
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_ALARMAP,         "Alarm AP" },
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_NOTIFYAP,        "Notify AP" },
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_INFOREPORTAP,    "Info Report AP" },
+    { S7COMMP_MULTIPLESTAI_MESSAGETYPE_EVENTACKAP,      "Event Ack AP" },
+    { 0,                                                NULL }
 };
 
 /* "Anzeigeklasse" / "Display class" when using Program_Alarm in plc program */
@@ -3227,6 +3111,15 @@ static gint hf_s7commp_reassembled_in = -1;
 static gint hf_s7commp_reassembled_length = -1;
 static gint ett_s7commp_fragment = -1;
 static gint ett_s7commp_fragments = -1;
+
+/* Expert info handles */
+static expert_field ei_s7commp_blobdecompression_failed = EI_INIT;
+static expert_field ei_s7commp_blobdecompression_nodictionary = EI_INIT;
+static expert_field ei_s7commp_blobdecompression_xmlsubdissector_failed = EI_INIT;
+static expert_field ei_s7commp_integrity_digestlen_error = EI_INIT;
+static expert_field ei_s7commp_value_unknown_type = EI_INIT;
+static expert_field ei_s7commp_notification_returnvalue_unknown = EI_INIT;
+static expert_field ei_s7commp_data_opcode_unknown = EI_INIT;
 
 static dissector_handle_t xml_handle;
 
@@ -3562,18 +3455,18 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_sparsearray_term,
           { "Sparsearray key terminating Null", "s7comm-plus.item.val.sparsearray_term", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_itemval_sparsearray_varianttypeid,
-          { "Sparsearray Variant Type-ID", "s7comm-plus.item.val.sparsearray_varianttypeid", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ", HFILL }},
+        { &hf_s7commp_itemval_varianttypeid,
+          { "Variant Type-ID", "s7comm-plus.item.val.varianttypeid", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_itemval_sparsearray_key,
           { "Sparsearray key", "s7comm-plus.item.val.sparsearray_key", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ", HFILL }},
         { &hf_s7commp_itemval_stringactlen,
           { "String actual length", "s7comm-plus.item.val.stringactlen", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ", HFILL }},
-        { &hf_s7commp_itemval_blobreserved,
-          { "Blob Reserved", "s7comm-plus.item.val.blobreserved", FT_UINT8, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
+        { &hf_s7commp_itemval_blobrootid,
+          { "Blob root ID", "s7comm-plus.item.val.blobrootid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
+            "If 0 then standard format. If >0 then special format similar to struct", HFILL }},
         { &hf_s7commp_itemval_blobsize,
           { "Blob size", "s7comm-plus.item.val.blobsize", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ", HFILL }},
@@ -3586,6 +3479,23 @@ proto_register_s7commp (void)
             "varuint32: Number of values of the specified datatype following", HFILL }},
         { &hf_s7commp_itemval_value,
           { "Value", "s7comm-plus.item.val.value", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+
+        /* Get/Set a packed struct */
+        { &hf_s7commp_packedstruct,
+          { "Packed struct", "s7comm-plus.item.packedstruct", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_packedstruct_interfacetimestamp,
+          { "Interface timestamp", "s7comm-plus.item.packedstruct.interfacetimestamp", FT_STRING, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_packedstruct_transpsize,
+          { "Unknown (Transport size?)", "s7comm-plus.item.packedstruct.transpsize", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_packedstruct_elementcount,
+          { "Element count", "s7comm-plus.item.packedstruct.elementcount", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_packedstruct_data,
+          { "Packed struct data", "s7comm-plus.item.packedstruct.data", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
 
         /* List elements */
@@ -3610,16 +3520,13 @@ proto_register_s7commp (void)
           { "Explore parents", "s7comm-plus.explore.req_parents", FT_UINT8, BASE_DEC, VALS(no_yes_names), 0x0,
             "Explore parents up to root", HFILL }},
         { &hf_s7commp_explore_objectcount,
-          { "Number of following Objects", "s7comm-plus.explore.objectcount", FT_UINT8, BASE_DEC, NULL, 0x0,
+          { "Number of following Objects (or object type? / unknown)", "s7comm-plus.explore.objectcount", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_explore_addresscount,
           { "Number of following Addresses (IDs)", "s7comm-plus.explore.addresscount", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_explore_structvalue,
           { "Value", "s7comm-plus.explore.structvalue", FT_UINT32, BASE_DEC, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_explore_subidcount,
-          { "Number of following Sub-Ids", "s7comm-plus.explore.subidcount", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_explore_resseqinteg,
           { "Explore Seq+IntegrId from Request", "s7comm-plus.explore.resseqinteg", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -4319,6 +4226,23 @@ proto_register_s7commp (void)
              NULL, HFILL }}
     };
 
+    static ei_register_info ei[] = {
+        { &ei_s7commp_blobdecompression_nodictionary,
+          { "s7comm-plus.blobdecompression.dictionary.not_found", PI_UNDECODED, PI_WARN, "Blob decompression no dictionary found", EXPFILL }},
+        { &ei_s7commp_blobdecompression_xmlsubdissector_failed,
+          { "s7comm-plus.blobdecompression.xmlsubdissector.failed", PI_UNDECODED, PI_WARN, "Blob decompression XML subdissector failed", EXPFILL }},
+        { &ei_s7commp_blobdecompression_failed,
+          { "s7comm-plus.blobdecompression.failed", PI_UNDECODED, PI_WARN, "Blob decompression failed", EXPFILL }},
+        { &ei_s7commp_integrity_digestlen_error,
+          { "s7comm-plus.integrity.digestlen.error", PI_PROTOCOL, PI_WARN, "Integrity digest length not 32", EXPFILL }},
+        { &ei_s7commp_value_unknown_type,
+          { "s7comm-plus.item.val.unknowntype_error", PI_UNDECODED, PI_WARN, "Unknown value datatype", EXPFILL }},
+        { &ei_s7commp_notification_returnvalue_unknown,
+          { "s7comm-plus.notification.vl.retval.unknown_error", PI_UNDECODED, PI_WARN, "Notification unknown return value", EXPFILL }},
+        { &ei_s7commp_data_opcode_unknown,
+          { "s7comm-plus.data.opcode.unknown_error", PI_UNDECODED, PI_WARN, "Unknown Opcode", EXPFILL }}
+    };
+
     static gint *ett[] = {
         &ett_s7commp,
         &ett_s7commp_header,
@@ -4332,6 +4256,7 @@ proto_register_s7commp (void)
         &ett_s7commp_itemaddr_area,
         &ett_s7commp_itemval_datatype_flags,
         &ett_s7commp_itemval_array,
+        &ett_s7commp_packedstruct,
         &ett_s7commp_tagdescr_attributeflags,
         &ett_s7commp_tagdescr_offsetinfo,
         &ett_s7commp_element_object,
@@ -4356,6 +4281,7 @@ proto_register_s7commp (void)
     };
 
     module_t *s7commp_module;
+    expert_module_t * expert_s7commp;
 
     proto_s7commp = proto_register_protocol (
         "S7 Communication Plus",            /* name */
@@ -4364,8 +4290,9 @@ proto_register_s7commp (void)
     );
 
     proto_register_field_array(proto_s7commp, hf, array_length (hf));
-
     proto_register_subtree_array(ett, array_length (ett));
+    expert_s7commp = expert_register_protocol(proto_s7commp);
+    expert_register_field_array(expert_s7commp, ei, array_length(ei));
 
     s7commp_module = prefs_register_protocol(proto_s7commp, NULL);
 
@@ -4683,6 +4610,7 @@ s7commp_decode_integrity(tvbuff_t *tvb,
         proto_tree_add_item(integrity_tree, hf_s7commp_integrity_digest, tvb, offset, integrity_len, ENC_NA);
         offset += integrity_len;
     } else {
+        expert_add_info(pinfo, integrity_tree, &ei_s7commp_integrity_digestlen_error);
         proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
         col_append_fstr(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that something went wrong */
     }
@@ -4917,6 +4845,7 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
     proto_tree *subtree = NULL;
     int lidcount, i;
     guint16 hmiinfo_length;
+    guint16 messagetype;
 
     if (datatype != S7COMMP_ITEM_DATATYPE_BLOB || length_of_value < 20) {
         return offset;
@@ -4930,6 +4859,7 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
     offset += 2;
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_alarmdomain, tvb, offset, 2, ENC_NA);
     offset += 2;
+    messagetype = tvb_get_ntohs(tvb, offset);
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_messagetype, tvb, offset, 2, ENC_NA);
     offset += 2;
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_alarmenabled, tvb, offset, 1, ENC_NA);
@@ -4938,17 +4868,48 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
     hmiinfo_length = tvb_get_ntohs(tvb, offset);
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_hmiinfo_length, tvb, offset, 2, ENC_NA);
     offset += 2;
-    offset = s7commp_decode_attrib_hmiinfo(tvb, subtree, offset, S7COMMP_ITEM_DATATYPE_BLOB, hmiinfo_length);
+    /* hmiinfo erkennt z.Zt. nur korrekt Alarm AP mit length = 9 */
+    if (messagetype == S7COMMP_MULTIPLESTAI_MESSAGETYPE_ALARMAP && hmiinfo_length == 9) {
+        offset = s7commp_decode_attrib_hmiinfo(tvb, subtree, offset, S7COMMP_ITEM_DATATYPE_BLOB, hmiinfo_length);
 
-    lidcount = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_item(subtree, hf_s7commp_multiplestai_lidcount, tvb, offset, 2, ENC_NA);
-    offset += 2;
+        lidcount = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_item(subtree, hf_s7commp_multiplestai_lidcount, tvb, offset, 2, ENC_NA);
+        offset += 2;
 
-    for (i = 0; i < lidcount; i++) {
-        pi = proto_tree_add_item(subtree, hf_s7commp_multiplestai_lid, tvb, offset, 4, ENC_NA);
-        offset += 4;
+        for (i = 0; i < lidcount; i++) {
+            pi = proto_tree_add_item(subtree, hf_s7commp_multiplestai_lid, tvb, offset, 4, ENC_NA);
+            offset += 4;
+        }
+    } else {
+        /* TODO */
+        offset += hmiinfo_length;
+    }
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decoding of attribute FilterOperation (1247)
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_attrib_filteroperation(tvbuff_t *tvb,
+                                    proto_tree *tree,
+                                    guint32 offset,
+                                    guint8 datatype)
+{
+    gint32 operation;
+    guint8 octet_count = 0;
+    proto_item *pi = NULL;
+
+    if (datatype != S7COMMP_ITEM_DATATYPE_DINT) {
+        return offset;
     }
 
+    operation = tvb_get_varint32(tvb, &octet_count, offset);
+    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "FilterOperation: %s", val_to_str(operation, attrib_filteroperation, "Unknown operation: %d"));
+    offset += octet_count;
+
+    PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
 /*******************************************************************************************************
@@ -5092,7 +5053,7 @@ s7commp_decompress_blob(tvbuff_t *tvb,
     if (s7commp_opt_decompress_blobs) {
 #ifdef HAVE_ZLIB
         uncomp_length = BLOB_DECOMPRESS_BUFSIZE;
-        uncomp_blob = (guint8 *)wmem_alloc(wmem_packet_scope(), BLOB_DECOMPRESS_BUFSIZE);
+        uncomp_blob = (guint8 *)wmem_alloc(pinfo->pool, BLOB_DECOMPRESS_BUFSIZE);
         blobptr = tvb_get_ptr(tvb, offset, length_comp_blob);
 
         streamp = wmem_new0(wmem_packet_scope(), z_stream);
@@ -5113,97 +5074,86 @@ DIAG_ON(cast-qual)
         if (retcode == Z_NEED_DICT) {
             pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset + 2, 4, streamp->adler);
             PROTO_ITEM_SET_GENERATED(pi);
-            /* solve Adler32 collision between DebugInfo_98000001 and IntfDesc_98000001*/
-            if (streamp->adler == S7COMMP_DICTID_DebugInfo_98000001) {
-                if (id_number == 2589) {        /* 2589 = FunctionalObject.DebugInfo */
-                    dict = s7commp_dict_DebugInfo_98000001;
-                    dict_size = sizeof(s7commp_dict_DebugInfo_98000001);
-                } else {
-                    dict = s7commp_dict_IntfDesc_98000001;
-                    dict_size = sizeof(s7commp_dict_IntfDesc_98000001);
-                }
-            } else {
-                switch (streamp->adler) {
-                    case S7COMMP_DICTID_BodyDesc_90000001:
-                        dict = s7commp_dict_BodyDesc_90000001;
-                        dict_size = sizeof(s7commp_dict_BodyDesc_90000001);
-                        break;
-                    case S7COMMP_DICTID_NWC_90000001:
-                        dict = s7commp_dict_NWC_90000001;
-                        dict_size = sizeof(s7commp_dict_NWC_90000001);
-                        break;
-                    case S7COMMP_DICTID_NWC_98000001:
-                        dict = s7commp_dict_NWC_98000001;
-                        dict_size = sizeof(s7commp_dict_NWC_98000001);
-                        break;
-                    case S7COMMP_DICTID_NWT_90000001:
-                        dict = s7commp_dict_NWT_90000001;
-                        dict_size = sizeof(s7commp_dict_NWT_90000001);
-                        break;
-                    case S7COMMP_DICTID_NWT_98000001:
-                        dict = s7commp_dict_NWT_98000001;
-                        dict_size = sizeof(s7commp_dict_NWT_98000001);
-                        break;
-                    case S7COMMP_DICTID_DebugInfo_90000001:
-                        dict = s7commp_dict_DebugInfo_90000001;
-                        dict_size = sizeof(s7commp_dict_DebugInfo_90000001);
-                        break;
-                    case S7COMMP_DICTID_ExtRefData_90000001:
-                        dict = s7commp_dict_ExtRefData_90000001;
-                        dict_size = sizeof(s7commp_dict_ExtRefData_90000001);
-                        break;
-                    case S7COMMP_DICTID_IntRefData_90000001:
-                        dict = s7commp_dict_IntRefData_90000001;
-                        dict_size = sizeof(s7commp_dict_IntRefData_90000001);
-                        break;
-                    case S7COMMP_DICTID_IntRefData_98000001:
-                        dict = s7commp_dict_IntRefData_98000001;
-                        dict_size = sizeof(s7commp_dict_IntRefData_98000001);
-                        break;
-                    case S7COMMP_DICTID_IntfDescTag_90000001:
-                        dict = s7commp_dict_IntfDescTag_90000001;
-                        dict_size = sizeof(s7commp_dict_IntfDescTag_90000001);
-                        break;
-                    case S7COMMP_DICTID_IntfDesc_90000001:
-                        dict = s7commp_dict_IntfDesc_90000001;
-                        dict_size = sizeof(s7commp_dict_IntfDesc_90000001);
-                        break;
-                    case S7COMMP_DICTID_IntfDesc_98000001:
-                        dict = s7commp_dict_IntfDesc_98000001;
-                        dict_size = sizeof(s7commp_dict_IntfDesc_98000001);
-                        break;
-                    case S7COMMP_DICTID_TagLineComm_90000001:
-                        dict = s7commp_dict_TagLineComm_90000001;
-                        dict_size = sizeof(s7commp_dict_TagLineComm_90000001);
-                        break;
-                    case S7COMMP_DICTID_LineComm_90000001:
-                        dict = s7commp_dict_LineComm_90000001;
-                        dict_size = sizeof(s7commp_dict_LineComm_90000001);
-                        break;
-                    case S7COMMP_DICTID_LineComm_98000001:
-                        dict = s7commp_dict_LineComm_98000001;
-                        dict_size = sizeof(s7commp_dict_LineComm_98000001);
-                        break;
-                    case S7COMMP_DICTID_IdentES_90000001:
-                        dict = s7commp_dict_IdentES_90000001;
-                        dict_size = sizeof(s7commp_dict_IdentES_90000001);
-                        break;
-                    case S7COMMP_DICTID_IdentES_90000002:
-                        dict = s7commp_dict_IdentES_90000002;
-                        dict_size = sizeof(s7commp_dict_IdentES_90000002);
-                        break;
-                    case S7COMMP_DICTID_IdentES_98000001:
-                        dict = s7commp_dict_IdentES_98000001;
-                        dict_size = sizeof(s7commp_dict_IdentES_98000001);
-                        break;
-                    case S7COMMP_DICTID_CompilerSettings_90000001:
-                        dict = s7commp_dict_CompilerSettings_90000001;
-                        dict_size = sizeof(s7commp_dict_CompilerSettings_90000001);
-                        break;
-                    default:
-                        proto_item_append_text(subtree, ", Error: Blob decompression failed, no dictionary found");
-                        break;
-                }
+            switch (streamp->adler) {
+                case S7COMMP_DICTID_BodyDesc_90000001:
+                    dict = s7commp_dict_BodyDesc_90000001;
+                    dict_size = sizeof(s7commp_dict_BodyDesc_90000001);
+                    break;
+                case S7COMMP_DICTID_NWC_90000001:
+                    dict = s7commp_dict_NWC_90000001;
+                    dict_size = sizeof(s7commp_dict_NWC_90000001);
+                    break;
+                case S7COMMP_DICTID_NWC_98000001:
+                    dict = s7commp_dict_NWC_98000001;
+                    dict_size = sizeof(s7commp_dict_NWC_98000001);
+                    break;
+                case S7COMMP_DICTID_NWT_90000001:
+                    dict = s7commp_dict_NWT_90000001;
+                    dict_size = sizeof(s7commp_dict_NWT_90000001);
+                    break;
+                case S7COMMP_DICTID_NWT_98000001:
+                    dict = s7commp_dict_NWT_98000001;
+                    dict_size = sizeof(s7commp_dict_NWT_98000001);
+                    break;
+                case S7COMMP_DICTID_DebugInfo_90000001:
+                    dict = s7commp_dict_DebugInfo_90000001;
+                    dict_size = sizeof(s7commp_dict_DebugInfo_90000001);
+                    break;
+                case S7COMMP_DICTID_ExtRefData_90000001:
+                    dict = s7commp_dict_ExtRefData_90000001;
+                    dict_size = sizeof(s7commp_dict_ExtRefData_90000001);
+                    break;
+                case S7COMMP_DICTID_IntRefData_90000001:
+                    dict = s7commp_dict_IntRefData_90000001;
+                    dict_size = sizeof(s7commp_dict_IntRefData_90000001);
+                    break;
+                case S7COMMP_DICTID_IntRefData_98000001:
+                    dict = s7commp_dict_IntRefData_98000001;
+                    dict_size = sizeof(s7commp_dict_IntRefData_98000001);
+                    break;
+                case S7COMMP_DICTID_IntfDescTag_90000001:
+                    dict = s7commp_dict_IntfDescTag_90000001;
+                    dict_size = sizeof(s7commp_dict_IntfDescTag_90000001);
+                    break;
+                case S7COMMP_DICTID_IntfDesc_90000001:
+                    dict = s7commp_dict_IntfDesc_90000001;
+                    dict_size = sizeof(s7commp_dict_IntfDesc_90000001);
+                    break;
+                case S7COMMP_DICTID_DebugInfo_IntfDesc_98000001:
+                    dict = s7commp_dict_DebugInfo_IntfDesc_98000001;
+                    dict_size = sizeof(s7commp_dict_DebugInfo_IntfDesc_98000001);
+                    break;
+                case S7COMMP_DICTID_TagLineComm_90000001:
+                    dict = s7commp_dict_TagLineComm_90000001;
+                    dict_size = sizeof(s7commp_dict_TagLineComm_90000001);
+                    break;
+                case S7COMMP_DICTID_LineComm_90000001:
+                    dict = s7commp_dict_LineComm_90000001;
+                    dict_size = sizeof(s7commp_dict_LineComm_90000001);
+                    break;
+                case S7COMMP_DICTID_LineComm_98000001:
+                    dict = s7commp_dict_LineComm_98000001;
+                    dict_size = sizeof(s7commp_dict_LineComm_98000001);
+                    break;
+                case S7COMMP_DICTID_IdentES_90000001:
+                    dict = s7commp_dict_IdentES_90000001;
+                    dict_size = sizeof(s7commp_dict_IdentES_90000001);
+                    break;
+                case S7COMMP_DICTID_IdentES_90000002:
+                    dict = s7commp_dict_IdentES_90000002;
+                    dict_size = sizeof(s7commp_dict_IdentES_90000002);
+                    break;
+                case S7COMMP_DICTID_IdentES_98000001:
+                    dict = s7commp_dict_IdentES_98000001;
+                    dict_size = sizeof(s7commp_dict_IdentES_98000001);
+                    break;
+                case S7COMMP_DICTID_CompilerSettings_90000001:
+                    dict = s7commp_dict_CompilerSettings_90000001;
+                    dict_size = sizeof(s7commp_dict_CompilerSettings_90000001);
+                    break;
+                default:
+                    expert_add_info_format(pinfo, subtree, &ei_s7commp_blobdecompression_nodictionary, "Unknown dictionary 0x%08x", streamp->adler);
+                    break;
             }
             if (dict) {
                 retcode = inflateSetDictionary(streamp, dict, dict_size);
@@ -5213,14 +5163,16 @@ DIAG_ON(cast-qual)
                 }
             }
         }
-        while (retcode == Z_OK) {
-            /* Z_OK -> made progress, but did not finish */
+        while ((retcode == Z_OK) || (retcode == Z_BUF_ERROR)) {
+            /* Z_OK -> made progress, but did not finish
+             * Z_BUF_ERROR -> output buffer full
+             */
             if (streamp->avail_out == 0) {
                 /* need more memory */
-                /* TODO: maybe add memory limit */
-                uncomp_blob = (guint8 *)wmem_realloc(wmem_packet_scope(), uncomp_blob, uncomp_length + BLOB_DECOMPRESS_BUFSIZE);
+                uncomp_blob = (guint8 *)wmem_realloc(pinfo->pool, uncomp_blob, uncomp_length + BLOB_DECOMPRESS_BUFSIZE);
                 streamp->next_out = uncomp_blob + uncomp_length;
                 streamp->avail_out = BLOB_DECOMPRESS_BUFSIZE;
+                uncomp_length += BLOB_DECOMPRESS_BUFSIZE;
             } else {
                 /* incomplete input, abort */
                 break;
@@ -5233,7 +5185,7 @@ DIAG_ON(cast-qual)
             if (uncomp_length > 0) {
                 if (streamp->avail_out == 0) {
                     /* need one more byte for string null terminator */
-                    uncomp_blob = (guint8 *)wmem_realloc(wmem_packet_scope(), uncomp_blob, uncomp_length + 1);
+                    uncomp_blob = (guint8 *)wmem_realloc(pinfo->pool, uncomp_blob, uncomp_length + 1);
                 }
 
                 next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
@@ -5246,22 +5198,69 @@ DIAG_ON(cast-qual)
                 PROTO_ITEM_SET_GENERATED(pi);
                 */
                 /* make new tvb and call xml subdissector, as all compressed data are (so far) xml */
-                next_tvb = tvb_new_child_real_data(tvb, uncomp_blob, uncomp_length, uncomp_length);
                 if (xml_handle != NULL) {
                     dissected = call_dissector_only(xml_handle, next_tvb, pinfo, subtree, NULL);
                     if (!dissected) {
-                        /* expert_add_info(pinfo, http_tree, &ei_http_subdissector_failed); */
-                        proto_tree_add_text(subtree, next_tvb, 0, -1, "XML subdissector failed");
+                        expert_add_info(pinfo, subtree, &ei_s7commp_blobdecompression_xmlsubdissector_failed);
                     }
                 }
             }
         } else {
-            proto_item_append_text(subtree, ", Error: Blob decompression failed");
+            expert_add_info_format(pinfo, subtree, &ei_s7commp_blobdecompression_failed, "Blob decompression failed, retcode = %d", retcode);
         }
         inflateEnd(streamp);
 #endif
     }
     offset += length_comp_blob;
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * Decoding of a packed struct value
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_packed_struct(tvbuff_t *tvb,
+                             proto_tree *tree,
+                             guint32 offset)
+{
+    guint32 start_offset = 0;
+    guint64 uint64val = 0;
+    guint32 element_count;
+    gchar *str_val = NULL;
+    guint8 octet_count = 0;
+    proto_item *value_item = NULL;
+    proto_tree *value_item_tree = NULL;
+
+    start_offset = offset;
+    value_item = proto_tree_add_item(tree, hf_s7commp_packedstruct, tvb, offset, -1, FALSE);
+    value_item_tree = proto_item_add_subtree(value_item, ett_s7commp_packedstruct);
+
+    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
+    str_val[0] = '\0';
+
+    uint64val = tvb_get_ntoh64(tvb, offset);
+    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
+    proto_tree_add_string_format(value_item_tree, hf_s7commp_packedstruct_interfacetimestamp, tvb, offset, 8,
+        str_val, "Interface timestamp: %s", str_val);
+    offset += 8;
+
+    /* Bisher war an dieser Stelle immer eine 2, was theoretisch fuer USint stehen koennte.
+     * Wenn das eine Transportgroesse ist, muesste die Elementanzahl entsprechend umgerechnet werden.
+     * Solange kein solches Paket gesichtet wurde, ohne Umrechnung belassen.
+     */
+    proto_tree_add_uint(value_item_tree, hf_s7commp_packedstruct_transpsize, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    offset += 1;
+
+    element_count = tvb_get_varuint32(tvb, &octet_count, offset);
+    proto_tree_add_uint(value_item_tree, hf_s7commp_packedstruct_elementcount, tvb, offset, octet_count, element_count);
+    offset += octet_count;
+
+    proto_tree_add_item(value_item_tree, hf_s7commp_packedstruct_data, tvb, offset, element_count, ENC_NA);
+    offset += element_count;
+
+    proto_item_set_len(value_item_tree, offset - start_offset);
+
     return offset;
 }
 /*******************************************************************************************************
@@ -5275,6 +5274,8 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
                               proto_tree *tree,
                               guint32 value_start_offset,           /* offset to start of the value */
                               guint8 datatype,
+                              guint8 datatype_flags,
+                              guint32 sparsearray_key,
                               guint32 length_of_value,  /* length of the value in bytes */
                               guint32 id_number)
 {
@@ -5307,6 +5308,9 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 299:   /*  299 = ServerSessionRole */
             offset = s7commp_decode_attrib_serversessionrole(tvb, tree, value_start_offset, datatype);
             break;
+        case 1247:  /* 1247 = FilterOperation */
+            offset = s7commp_decode_attrib_filteroperation(tvb, tree, value_start_offset, datatype);
+            break;
         case 2523:  /* 2523 = Block.BlockLanguage */
             offset = s7commp_decode_attrib_blocklanguage(tvb, tree, value_start_offset, datatype);
             break;
@@ -5323,7 +5327,15 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 2585:  /* FunctionalObject.NetworkTitles */
         case 2589:  /* FunctionalObject.DebugInfo */
         case 4275:  /* ConstantsGlobal.Symbolics */
-            offset = s7commp_decompress_blob(tvb, pinfo, tree, value_start_offset, datatype, length_of_value, id_number);
+            /* Spezial-Ausnahme: Sparsearray Elemente mit einem Sparsearray-Key >= 0x80000000 sind nicht,
+             * oder wenn dann anders komprimiert.
+             */
+            if ((datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY) && (sparsearray_key & 0x80000000)) {
+                break;
+            } else {
+                offset = s7commp_decompress_blob(tvb, pinfo, tree, value_start_offset, datatype, length_of_value, id_number);
+            }
+            break;
         case 7813:  /* DAI.HmiInfo */
             offset = s7commp_decode_attrib_hmiinfo(tvb, tree, value_start_offset, datatype, length_of_value);
             break;
@@ -5348,6 +5360,7 @@ s7commp_decode_value(tvbuff_t *tvb,
 {
     guint8 octet_count = 0;
     guint8 datatype;
+    guint8 datatype_of_value;
     guint8 datatype_flags;
     gboolean is_array = FALSE;
     gboolean is_address_array = FALSE;
@@ -5378,6 +5391,8 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint32 length_of_value = 0;
     guint32 value_start_offset = 0;
 
+    guint32 struct_value = 0;
+
     str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
     str_val[0] = '\0';
     str_arrval = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_ARRVAL_MAX);
@@ -5403,6 +5418,7 @@ s7commp_decode_value(tvbuff_t *tvb,
      * sondern es wird pro Array Element die Zerlegefunktion fuer eine ID/Value Liste aufgerufen.
      */
 
+    datatype_of_value = datatype;
     if (is_array || is_address_array || is_sparsearray) {
         if (is_sparsearray) {
             /* Bei diesem Array-Typ gibt es keine Angabe ueber die Anzahl. Das Array ist Null-terminiert.
@@ -5444,15 +5460,32 @@ s7commp_decode_value(tvbuff_t *tvb,
                 break;
             } else {
                 if (datatype == S7COMMP_ITEM_DATATYPE_VARIANT) {
-                    proto_tree_add_uint(current_tree, hf_s7commp_itemval_sparsearray_varianttypeid, tvb, offset, octet_count, sparsearray_key);
+                    proto_tree_add_uint(current_tree, hf_s7commp_itemval_varianttypeid, tvb, offset, octet_count, sparsearray_key);
                 } else {
                     proto_tree_add_uint(current_tree, hf_s7commp_itemval_sparsearray_key, tvb, offset, octet_count, sparsearray_key);
                 }
                 offset += octet_count;
             }
+        } else {
+            /* Sonderbehandung Adressarray (ausschliesslich?) mit datatype VARIANT
+             * TODO: Dieses ist nur eine vorlaeufige Auswertung, da zur Bestimmung des Aufbaus
+             *       noch zu wenige Aufzeichnungen vorliegen. Wenn der Aufbau feststeht, sollte diese
+             *       gesamte Funktion ueberarbeitet werden (Datentyp-Auswertung und Array-Verarbeitung trennen).
+             * Erste Vermutung: 1. Byte datatype flags (unbestaetigt)
+             *                  2. Byte Type-ID, dann weiter mit Wert anhand der Typ-ID.
+             * Bei einem Sparsearray scheint der Aufbau anders zu sein.
+             */
+            if (datatype == S7COMMP_ITEM_DATATYPE_VARIANT) {
+                proto_tree_add_bitmask(current_tree, tvb, offset, hf_s7commp_itemval_datatype_flags,
+                    ett_s7commp_itemval_datatype_flags, s7commp_itemval_datatype_flags_fields, ENC_BIG_ENDIAN);
+                offset += 1;
+                datatype_of_value = tvb_get_guint8(tvb, offset);    /* Datentyp fuer switch-Auswertung aendern */
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_varianttypeid, tvb, offset, 1, datatype_of_value);
+                offset += 1;
+            }
         }
 
-        switch (datatype) {
+        switch (datatype_of_value) {
             case S7COMMP_ITEM_DATATYPE_NULL:
                 g_strlcpy(str_val, "<Null>", S7COMMP_ITEMVAL_STR_VAL_MAX);
                 length_of_value = 0;
@@ -5535,7 +5568,8 @@ s7commp_decode_value(tvbuff_t *tvb,
                 if (struct_level) *struct_level += 1; /* entering a new structure level */
                 length_of_value = 4;
                 value_start_offset = offset;
-                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_ntohl(tvb, offset));
+                struct_value = tvb_get_ntohl(tvb, offset);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", struct_value);
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_DWORD:
@@ -5606,21 +5640,36 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
                 break;
             case S7COMMP_ITEM_DATATYPE_BLOB:
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobreserved, tvb, offset, 1, tvb_get_guint8(tvb, offset));
-                offset += 1;
-                length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, octet_count, length_of_value);
+                uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobrootid, tvb, offset, octet_count, uint32val);
                 offset += octet_count;
-                value_start_offset = offset;
-                if (length_of_value > 0) {
-                    g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
+                /* Wenn Wert > 0 dann Spezialformat, welches im Prinzip bis auf die 9 eingeschobenen Bytes
+                 * identisch zum Aufbau einer Struct ist. Verwendung z.B. mit ID 1848.
+                 */
+                if (uint32val > 0) {
+                    g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "<Blob special for ID: %u>", uint32val);
+                    proto_tree_add_text(current_tree, tvb, offset, 9, "Blob special unknown 9 bytes (always zero?)");
+                    offset += 9;
+                    value_start_offset = offset;
+                    /* Sub-Elemente rekursiv abarbeiten. Bisher sind hier immer nur zwei Standard-Blobs enthalten. */
+                    offset = s7commp_decode_id_value_list(tvb, pinfo, current_tree, offset, TRUE);
+                    length_of_value = 0;
                 } else {
-                    g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
+                    length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_uint(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, octet_count, length_of_value);
+                    offset += octet_count;
+                    value_start_offset = offset;
+                    if (length_of_value > 0) {
+                        g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
+                    } else {
+                        g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
+                    }
+                    offset += length_of_value;
                 }
-                offset += length_of_value;
                 break;
             default:
                 unknown_type_occured = TRUE;
+                expert_add_info(pinfo, current_tree, &ei_s7commp_value_unknown_type);
                 g_strlcpy(str_val, "Unknown Type occured. Could not interpret value!", S7COMMP_ITEMVAL_STR_VAL_MAX);
                 break;
         } /* switch */
@@ -5654,7 +5703,7 @@ s7commp_decode_value(tvbuff_t *tvb,
             }
         }
         /* Erweitertes Decodieren der Daten ausgewaehlter IDs */
-        s7commp_decode_value_extended(tvb, pinfo, current_tree, value_start_offset, datatype, length_of_value, id_number);
+        s7commp_decode_value_extended(tvb, pinfo, current_tree, value_start_offset, datatype, datatype_flags, sparsearray_key, length_of_value, id_number);
     } /* for */
 
     if (strlen(str_arrval) == 0) {
@@ -5693,6 +5742,17 @@ s7commp_decode_value(tvbuff_t *tvb,
             proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
         }
         proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_val);
+    }
+    /* Sonderbehandlung bei Datentyp struct bestimmten IDs:
+     * Es werden die struct-Elemente nicht einzeln sondern gepackt uebertragen (z.B. DTL-Struct).
+     * Der ID-Bereich in dem dieses moeglich ist, ist nur vermutet (Type Info).
+     * Die Auswertung an dieser Stelle funktioniert nur, solange hier nicht auch Arrays erlaubt sind.
+     */
+    if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT &&
+        ((struct_value > 0x90000000 && struct_value < 0x9fffffff) ||
+         (struct_value > 0x02000000 && struct_value < 0x02ffffff)) ) {
+        offset = s7commp_decode_packed_struct(tvb, current_tree, offset);
+        if (struct_level) *struct_level -= 1; /* in diesem Fall keine neue Strukturebene, da auch keine terminierende Null */
     }
     return offset;
 }
@@ -7263,6 +7323,8 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
      * Folgende Rueckgabewerte wurden gesichtet:
      *  0x03 -> Fehler bei einer Adresse (S7-1500 - Plcsim)
      *  0x13 -> Fehler bei einer Adresse (S7-1200) und 1500-Plcsim
+     *  0x81 -> Standard Objekt beginnend mit 0xa1 (nur bei Protokoll-Version v1?)
+     *  0x83 -> Standard value Aufbau, dann notification value-list (nur bei Protokoll-Version v1?)
      *  0x92 -> Erfolg (S7-1200)
      *  0x9b -> Bei 1500 und 1200 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
      *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
@@ -7309,8 +7371,12 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
                 offset += 4;
                 n_access_errors++;
+            } else if (item_return_value == 0x81) {     /* Vermutlich nur in Protokoll Version v1*/
+                offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, FALSE);
+            } else if (item_return_value == 0x83) {     /* Vermutlich nur in Protokoll Version v1*/
+                offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, 0);
             } else {
-                proto_item_append_text(data_item_tree, " Don't know how to decode the values with return code 0x%02x, stop decoding", item_return_value);
+                expert_add_info_format(pinfo, data_item_tree, &ei_s7commp_notification_returnvalue_unknown, "Notification unknown return value: 0x%02x", item_return_value);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
             }
@@ -7457,6 +7523,7 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
                                guint32 offset)
 {
     guint32 subscr_object_id;
+    guint32 list_start_offset;
 
     /* 4 Bytes Subscription Object Id -> scheint hier nicht der Fall zu sein? */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
@@ -7466,13 +7533,20 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
 
     proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));
     offset += 4;
-    proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 3: 0x%08x", tvb_get_ntohl(tvb, offset));
-    offset += 4;
-    proto_tree_add_text(tree, tvb, offset, 2, "Notification v1, Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
-    offset += 2;
-    proto_tree_add_text(tree, tvb, offset, 1, "Notification v1, Unknown 5: 0x%02x", tvb_get_guint8(tvb, offset));
-    offset += 1;
-    offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
+    /* Alle folgenden Werte sind nur vorhanden, wenn hier keine 4 Null-Bytes folgen.
+     * Der Wert an dieser Stelle ist meistens um 2 oder 3 hoeher als die obige Object Id.
+     */
+    if (tvb_get_ntohl(tvb, offset) != 0) {
+        proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 3: 0x%08x", tvb_get_ntohl(tvb, offset));
+        offset += 4;
+        proto_tree_add_text(tree, tvb, offset, 2, "Notification v1, Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
+        offset += 2;
+        list_start_offset = offset;
+        offset = s7commp_decode_notification_value_list(tvb, pinfo, tree, offset, TRUE);
+        if (offset - list_start_offset > 1) {
+            col_append_fstr(pinfo->cinfo, COL_INFO, " <Contains values>");
+        }
+    }
 
     return offset;
 }
@@ -7948,7 +8022,8 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
                                      packet_info *pinfo,
                                      proto_tree *tree,
                                      gint16 dlength _U_,
-                                     guint32 offset)
+                                     guint32 offset,
+                                     guint8 protocolversion)
 {
     guint8 type;
     guint16 valtype;
@@ -7957,30 +8032,32 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
     type = tvb_get_guint8(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_beginseq_transactiontype, tvb, offset, 1, type);
     offset += 1;
-    valtype = tvb_get_ntohs(tvb, offset);
-    proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
+    if (protocolversion != S7COMMP_PROTOCOLVERSION_1) {
+        valtype = tvb_get_ntohs(tvb, offset);
+        proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
+        offset += 2;
 
-    /* Ob ein Objekt oder anderer weiterer Wert folgt, scheint abhaengig vom 2./3. Byte zu sein.
-     * Wenn 1 dann Objekt, wenn 18 dann ID. Andere Werte als 1 und 18 bisher noch nicht gesichtet.
-     */
-    if (valtype == 1) {
-        /* Die 1200 mit V2 laesst hier gelegentlich 1 Byte aus. Die Antwort zeigt aber keine
-         * Fehlermeldung, d.h. dies scheint toleriert zu werden.
+        /* Ob ein Objekt oder anderer weiterer Wert folgt, scheint abhaengig vom 2./3. Byte zu sein.
+         * Wenn 1 dann Objekt, wenn 18 dann ID. Andere Werte als 1 und 18 bisher noch nicht gesichtet.
          */
-        if (tvb_get_guint8(tvb, offset + 1) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-            proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 1, ENC_BIG_ENDIAN);
-            offset += 1;
+        if (valtype == 1) {
+            /* Die 1200 mit V2 laesst hier gelegentlich 1 Byte aus. Die Antwort zeigt aber keine
+             * Fehlermeldung, d.h. dies scheint toleriert zu werden.
+             */
+            if (tvb_get_guint8(tvb, offset + 1) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
+                proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 1, ENC_BIG_ENDIAN);
+                offset += 1;
+            } else {
+                proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 2, ENC_BIG_ENDIAN);
+                offset += 2;
+            }
+            offset = s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
         } else {
-            proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 2, ENC_BIG_ENDIAN);
-            offset += 2;
+            id = tvb_get_ntohl(tvb, offset);
+            s7commp_pinfo_append_idname(pinfo, id, " Id=");
+            proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
+            offset += 4;
         }
-        offset = s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
-    } else {
-        id = tvb_get_ntohl(tvb, offset);
-        s7commp_pinfo_append_idname(pinfo, id, " Id=");
-        proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
-        offset += 4;
     }
 
     return offset;
@@ -7994,16 +8071,19 @@ static guint32
 s7commp_decode_response_beginsequence(tvbuff_t *tvb,
                                       packet_info *pinfo,
                                       proto_tree *tree,
-                                      guint32 offset)
+                                      guint32 offset,
+                                      guint8 protocolversion)
 {
     guint16 errorcode = 0;
     gboolean errorextension = FALSE;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
-    proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
-    offset += 2;
-    proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
-    offset += 4;
+    if (protocolversion != S7COMMP_PROTOCOLVERSION_1) {
+        proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
+        offset += 2;
+        proto_tree_add_item(tree, hf_s7commp_beginseq_requestid, tvb, offset, 4, ENC_BIG_ENDIAN);
+        offset += 4;
+    }
 
     return offset;
 }
@@ -8101,13 +8181,12 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
 {
     int number_of_objects = 0;
     int number_of_ids = 0;
-    int i, j;
+    int i;
     guint32 start_offset;
     guint32 id_number = 0;
     guint32 uint32value;
     guint8 octet_count = 0;
     guint8 datatype;
-    int id_count = 0;
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
 
@@ -8133,20 +8212,19 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
     offset += 1;
     proto_tree_add_item(tree, hf_s7commp_explore_req_parents, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
-    number_of_objects = tvb_get_guint8(tvb, offset);
-    proto_tree_add_uint(tree, hf_s7commp_explore_objectcount, tvb, offset, 1, number_of_objects);
-    offset += 1;
-    number_of_ids = tvb_get_guint8(tvb, offset);
-    proto_tree_add_uint(tree, hf_s7commp_explore_addresscount, tvb, offset, 1, number_of_ids);
-    offset += 1;
+    do {
+        number_of_objects = tvb_get_guint8(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_explore_objectcount, tvb, offset, 1, number_of_objects);
+        offset += 1;
+        number_of_ids = tvb_get_guint8(tvb, offset);
+        proto_tree_add_uint(tree, hf_s7commp_explore_addresscount, tvb, offset, 1, number_of_ids);
+        offset += 1;
 
-    if (number_of_objects > 0) {
-        start_offset = offset;
-        data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
-        data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
-        proto_item_append_text(data_item_tree, " (Objects with (type, value))");
-        for (i = 0; i < number_of_objects; i++) {
-            /* Hier gibt es nur eine Typ-Kennung und den Wert, ohne Flags. Meistens (immer?) ist es eine Struct */
+        if (number_of_objects > 0) {
+            start_offset = offset;
+            data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
+            proto_item_append_text(data_item_tree, " (Objects with (type, value))");
             datatype = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
             offset += 1;
@@ -8154,36 +8232,23 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
                 proto_tree_add_item(data_item_tree, hf_s7commp_explore_structvalue, tvb, offset, 4, ENC_BIG_ENDIAN);
                 offset += 4;
                 offset = s7commp_decode_id_value_list(tvb, pinfo, data_item_tree, offset, TRUE);
-                /* Dann folgt nochmal eine Anzahl an IDs, 2 Bytes */
-                id_count = tvb_get_ntohs(tvb, offset);
-                proto_tree_add_uint(data_item_tree, hf_s7commp_explore_subidcount, tvb, offset, 2, id_count);
-                offset += 2;
-                for (j = 0; j < id_count; j++) {
-                    id_number = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
-                    offset += octet_count;
-                }
-            } else {
-                proto_tree_add_text(data_item_tree, tvb, offset, 0, "TODO, don't know how to handle this.");
-                break;
             }
+            proto_item_set_len(data_item_tree, offset - start_offset);
         }
-        proto_item_set_len(data_item_tree, offset - start_offset);
-    }
 
-    if (number_of_ids > 0) {
-        start_offset = offset;
-        data_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
-        data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_addresslist);
-        proto_item_append_text(data_item_tree, " (ID Numbers)");
-        for (i = 0; i < number_of_ids; i++) {
-            id_number = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
-            offset += octet_count;
+        if (number_of_ids > 0) {
+            start_offset = offset;
+            data_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
+            data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_addresslist);
+            proto_item_append_text(data_item_tree, " (ID Numbers)");
+            for (i = 0; i < number_of_ids; i++) {
+                id_number = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_uint(data_item_tree, hf_s7commp_data_id_number, tvb, offset, octet_count, id_number);
+                offset += octet_count;
+            }
+            proto_item_set_len(data_item_tree, offset - start_offset);
         }
-        proto_item_set_len(data_item_tree, offset - start_offset);
-    }
-
+    } while (number_of_objects > 0);
     return offset;
 }
 /*******************************************************************************************************
@@ -8235,6 +8300,26 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
     if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * General error message, response
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_error(tvbuff_t *tvb,
+                              packet_info *pinfo,
+                              proto_tree *tree,
+                              guint32 offset)
+{
+    gint16 errorcode = 0;
+    gboolean errorextension = FALSE;
+
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
+
+    // this opcode has no data after the error code
+
     return offset;
 }
 /*******************************************************************************************************
@@ -8466,7 +8551,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                         offset = s7commp_decode_request_getlink(tvb, pinfo, item_tree, offset);
                         break;
                     case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
-                        offset = s7commp_decode_request_beginsequence(tvb, pinfo, item_tree, dlength, offset);
+                        offset = s7commp_decode_request_beginsequence(tvb, pinfo, item_tree, dlength, offset, protocolversion);
                         break;
                     case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
                         offset = s7commp_decode_request_endsequence(tvb, item_tree, offset);
@@ -8518,7 +8603,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                         offset = s7commp_decode_response_getlink(tvb, pinfo, item_tree, offset);
                         break;
                     case S7COMMP_FUNCTIONCODE_BEGINSEQUENCE:
-                        offset = s7commp_decode_response_beginsequence(tvb, pinfo, item_tree, offset);
+                        offset = s7commp_decode_response_beginsequence(tvb, pinfo, item_tree, offset, protocolversion);
                         break;
                     case S7COMMP_FUNCTIONCODE_ENDSEQUENCE:
                         offset = s7commp_decode_response_endsequence(tvb, pinfo, item_tree, offset);
@@ -8526,6 +8611,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                     case S7COMMP_FUNCTIONCODE_INVOKE:
                         offset = s7commp_decode_response_invoke(tvb, pinfo, item_tree, offset);
                         break;
+                    case S7COMMP_FUNCTIONCODE_ERROR:
+                         offset = s7commp_decode_response_error(tvb, pinfo, item_tree, offset);
+                         break;
                 }
                 proto_item_set_len(item_tree, offset - offset_save);
                 dlength = dlength - (offset - offset_save);
@@ -8558,6 +8646,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         offset = s7commp_decode_integrity_wid(tvb, pinfo, tree, has_integrity_id, protocolversion, &dlength, offset);
     } else {
         /* unknown opcode */
+        expert_add_info_format(pinfo, tree, &ei_s7commp_data_opcode_unknown, "Unknown Opcode: 0x%02x", opcode);
         proto_item_append_text(tree, ": Unknown Opcode: 0x%02x", opcode);
         col_append_fstr(pinfo->cinfo, COL_INFO, " Unknown Opcode: 0x%02x", opcode);
     }
@@ -8734,16 +8823,19 @@ dissect_s7commp(tvbuff_t *tvb,
                 #ifdef DEBUG_REASSEMBLING
                 printf("Reassembling pass 1: Frame=%3d HasTrailer=%d", pinfo->fd->num, has_trailer);
                 #endif
-                /* evtl. find_or_create_conversation verwenden?
-                 * conversation = find_or_create_conversation(pinfo);
+                /* Conversation:
+                 * find_conversation() ist dazu gedacht eine Konversation in beiden Richtungen zu finden.
+                 * D.h. es wurde z.B. Port 2000->102 wie auch 102->2000 gefunden. Das ist an dieser Stelle jedoch
+                 * nicht gewuenscht, und kann auch durch den Parameter option nicht verhindert werden.
+                 * Aus dem Grund wird aus Quell- und Zielport eine eindeutige Portnummer generiert.
+                 * Destport/srcport sind vom Typ guint32, erlaubte Portnummern sind jedoch nur 0..65535.
                  */
-
                 conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                 pinfo->ptype, pinfo->destport,
+                                                 pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
                                                  0, NO_PORT_B);
                 if (conversation == NULL) {
                     conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                    pinfo->ptype, pinfo->destport,
+                                                    pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
                                                     0, NO_PORT2);
                     #ifdef DEBUG_REASSEMBLING
                     printf(" NewConv" );

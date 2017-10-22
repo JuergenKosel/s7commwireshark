@@ -5137,7 +5137,7 @@ DIAG_ON(cast-qual)
                     dict_size = sizeof(s7commp_dict_CompilerSettings_90000001);
                     break;
                 default:
-                    expert_add_info_format(pinfo, subtree, &ei_s7commp_blobdecompression_nodictionary, "Unknown dictionary 0x%08x", streamp->adler);
+                    expert_add_info_format(pinfo, subtree, &ei_s7commp_blobdecompression_nodictionary, "Unknown dictionary 0x%08lx", streamp->adler);
                     break;
             }
             if (dict) {
@@ -5369,7 +5369,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     gint8 int8val = 0;
     gchar *str_val = NULL;          /* Value of one single item */
     gchar *str_arrval = NULL;       /* Value of array values */
-    guint32 sparsearray_key;
+    guint32 sparsearray_key = 0;
     const gchar *str_arr_prefix = "Unknown";
 
     guint32 start_offset = 0;

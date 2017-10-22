@@ -4725,8 +4725,7 @@ s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
     gchar *str_val = NULL;
     proto_item *pi = NULL;
 
-    if ((datatype != S7COMMP_ITEM_DATATYPE_ULINT)
-        || (length_of_value < 1)) {
+    if (datatype != S7COMMP_ITEM_DATATYPE_ULINT) {
         return offset;
     }
 
@@ -4756,8 +4755,7 @@ s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
     guint16 blocklang;
     proto_item *pi = NULL;
 
-    if ((datatype != S7COMMP_ITEM_DATATYPE_UINT)
-        || (length_of_value < 1)) {
+    if (datatype != S7COMMP_ITEM_DATATYPE_UINT) {
         return offset;
     }
 
@@ -4783,8 +4781,7 @@ s7commp_decode_attrib_serversessionrole(tvbuff_t *tvb,
     guint8 octet_count = 0;
     proto_item *pi = NULL;
 
-    if ((datatype != S7COMMP_ITEM_DATATYPE_UDINT)
-        || (length_of_value < 1)) {
+    if (datatype != S7COMMP_ITEM_DATATYPE_UDINT) {
         return offset;
     }
 

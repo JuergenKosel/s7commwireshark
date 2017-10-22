@@ -466,18 +466,6 @@ static const value_string var_item_area1_names[] = {
 #define S7COMMP_EXPLORE_CLASS_OB                0x95
 #define S7COMMP_EXPLORE_CLASS_FBT               0x96
 #define S7COMMP_EXPLORE_CLASS_LIB               0x02
-static const value_string explore_class_names[] = {
-    { S7COMMP_EXPLORE_CLASS_ASALARMS,           "AS-Alarms" },
-    { S7COMMP_EXPLORE_CLASS_IQMCT,              "IQMCT" },
-    { S7COMMP_EXPLORE_CLASS_UDT,                "UDT" },
-    { S7COMMP_EXPLORE_CLASS_DB,                 "DB" },
-    { S7COMMP_EXPLORE_CLASS_FB,                 "FB" },
-    { S7COMMP_EXPLORE_CLASS_FC,                 "FC" },
-    { S7COMMP_EXPLORE_CLASS_OB,                 "OB" },
-    { S7COMMP_EXPLORE_CLASS_FBT,                "FBT" },
-    { S7COMMP_EXPLORE_CLASS_LIB,                "LIB" },
-    { 0,                                        NULL }
-};
 #define S7COMMP_EXPLORE_CLASS_IQMCT_INPUT       0x01
 #define S7COMMP_EXPLORE_CLASS_IQMCT_OUTPUT      0x02
 #define S7COMMP_EXPLORE_CLASS_IQMCT_BITMEM      0x03

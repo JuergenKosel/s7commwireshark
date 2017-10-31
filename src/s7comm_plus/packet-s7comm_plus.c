@@ -7441,8 +7441,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
             proto_tree_add_uint(tree, hf_s7commp_notification_seqnum_uint8, tvb, offset, 1, seqnum);
             offset += 1;
         }
-        col_append_fstr(pinfo->cinfo, COL_INFO, " Ctick=%u", credit_tick);
-        col_append_fstr(pinfo->cinfo, COL_INFO, " NSeq=%u", seqnum);
+        col_append_fstr(pinfo->cinfo, COL_INFO, " Ctick=%u NSeq=%u", credit_tick, seqnum);
 
         item_return_value = tvb_get_guint8(tvb, offset);
         /* Woran zu erkennen ist, dass hier ein eingeschobener Wert folgt ist noch nicht bekannt.
@@ -8707,9 +8706,9 @@ dissect_s7commp(tvbuff_t *tvb,
 
     /* display some infos in info-column of wireshark */
     if (pinfo->srcport == 102) {
-        col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Version:[%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
+        col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Ver:[%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
     } else {
-        col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Version:[%s]", UTF8_LEFTWARDS_ARROW, pinfo->srcport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
+        col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Ver:[%s]", UTF8_LEFTWARDS_ARROW, pinfo->srcport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
     }
     s7commp_item = proto_tree_add_item(tree, proto_s7commp, tvb, 0, -1, FALSE);
     s7commp_tree = proto_item_add_subtree(s7commp_item, ett_s7commp);

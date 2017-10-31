@@ -8701,14 +8701,15 @@ dissect_s7commp(tvbuff_t *tvb,
 
     col_set_str(pinfo->cinfo, COL_PROTOCOL, PROTO_TAG_S7COMM_PLUS);
     col_clear(pinfo->cinfo, COL_INFO);
+    col_append_sep_str(pinfo->cinfo, COL_INFO, " | ", "");
 
     protocolversion = tvb_get_guint8(tvb, 1);                       /* Get the type byte */
 
     /* display some infos in info-column of wireshark */
     if (pinfo->srcport == 102) {
-        col_add_fstr(pinfo->cinfo, COL_INFO, "%s%u Version:[%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
+        col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Version:[%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
     } else {
-        col_add_fstr(pinfo->cinfo, COL_INFO, "%s%u Version:[%s]", UTF8_LEFTWARDS_ARROW, pinfo->srcport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
+        col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Version:[%s]", UTF8_LEFTWARDS_ARROW, pinfo->srcport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
     }
     s7commp_item = proto_tree_add_item(tree, proto_s7commp, tvb, 0, -1, FALSE);
     s7commp_tree = proto_item_add_subtree(s7commp_item, ett_s7commp);
@@ -9015,6 +9016,7 @@ dissect_s7commp(tvbuff_t *tvb,
             offset += 2;
         }
     }
+    col_set_fence(pinfo->cinfo, COL_INFO);
     return TRUE;
 }
 

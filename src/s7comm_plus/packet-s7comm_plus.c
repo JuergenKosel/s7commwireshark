@@ -4600,7 +4600,7 @@ s7commp_decode_integrity(tvbuff_t *tvb,
     } else {
         expert_add_info(pinfo, integrity_tree, &ei_s7commp_integrity_digestlen_error);
         proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
-        col_append_fstr(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that something went wrong */
+        col_append_str(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that something went wrong */
     }
     proto_item_set_len(integrity_tree, offset - offset_save);
     return offset;
@@ -7490,7 +7490,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
             offset += 3;
         }
         if (add_data_info_column) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " <Contains values>");
+            col_append_str(pinfo->cinfo, COL_INFO, " <Contains values>");
         }
     }
 
@@ -7529,7 +7529,7 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
         list_start_offset = offset;
         offset = s7commp_decode_notification_value_list(tvb, pinfo, tree, offset, TRUE);
         if (offset - list_start_offset > 1) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " <Contains values>");
+            col_append_str(pinfo->cinfo, COL_INFO, " <Contains values>");
         }
     }
 
@@ -8893,7 +8893,7 @@ dissect_s7commp(tvbuff_t *tvb,
                 packet_state->start_opcode = conversation_state->start_opcode;
                 packet_state->start_function = conversation_state->start_function;
                 #ifdef DEBUG_REASSEMBLING
-                col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: INIT-packet_state)");
+                col_append_str(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: INIT-packet_state)");
                 #endif
             } else {
                 first_fragment = packet_state->first_fragment;

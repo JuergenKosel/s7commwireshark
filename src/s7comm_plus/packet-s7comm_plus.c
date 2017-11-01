@@ -2895,8 +2895,6 @@ static const int *s7commp_tagdescr_attributeflags2_fields[] = {
     NULL
 };
 
-static gint hf_s7commp_tagdescr_unknown4 = -1;
-static gint hf_s7commp_tagdescr_unknown5 = -1;
 static gint hf_s7commp_tagdescr_lid = -1;
 static gint hf_s7commp_tagdescr_s7stringlength = -1;
 static gint hf_s7commp_tagdescr_structrelid = -1;
@@ -2919,7 +2917,6 @@ static gint hf_s7commp_object_attributeid = -1;
 static gint hf_s7commp_object_attributeidflags = -1;
 static gint hf_s7commp_object_relunknown1 = -1;
 static gint hf_s7commp_object_blocklength = -1;
-static gint hf_s7commp_object_blockunknown1 = -1;
 static gint hf_s7commp_object_createobjidcount = -1;
 static gint hf_s7commp_object_createobjid = -1;
 static gint hf_s7commp_object_deleteobjid = -1;
@@ -3000,7 +2997,6 @@ static gint hf_s7commp_compressedblob = -1;
 static gint ett_s7commp_compressedblob = -1;
 static gint hf_s7commp_compressedblob_dictionary_version = -1;
 static gint hf_s7commp_compressedblob_dictionary_id = -1;
-static gint hf_s7commp_compressedblob_uncompressed = -1;
 
 /* MultipleStai */
 static gint hf_s7commp_multiplestai = -1;
@@ -3657,12 +3653,6 @@ proto_register_s7commp (void)
           { "Bit01", "s7comm-plus.tagdescr.attributeflags.bit01", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_BIT01,
             NULL, HFILL }},
 
-        { &hf_s7commp_tagdescr_unknown4,
-          { "Unknown 4", "s7comm-plus.tagdescr.unknown4", FT_UINT8, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_tagdescr_unknown5,
-          { "Unknown 5", "s7comm-plus.tagdescr.unknown5", FT_UINT8, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
         { &hf_s7commp_tagdescr_lid,
           { "LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Tag description - LID", HFILL }},
@@ -3867,9 +3857,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_object_blocklength,
           { "Block length", "s7comm-plus.object.blocklength", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_object_blockunknown1,
-          { "Unknown 2 trailing bytes", "s7comm-plus.object.blockunknown1", FT_UINT16, BASE_DEC, NULL, 0x0,
-            NULL, HFILL }},
 
         { &hf_s7commp_object_createobjidcount,
           { "Number of following Object Ids", "s7comm-plus.object.createobjidcount", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -4054,9 +4041,6 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_compressedblob_dictionary_id,
           { "Dictionary checksum (Adler-32)", "s7comm-plus.compressedblob.dictionary_id", FT_UINT32, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_compressedblob_uncompressed,
-          { "Uncompressed", "s7comm-plus.compressedblob.uncompressed", FT_STRING, STR_UNICODE, NULL, 0x0,
             NULL, HFILL }},
 
         /* MultipleStai */
@@ -4863,7 +4847,7 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
         offset += 2;
 
         for (i = 0; i < lidcount; i++) {
-            pi = proto_tree_add_item(subtree, hf_s7commp_multiplestai_lid, tvb, offset, 4, ENC_NA);
+            proto_tree_add_item(subtree, hf_s7commp_multiplestai_lid, tvb, offset, 4, ENC_NA);
             offset += 4;
         }
     } else {
@@ -5178,11 +5162,6 @@ DIAG_ON(cast-qual)
                 add_new_data_source(pinfo, next_tvb, "Decompressed Data");
 
                 uncomp_blob[uncomp_length] = '\0';
-                /* keep this for possible non-xml blobs */
-                /*
-                pi = proto_tree_add_string(subtree, hf_s7commp_compressedblob_uncompressed, next_tvb, 0, uncomp_length, uncomp_blob);
-                PROTO_ITEM_SET_GENERATED(pi);
-                */
                 /* make new tvb and call xml subdissector, as all compressed data are (so far) xml */
                 if (xml_handle != NULL) {
                     dissected = call_dissector_only(xml_handle, next_tvb, pinfo, subtree, NULL);

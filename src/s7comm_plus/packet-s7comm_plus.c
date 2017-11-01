@@ -3206,17 +3206,18 @@ static void
 s7commp_idname_fmt(gchar *result, guint32 id_number)
 {
     const guint8 *str;
-    guint32 section, index;
+    guint32 section;
+    guint32 xindex;
 
     if ((str = try_val_to_str_ext(id_number, &id_number_names_ext))) {
         g_snprintf(result, ITEM_LABEL_LENGTH, "%s", str);
     } else {
         /*cls = ((id_number & 0xff000000) >> 24);*/
-        index = ((id_number & 0x00ff0000) >> 16);
+        xindex = ((id_number & 0x00ff0000) >> 16);
         section = (id_number & 0xffff);
 
         if (id_number >= 0x70000000 && id_number <= 0x7fffffff) {
-            g_snprintf(result, ITEM_LABEL_LENGTH, "DebugObject.%u.%u", index, section);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "DebugObject.%u.%u", xindex, section);
         } else if (id_number >= 0x89fd0000 && id_number <= 0x89fdffff) {
             g_snprintf(result, ITEM_LABEL_LENGTH, "UDT.%u", section);
         } else if (id_number >= 0x8a0e0000 && id_number <= 0x8a0effff) {    /* Datenbaustein mit Nummer, 8a0e.... wird aber auch als AlarmID verwendet */
@@ -3242,34 +3243,34 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
         } else if (id_number >= 0x8a7e0000 && id_number <= 0x8a7effff) {    /* AS Alarms */
             g_snprintf(result, ITEM_LABEL_LENGTH, "ASAlarms.%u", section);
         } else if (id_number >= 0x90000000 && id_number <= 0x90ffffff) {    /* TypeInfo Bereich IQMCT, wofuer hier section steht ist nicht bekannt, bisher immer 0 gesehen. */
-            str = try_val_to_str(index, explore_class_iqmct_names);
+            str = try_val_to_str(xindex, explore_class_iqmct_names);
             if (str) {
                 g_snprintf(result, ITEM_LABEL_LENGTH, "TI_%s.%u", str, section);
             } else {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_IQMCT.unknown.%u.%u", index, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_IQMCT.unknown.%u.%u", xindex, section);
             }
         } else if (id_number >= 0x91000000 && id_number <= 0x91ffffff) {    /* TypeInfo Bereich im UDT */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_UDT.%u.%u", section, index);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_UDT.%u.%u", section, xindex);
         } else if (id_number >= 0x92000000 && id_number <= 0x92ffffff) {    /* TypeInfo Bereich im DB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_DB.%u.%u", section, index);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_DB.%u.%u", section, xindex);
         } else if (id_number >= 0x93000000 && id_number <= 0x93ffffff) {    /* TypeInfo Bereich im FB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FB.%u.%u", section, index);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FB.%u.%u", section, xindex);
         } else if (id_number >= 0x94000000 && id_number <= 0x94ffffff) {    /* TypeInfo Bereich im FC */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FC.%u.%u", section, index);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FC.%u.%u", section, xindex);
         } else if (id_number >= 0x95000000 && id_number <= 0x95ffffff) {    /* TypeInfo Bereich im OB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_OB.%u.%u", section, index);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_OB.%u.%u", section, xindex);
         } else if (id_number >= 0x96000000 && id_number <= 0x96ffffff) {    /* TypeInfo Bereich im FBT */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FBT.%u.%u", section, index);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_FBT.%u.%u", section, xindex);
         } else if (id_number >= 0x9a000000 && id_number <= 0x9affffff) {    /* Struct-Array in einem DB */
-            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_StructArrayDB.%u.%u", section, index);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_StructArrayDB.%u.%u", section, xindex);
         } else if (id_number >= 0x9eae0000 && id_number <= 0x9eaeffff) {    /* Haengt auch mit dem Alarmsystem zusammen??? TODO */
             g_snprintf(result, ITEM_LABEL_LENGTH, "?UnknownAlarms?.%u", section);
         } else if (id_number >= 0x02000000 && id_number <= 0x02ffffff) {    /* Explore Bereich LIB */
-            str = try_val_to_str(index, explore_class_lib_names);
+            str = try_val_to_str(xindex, explore_class_lib_names);
             if (str) {
                 g_snprintf(result, ITEM_LABEL_LENGTH, "TI_LIB.%s.%u", str, section);
             } else {
-                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_Unknown.%u.%u", index, section);
+                g_snprintf(result, ITEM_LABEL_LENGTH, "TI_Unknown.%u.%u", xindex, section);
             }
         } else {                                                            /* Komplett unbekannt */
             g_snprintf(result, ITEM_LABEL_LENGTH, "Unknown (%u)", id_number);
@@ -3359,7 +3360,7 @@ proto_register_s7commp (void)
 
         { &hf_s7commp_data_data,
           { "Data unknown", "s7comm-plus.data.data", FT_BYTES, BASE_NONE, NULL, 0x0,
-            "Data unknown", HFILL }},
+            NULL, HFILL }},
 
         { &hf_s7commp_data_req_set,
           { "Request Set", "s7comm-plus.data.req_set", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -5234,7 +5235,7 @@ s7commp_decode_packed_struct(tvbuff_t *tvb,
      * Wenn das eine Transportgroesse ist, muesste die Elementanzahl entsprechend umgerechnet werden.
      * Solange kein solches Paket gesichtet wurde, ohne Umrechnung belassen.
      */
-    proto_tree_add_uint(value_item_tree, hf_s7commp_packedstruct_transpsize, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    proto_tree_add_item(value_item_tree, hf_s7commp_packedstruct_transpsize, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
 
     element_count = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -5962,7 +5963,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     proto_item_append_text(tree, ": Name=%s", str_name);
     offset += length_of_value;
 
-    proto_tree_add_uint(tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+    proto_tree_add_item(tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
 
     datatype = tvb_get_guint8(tvb, offset);
@@ -6143,7 +6144,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
             item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, -1, FALSE);
             tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
 
-            proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_lid, tvb, offset, 4, tvb_get_letohl(tvb, offset));
+            proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_lid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
             offset += 4;
 
             proto_tree_add_text(tag_tree, tvb, offset, 4, "Unknown ID?: 0x%08x", tvb_get_letohl(tvb, offset));
@@ -6194,7 +6195,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
              */
             if (softdatatype == S7COMMP_SOFTDATATYPE_STRING ||
                 softdatatype == S7COMMP_SOFTDATATYPE_WSTRING) {
-                proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_s7stringlength, tvb, offset, 2, tvb_get_letohs(tvb, offset));
+                proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_s7stringlength, tvb, offset, 2, ENC_LITTLE_ENDIAN);
             } else {
                 proto_tree_add_text(tag_tree, tvb, offset, 2, "General Offsetinfo 1: %u", tvb_get_letohs(tvb, offset));
             }
@@ -6455,7 +6456,7 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
             proto_item_append_text(tag_tree, "[%d]: Name=%s", i, str_name);
             offset += length_of_value;
             /* String-terminierende Null? Bei Laengenangabe eigentlich ueberfluessig */
-            proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, tvb_get_guint8(tvb, offset));
+            proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
             offset += 1;
             i++;
         } while (offset < max_offset);
@@ -6539,7 +6540,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 uint32_value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_object_relid, tvb, offset, octet_count, uint32_value);
                 offset += octet_count;
-                proto_tree_add_uint(data_item_tree, hf_s7commp_object_relunknown1, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
+                proto_tree_add_item(data_item_tree, hf_s7commp_object_relunknown1, tvb, offset, 4, ENC_BIG_ENDIAN);
                 offset += 4;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
@@ -8456,7 +8457,7 @@ s7commp_decode_data(tvbuff_t *tvb,
             proto_item_set_len(item_tree, offset - offset_save);
             dlength = dlength - (offset - offset_save);
         } else {
-            proto_tree_add_uint(tree, hf_s7commp_data_reserved1, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
+            proto_tree_add_item(tree, hf_s7commp_data_reserved1, tvb, offset, 2, ENC_BIG_ENDIAN);
             offset += 2;
             dlength -= 2;
 
@@ -8466,7 +8467,7 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset += 2;
             dlength -= 2;
 
-            proto_tree_add_uint(tree, hf_s7commp_data_reserved2, tvb, offset, 2, tvb_get_ntohs(tvb, offset));
+            proto_tree_add_item(tree, hf_s7commp_data_reserved2, tvb, offset, 2, ENC_BIG_ENDIAN);
             offset += 2;
             dlength -= 2;
 
@@ -8484,7 +8485,7 @@ s7commp_decode_data(tvbuff_t *tvb,
             proto_item_append_text(tree, " %s", val_to_str(functioncode, data_functioncode_names, "?"));
 
             if (opcode == S7COMMP_OPCODE_REQ) {
-                proto_tree_add_uint(tree, hf_s7commp_data_sessionid, tvb, offset, 4, tvb_get_ntohl(tvb, offset));
+                proto_tree_add_item(tree, hf_s7commp_data_sessionid, tvb, offset, 4, ENC_BIG_ENDIAN);
                 offset += 4;
                 dlength -= 4;
 
@@ -9008,10 +9009,10 @@ dissect_s7commp(tvbuff_t *tvb,
             s7commp_trailer_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_trailer);
             proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protid, next_tvb, offset, 1, FALSE);
             offset += 1;
-            proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_protocolversion, next_tvb, offset, 1, tvb_get_guint8(next_tvb, offset));
+            proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protocolversion, next_tvb, offset, 1, ENC_BIG_ENDIAN);
             proto_item_append_text(s7commp_trailer_tree, ": Protocol version=%s", val_to_str(tvb_get_guint8(next_tvb, offset), protocolversion_names, "0x%02x"));
             offset += 1;
-            proto_tree_add_uint(s7commp_trailer_tree, hf_s7commp_trailer_datlg, next_tvb, offset, 2, tvb_get_ntohs(next_tvb, offset));
+            proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_datlg, next_tvb, offset, 2, ENC_BIG_ENDIAN);
             offset += 2;
         }
     }

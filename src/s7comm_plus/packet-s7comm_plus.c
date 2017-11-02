@@ -5665,7 +5665,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                     offset = s7commp_decode_id_value_list(tvb, pinfo, current_tree, offset, TRUE);
                     length_of_value = 0;
                 } else {
-                    proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, &octet_count, &uint32val);
+                    proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, &octet_count, &length_of_value);
                     offset += octet_count;
                     value_start_offset = offset;
                     if (length_of_value > 0) {

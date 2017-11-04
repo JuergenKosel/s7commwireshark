@@ -7542,7 +7542,6 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     proto_tree *sub_list_item_tree = NULL;
 
     guint8 octet_count = 0;
-    guint32 value = 0;
     guint32 item_count_unsubscr = 0;
     guint32 item_count_subscr = 0;
     guint32 i;
@@ -7559,7 +7558,7 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     offset += 2;
 
     /* Array size: wird nicht weiter benoetigt, muss fuer die Berechnung des offsets aber nochmal ausgelesen werden */
-    value = tvb_get_varuint32(tvb, &octet_count, offset);
+    tvb_get_varuint32(tvb, &octet_count, offset);
     offset += octet_count;
 
     list_start_offset = offset;

@@ -8790,11 +8790,11 @@ dissect_s7commp(tvbuff_t *tvb,
                  * Destport/srcport sind vom Typ guint32, erlaubte Portnummern sind jedoch nur 0..65535.
                  */
                 conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                 pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
+                                                 (const endpoint_type) pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
                                                  0, NO_PORT_B);
                 if (conversation == NULL) {
                     conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                    pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
+                                                    (const endpoint_type) pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
                                                     0, NO_PORT2);
                     #ifdef DEBUG_REASSEMBLING
                     printf(" NewConv" );

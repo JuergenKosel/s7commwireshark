@@ -4499,6 +4499,7 @@ proto_tree_add_ret_varuint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint 
     return proto_tree_add_uint(tree, hfindex, tvb, start, *octet_count, value);
 }
 /*******************************************************************************************************/
+#if 0 // the following function causes an unused function warning
 static proto_item *
 proto_tree_add_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start, guint8 *octet_count)
 {
@@ -4508,6 +4509,7 @@ proto_tree_add_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start
     value = tvb_get_varint32(tvb, octet_count, start);
     return proto_tree_add_int(tree, hfindex, tvb, start, *octet_count, value);
 }
+#endif
 /*******************************************************************************************************/
 static proto_item *
 proto_tree_add_ret_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start, guint8 *octet_count, gint32 *retval)

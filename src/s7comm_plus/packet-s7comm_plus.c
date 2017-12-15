@@ -5401,6 +5401,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     gchar *str_arrval = NULL;       /* Value of array values */
     guint32 sparsearray_key = 0;
     const gchar *str_arr_prefix = "Unknown";
+    gchar *struct_resultstring;
 
     guint32 start_offset = 0;
     guint32 length_of_value = 0;
@@ -5422,7 +5423,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
     offset += 1;
 
-    is_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ARRAY);
+    is_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ARRAY) && (datatype != S7COMMP_ITEM_DATATYPE_STRUCT);
     is_address_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY) && (datatype != S7COMMP_ITEM_DATATYPE_STRUCT);
     is_sparsearray = (datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY);
     is_struct_addressarray = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY) && (datatype == S7COMMP_ITEM_DATATYPE_STRUCT);
@@ -5583,7 +5584,9 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 4;
                 value_start_offset = offset;
                 struct_value = tvb_get_ntohl(tvb, offset);
-                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", struct_value);
+                struct_resultstring = (gchar *)wmem_alloc(wmem_packet_scope(), ITEM_LABEL_LENGTH);
+                s7commp_idname_fmt(struct_resultstring, struct_value);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u (%s)", struct_value, struct_resultstring);
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_DWORD:

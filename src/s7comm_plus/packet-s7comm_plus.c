@@ -681,11 +681,9 @@ static const value_string tagdescr_offsetinfotype_names[] = {
 };
 
 #define S7COMMP_TAGDESCR_BITOFFSETINFO_RETAIN                       0x80
-#define S7COMMP_TAGDESCR_BITOFFSETINFO_BITOFFSET                    0x70
+#define S7COMMP_TAGDESCR_BITOFFSETINFO_NONOPTBITOFFSET              0x70
 #define S7COMMP_TAGDESCR_BITOFFSETINFO_CLASSIC                      0x08
-#define S7COMMP_TAGDESCR_BITOFFSETINFO_BIT03                        0x04
-#define S7COMMP_TAGDESCR_BITOFFSETINFO_BIT02                        0x02
-#define S7COMMP_TAGDESCR_BITOFFSETINFO_BIT01                        0x01
+#define S7COMMP_TAGDESCR_BITOFFSETINFO_OPTBITOFFSET                 0x07
 
 /* Section for tag description (S7-1500) */
 #define S7COMMP_TAGDESCR_SECTION_NONE              0
@@ -2902,20 +2900,16 @@ static const int *s7commp_tagdescr_attributeflags2_fields[] = {
 
 static gint hf_s7commp_tagdescr_bitoffsetinfo = -1;
 static gint hf_s7commp_tagdescr_bitoffsetinfo_retain = -1;
-static gint hf_s7commp_tagdescr_bitoffsetinfo_bitoffset = -1;       /* 3 Bits, mask 0x70 */
+static gint hf_s7commp_tagdescr_bitoffsetinfo_nonoptbitoffset = -1;   /* 3 Bits, mask 0x70 */
 static gint hf_s7commp_tagdescr_bitoffsetinfo_classic = -1;
-static gint hf_s7commp_tagdescr_bitoffsetinfo_bit03 = -1;
-static gint hf_s7commp_tagdescr_bitoffsetinfo_bit02 = -1;
-static gint hf_s7commp_tagdescr_bitoffsetinfo_bit01 = -1;
+static gint hf_s7commp_tagdescr_bitoffsetinfo_optbitoffset = -1;      /* 3 Bits, mask 0x07 */
 static gint ett_s7commp_tagdescr_bitoffsetinfo = -1;
 
 static const int *s7commp_tagdescr_bitoffsetinfo_fields[] = {
     &hf_s7commp_tagdescr_bitoffsetinfo_retain,
-    &hf_s7commp_tagdescr_bitoffsetinfo_bitoffset,
+    &hf_s7commp_tagdescr_bitoffsetinfo_nonoptbitoffset,
     &hf_s7commp_tagdescr_bitoffsetinfo_classic,
-    &hf_s7commp_tagdescr_bitoffsetinfo_bit03,
-    &hf_s7commp_tagdescr_bitoffsetinfo_bit02,
-    &hf_s7commp_tagdescr_bitoffsetinfo_bit01,
+    &hf_s7commp_tagdescr_bitoffsetinfo_optbitoffset,
     NULL
 };
 
@@ -3677,20 +3671,14 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_bitoffsetinfo_retain,
           { "Retain", "s7comm-plus.tagdescr.bitoffsetinfo.retain", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_RETAIN,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_bitoffsetinfo_bitoffset,
-          { "Bitoffset", "s7comm-plus.tagdescr.bitoffsetinfo.bitoffset", FT_UINT8, BASE_DEC, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_BITOFFSET,
+        { &hf_s7commp_tagdescr_bitoffsetinfo_nonoptbitoffset,
+          { "Nonoptimized Bitoffset", "s7comm-plus.tagdescr.bitoffsetinfo.bitoffset.nonoptimized", FT_UINT8, BASE_DEC, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_NONOPTBITOFFSET,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_bitoffsetinfo_classic,
           { "Classic", "s7comm-plus.tagdescr.bitoffsetinfo.classic", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_CLASSIC,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_bitoffsetinfo_bit03,
-          { "Bit03", "s7comm-plus.tagdescr.bitoffsetinfo.bit03", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_BIT03,
-            NULL, HFILL }},
-        { &hf_s7commp_tagdescr_bitoffsetinfo_bit02,
-          { "Bit02", "s7comm-plus.tagdescr.bitoffsetinfo.bit02", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_BIT02,
-            NULL, HFILL }},
-        { &hf_s7commp_tagdescr_bitoffsetinfo_bit01,
-          { "Bit01", "s7comm-plus.tagdescr.bitoffsetinfo.bit01", FT_BOOLEAN, 8, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_BIT01,
+        { &hf_s7commp_tagdescr_bitoffsetinfo_optbitoffset,
+          { "Optimized Bitoffset", "s7comm-plus.tagdescr.bitoffsetinfo.bitoffset.optimized", FT_UINT8, BASE_DEC, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_OPTBITOFFSET,
             NULL, HFILL }},
 
         { &hf_s7commp_tagdescr_lid,

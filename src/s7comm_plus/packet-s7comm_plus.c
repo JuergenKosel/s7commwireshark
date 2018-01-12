@@ -54,7 +54,7 @@ void proto_register_s7commp(void);
 static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint32 offset, gboolean recursive);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
-//#define USE_INTERNALS
+#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
  /*******************************************************
@@ -2914,6 +2914,7 @@ static const int *s7commp_tagdescr_bitoffsetinfo_fields[] = {
 };
 
 static gint hf_s7commp_tagdescr_lid = -1;
+static gint hf_s7commp_tagdescr_subsymbolcrc = -1;
 static gint hf_s7commp_tagdescr_s7stringlength = -1;
 static gint hf_s7commp_tagdescr_structrelid = -1;
 static gint hf_s7commp_tagdescr_lenunknown = -1;
@@ -3684,6 +3685,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_lid,
           { "LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Tag description - LID", HFILL }},
+        { &hf_s7commp_tagdescr_subsymbolcrc,
+          { "Subsymbol CRC", "s7comm-plus.tagdescr.subsymbolcrc", FT_UINT32, BASE_HEX, NULL, 0x0,
+            "Calculated CRC from symbol name plus softdatatype-id", HFILL }},
         { &hf_s7commp_tagdescr_s7stringlength,
           { "Length of S7String", "s7comm-plus.tagdescr.s7stringlength", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Length of S7String", HFILL }},
@@ -6204,7 +6208,14 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
             proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_lid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
             offset += 4;
 
-            proto_tree_add_text(tag_tree, tvb, offset, 4, "Unknown ID?: 0x%08x", tvb_get_letohl(tvb, offset));
+            /* Die CRC hier wird rein aus dem Symbol hier, plus softdatatype-id (1=Bool, 5=Int, ...) uebermittelt.
+             * Fuer den Zugriff auf eine Variable in einem DB reicht diese alleine nicht aus,
+             * sondern es muss die Pruefsumme ueber den gesamten Symbolpfad gebildet werden:
+             * DBname.structname.variablenname
+             * Als Trennzeichen "." ist hierbei 0x09 einzusetzen und dann ein zweites Mal darueber die
+             * Pruefsumme zu bilden.
+             */
+            proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_subsymbolcrc, tvb, offset, 4, ENC_LITTLE_ENDIAN);
             offset += 4;
 
             softdatatype = tvb_get_guint8(tvb, offset); /* hier nur 1 Byte */

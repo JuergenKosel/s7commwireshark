@@ -54,7 +54,7 @@ void proto_register_s7commp(void);
 static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint32 offset, gboolean recursive);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
-#define USE_INTERNALS
+//#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
  /*******************************************************

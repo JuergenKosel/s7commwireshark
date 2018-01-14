@@ -37,28 +37,22 @@ set(CLEAN_FILES
 	${PLUGIN_FILES}
 )
 
-if (WERROR_COMMON_FLAGS)
-	set_source_files_properties(
-		${CLEAN_FILES}
-		PROPERTIES
-		COMPILE_FLAGS ${WERROR_COMMON_FLAGS}
-	)
-endif()
+set_source_files_properties(
+	${CLEAN_FILES}
+	PROPERTIES
+	COMPILE_FLAGS ${WERROR_COMMON_FLAGS}
+)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-register_dissector_files(plugin.c
+register_plugin_files(plugin.c
 	plugin
 	${DISSECTOR_SRC}
 )
 
-add_plugin_library(s7comm_plus)
+add_plugin_library(s7comm_plus epan)
 
-install(TARGETS s7comm_plus
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${CPACK_PACKAGE_NAME}/plugins/${CPACK_PACKAGE_VERSION} NAMELINK_SKIP
-	RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/${CPACK_PACKAGE_NAME}/plugins/${CPACK_PACKAGE_VERSION}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${CPACK_PACKAGE_NAME}/plugins/${CPACK_PACKAGE_VERSION}
-)
+install_plugin(s7comm_plus epan)
 
 file(GLOB DISSECTOR_HEADERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.h")
 CHECKAPI(

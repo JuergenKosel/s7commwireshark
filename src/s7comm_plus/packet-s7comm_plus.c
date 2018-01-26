@@ -54,7 +54,7 @@ void proto_register_s7commp(void);
 static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint32 offset, gboolean recursive);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
-#define USE_INTERNALS
+//#define USE_INTERNALS
 /* #define DEBUG_REASSEMBLING */
 
  /*******************************************************
@@ -2951,6 +2951,7 @@ static gint hf_s7commp_setvar_unknown1 = -1;
 static gint hf_s7commp_setvar_objectid = -1;
 static gint hf_s7commp_setvar_itemcount = -1;
 static gint hf_s7commp_setvar_itemaddrcount = -1;
+static gint hf_s7commp_setvar_rawvaluelen = -1;
 
 /* Getmultivar/Getvariable */
 static gint hf_s7commp_getmultivar_unknown1 = -1;
@@ -3923,7 +3924,7 @@ proto_register_s7commp (void)
           { "Unknown", "s7comm-plus.setvar.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_setvar_objectid,
-          { "In Object Id", "s7comm-plus.setvar.objectid", FT_UINT32, BASE_HEX, NULL, 0x0,
+          { "In Object Id", "s7comm-plus.setvar.objectid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_setvar_itemcount,
           { "Item count", "s7comm-plus.setvar.itemcount", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -3931,6 +3932,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_setvar_itemaddrcount,
           { "Item address count", "s7comm-plus.setvar.itemaddrcount", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ: Item address count", HFILL }},
+        { &hf_s7commp_setvar_rawvaluelen,
+          { "Raw value length", "s7comm-plus.setvar.rawvaluelen", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "VLQ: Raw value length", HFILL }},
 
         /* GetMultiVariables/GetVariable */
         { &hf_s7commp_getmultivar_unknown1,
@@ -7624,27 +7628,48 @@ s7commp_decode_request_setvariable(tvbuff_t *tvb,
                                    guint32 offset)
 {
     guint32 object_id;
-    guint8 octet_count;
-    guint32 item_count;
+    guint8 octet_count = 0;
+    guint32 item_address_count = 0;
     guint32 i;
+    int struct_level = 0;
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset;
 
     object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_setvar_objectid, tvb, offset, 4, object_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+    s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
     offset += 4;
 
-    proto_tree_add_ret_varuint32(tree, hf_s7commp_setvar_itemcount, tvb, offset, &octet_count, &item_count);
+    proto_tree_add_ret_varuint32(tree, hf_s7commp_setvar_itemaddrcount, tvb, offset, &octet_count, &item_address_count);
     offset += octet_count;
+
+    list_start_offset = offset;
+    list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
+    list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
+    /* Wenn count == 1 dann folgt nur eine ID. Wenn z.B. count == 4, dann folgen 2 IDs, eine Null
+     * und dann eine Laengenangabe die mit der Roh-Laenge im folgenden Value-Teil identisch ist.
+     * Warum diese Redundanz ist nicht klar. Vermutetes Schema was zumindest bei den bisherigen
+     * Aufzeichnungen funktioniert:
+     * Wenn innerhalb Schleife ein Nullwert auftritt, dann folgt danach noch eine Laenge.
+     */
+    for (i = 1; i <= item_address_count; i++) {
+        proto_tree_add_ret_varuint32(list_item_tree, hf_s7commp_data_id_number, tvb, offset, &octet_count, &object_id);
+        offset += octet_count;
+        if (object_id == 0) {
+            proto_tree_add_varuint32(list_item_tree, hf_s7commp_setvar_rawvaluelen, tvb, offset, &octet_count);
+            offset += octet_count;
+            i += 1;
+        }
+    }
+    proto_item_set_len(list_item_tree, offset - list_start_offset);
+
     list_start_offset = offset;
     list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
-    for (i = 1; i <= item_count; i++) {
-        offset = s7commp_decode_id_value_list(tvb, pinfo, list_item_tree, offset, FALSE);
-    }
+    offset = s7commp_decode_value(tvb, pinfo, list_item_tree, offset, &struct_level, 0);
     proto_item_set_len(list_item_tree, offset - list_start_offset);
+
     return offset;
 }
 /*******************************************************************************************************

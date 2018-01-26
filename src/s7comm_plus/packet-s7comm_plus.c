@@ -2667,11 +2667,32 @@ static gint hf_s7commp_data_data = -1;
 static gint hf_s7commp_data_opcode = -1;
 static gint hf_s7commp_data_reserved1 = -1;
 static gint hf_s7commp_data_reserved2 = -1;
-static gint hf_s7commp_data_unknown1 = -1;
+static gint hf_s7commp_data_transportflags = -1;
+static gint hf_s7commp_data_transportflags_bit0 = -1;
+static gint hf_s7commp_data_transportflags_bit1 = -1;
+static gint hf_s7commp_data_transportflags_bit2 = -1;
+static gint hf_s7commp_data_transportflags_bit3 = -1;
+static gint hf_s7commp_data_transportflags_bit4 = -1;
+static gint hf_s7commp_data_transportflags_bit5 = -1;
+static gint hf_s7commp_data_transportflags_bit6 = -1;
+static gint hf_s7commp_data_transportflags_bit7 = -1;
 static gint hf_s7commp_data_function = -1;
 static gint hf_s7commp_data_sessionid = -1;
 static gint hf_s7commp_data_seqnum = -1;
 static gint hf_s7commp_objectqualifier = -1;
+
+static gint ett_s7commp_data_transportflags = -1;
+static const int *s7commp_data_transportflags_fields[] = {
+    &hf_s7commp_data_transportflags_bit0,
+    &hf_s7commp_data_transportflags_bit1,
+    &hf_s7commp_data_transportflags_bit2,
+    &hf_s7commp_data_transportflags_bit3,
+    &hf_s7commp_data_transportflags_bit4,
+    &hf_s7commp_data_transportflags_bit5,
+    &hf_s7commp_data_transportflags_bit6,
+    &hf_s7commp_data_transportflags_bit7,
+    NULL
+};
 
 static gint hf_s7commp_valuelist = -1;
 static gint hf_s7commp_errorvaluelist = -1;
@@ -3368,9 +3389,33 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_seqnum,
           { "Sequence number", "s7comm-plus.data.seqnum", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Sequence number (for reference)", HFILL }},
-        { &hf_s7commp_data_unknown1,
-          { "Unknown 1", "s7comm-plus.data.unknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
-            "Unknown 1. Maybe flags or split into nibbles", HFILL }},
+        { &hf_s7commp_data_transportflags,
+          { "Transport flags", "s7comm-plus.data.transportflags", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit0,
+          { "Bit0", "s7comm-plus.data.transportflags.bit0", FT_BOOLEAN, 8, NULL, 0x01,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit1,
+          { "Bit1-SometimesSet?", "s7comm-plus.data.transportflags.bit1", FT_BOOLEAN, 8, NULL, 0x02,
+            "This flag is in most telegrams not set. Its often set when there is no object qualifier, but not always", HFILL }},
+        { &hf_s7commp_data_transportflags_bit2,
+          { "Bit2-AlwaysSet?", "s7comm-plus.data.transportflags.bit2", FT_BOOLEAN, 8, NULL, 0x04,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit3,
+          { "Bit3", "s7comm-plus.data.transportflags.bit3", FT_BOOLEAN, 8, NULL, 0x08,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit4,
+          { "Bit4-AlwaysSet?", "s7comm-plus.data.transportflags.bit4", FT_BOOLEAN, 8, NULL, 0x10,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit5,
+          { "Bit5-AlwaysSet?", "s7comm-plus.data.transportflags.bit5", FT_BOOLEAN, 8, NULL, 0x20,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit6,
+          { "Bit6-NoResponseExpected?", "s7comm-plus.data.transportflags.bit6", FT_BOOLEAN, 8, NULL, 0x40,
+            "If this flag is set in a request, there is no response", HFILL }},
+        { &hf_s7commp_data_transportflags_bit7,
+          { "Bit7", "s7comm-plus.data.transportflags.bit7", FT_BOOLEAN, 8, NULL, 0x80,
+            NULL, HFILL }},
         { &hf_s7commp_data_sessionid,
           { "Session Id", "s7comm-plus.data.sessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
             "Session Id, negotiated on session start", HFILL }},
@@ -4276,6 +4321,7 @@ proto_register_s7commp (void)
         &ett_s7commp,
         &ett_s7commp_header,
         &ett_s7commp_data,
+        &ett_s7commp_data_transportflags,
         &ett_s7commp_data_item,
         &ett_s7commp_data_returnvalue,
         &ett_s7commp_trailer,
@@ -8488,7 +8534,8 @@ s7commp_decode_data(tvbuff_t *tvb,
                 offset += 4;
                 dlength -= 4;
 
-                proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
+                proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_data_transportflags,
+                    ett_s7commp_data_transportflags, s7commp_data_transportflags_fields, ENC_BIG_ENDIAN);
                 offset += 1;
                 dlength -= 1;
 
@@ -8547,7 +8594,8 @@ s7commp_decode_data(tvbuff_t *tvb,
                 proto_item_set_len(item_tree, offset - offset_save);
                 dlength = dlength - (offset - offset_save);
             } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {
-                proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
+                proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_data_transportflags,
+                    ett_s7commp_data_transportflags, s7commp_data_transportflags_fields, ENC_BIG_ENDIAN);
                 offset += 1;
                 dlength -= 1;
 

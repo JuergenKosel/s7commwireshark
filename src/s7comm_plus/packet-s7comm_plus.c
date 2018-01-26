@@ -4444,7 +4444,7 @@ static guint32
 tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
 {
     int counter;
-    gint32 val = 0;
+    guint32 val = 0;
     guint8 octet;
     guint8 cont;
     for (counter = 1; counter <= 4+1; counter++) {        /* grosse Werte benoetigen 5 Bytes: 4*7 bit + 4 bit */

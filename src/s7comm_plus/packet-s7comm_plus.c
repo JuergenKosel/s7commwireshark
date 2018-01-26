@@ -6678,9 +6678,9 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
         offset += octet_count;
         /* add result object ids to info column, usually it's only one single id */
         if (i == 0) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+            s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
         } else {
-            col_append_fstr(pinfo->cinfo, COL_INFO, ",0x%08x", object_id);
+            s7commp_pinfo_append_idname(pinfo, object_id, ", ");
         }
     }
     /* Ein Daten-Objekt gibt es nur beim Connect.
@@ -6705,7 +6705,7 @@ s7commp_decode_request_deleteobject(tvbuff_t *tvb,
     guint32 object_id;
     object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_object_deleteobjid, tvb, offset, 4, object_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+    s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
     offset += 4;
 
     return offset;
@@ -6730,7 +6730,7 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
     object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_object_deleteobjid, tvb, offset, 4, object_id);
     offset += 4;
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+    s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
 
     if (errorextension) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
@@ -7141,7 +7141,7 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         proto_item_set_len(list_item_tree, offset - list_start_offset);
     } else {
         proto_tree_add_uint(tree, hf_s7commp_setvar_objectid, tvb, offset-4, 4, value);
-        col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", value);
+        s7commp_pinfo_append_idname(pinfo, value, " ObjId=");
         proto_tree_add_ret_varuint32(tree, hf_s7commp_setvar_itemcount, tvb, offset, &octet_count, &item_count);
         offset += octet_count;
         proto_tree_add_ret_varuint32(tree, hf_s7commp_setvar_itemaddrcount, tvb, offset, &octet_count, &item_address_count);
@@ -7393,7 +7393,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
     /* 4 Bytes Subscription Object Id */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_subscrobjectid, tvb, offset, 4, subscr_object_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", subscr_object_id);
+    s7commp_pinfo_append_idname(pinfo, subscr_object_id, " ObjId=");
     offset += 4;
 
     /* 6/7: Unbekannt */
@@ -7505,7 +7505,7 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
     /* 4 Bytes Subscription Object Id -> scheint hier nicht der Fall zu sein? */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_subscrobjectid, tvb, offset, 4, subscr_object_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", subscr_object_id);
+    s7commp_pinfo_append_idname(pinfo, subscr_object_id, " ObjId=");
     offset += 4;
 
     proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));

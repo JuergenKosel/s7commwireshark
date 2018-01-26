@@ -3239,7 +3239,9 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
         section = (id_number & 0xffff);
 
         if (id_number >= 0x70000000 && id_number <= 0x7fffffff) {
-            g_snprintf(result, ITEM_LABEL_LENGTH, "DebugObject.%u.%u", xindex, section);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "DynObjX7.%u.%u", xindex, section);  /* Fuer variable Aufgaben wie zyklische Lesedienste */
+        } else if (id_number >= 0x10000000 && id_number <= 0x1fffffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "DynObjX1.%u.%u", xindex, section);  /* Fuer variable Aufgaben wie zyklische Lesedienste, aber 1200 mit FW <=2  */
         } else if (id_number >= 0x89fd0000 && id_number <= 0x89fdffff) {
             g_snprintf(result, ITEM_LABEL_LENGTH, "UDT.%u", section);
         } else if (id_number >= 0x8a0e0000 && id_number <= 0x8a0effff) {    /* Datenbaustein mit Nummer, 8a0e.... wird aber auch als AlarmID verwendet */

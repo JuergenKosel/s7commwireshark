@@ -2667,11 +2667,32 @@ static gint hf_s7commp_data_data = -1;
 static gint hf_s7commp_data_opcode = -1;
 static gint hf_s7commp_data_reserved1 = -1;
 static gint hf_s7commp_data_reserved2 = -1;
-static gint hf_s7commp_data_unknown1 = -1;
+static gint hf_s7commp_data_transportflags = -1;
+static gint hf_s7commp_data_transportflags_bit0 = -1;
+static gint hf_s7commp_data_transportflags_bit1 = -1;
+static gint hf_s7commp_data_transportflags_bit2 = -1;
+static gint hf_s7commp_data_transportflags_bit3 = -1;
+static gint hf_s7commp_data_transportflags_bit4 = -1;
+static gint hf_s7commp_data_transportflags_bit5 = -1;
+static gint hf_s7commp_data_transportflags_bit6 = -1;
+static gint hf_s7commp_data_transportflags_bit7 = -1;
 static gint hf_s7commp_data_function = -1;
 static gint hf_s7commp_data_sessionid = -1;
 static gint hf_s7commp_data_seqnum = -1;
 static gint hf_s7commp_objectqualifier = -1;
+
+static gint ett_s7commp_data_transportflags = -1;
+static const int *s7commp_data_transportflags_fields[] = {
+    &hf_s7commp_data_transportflags_bit0,
+    &hf_s7commp_data_transportflags_bit1,
+    &hf_s7commp_data_transportflags_bit2,
+    &hf_s7commp_data_transportflags_bit3,
+    &hf_s7commp_data_transportflags_bit4,
+    &hf_s7commp_data_transportflags_bit5,
+    &hf_s7commp_data_transportflags_bit6,
+    &hf_s7commp_data_transportflags_bit7,
+    NULL
+};
 
 static gint hf_s7commp_valuelist = -1;
 static gint hf_s7commp_errorvaluelist = -1;
@@ -2951,6 +2972,7 @@ static gint hf_s7commp_setvar_unknown1 = -1;
 static gint hf_s7commp_setvar_objectid = -1;
 static gint hf_s7commp_setvar_itemcount = -1;
 static gint hf_s7commp_setvar_itemaddrcount = -1;
+static gint hf_s7commp_setvar_rawvaluelen = -1;
 
 /* Getmultivar/Getvariable */
 static gint hf_s7commp_getmultivar_unknown1 = -1;
@@ -3238,7 +3260,9 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
         section = (id_number & 0xffff);
 
         if (id_number >= 0x70000000 && id_number <= 0x7fffffff) {
-            g_snprintf(result, ITEM_LABEL_LENGTH, "DebugObject.%u.%u", xindex, section);
+            g_snprintf(result, ITEM_LABEL_LENGTH, "DynObjX7.%u.%u", xindex, section);  /* Fuer variable Aufgaben wie zyklische Lesedienste */
+        } else if (id_number >= 0x10000000 && id_number <= 0x1fffffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "DynObjX1.%u.%u", xindex, section);  /* Fuer variable Aufgaben wie zyklische Lesedienste, aber 1200 mit FW <=2  */
         } else if (id_number >= 0x89fd0000 && id_number <= 0x89fdffff) {
             g_snprintf(result, ITEM_LABEL_LENGTH, "UDT.%u", section);
         } else if (id_number >= 0x8a0e0000 && id_number <= 0x8a0effff) {    /* Datenbaustein mit Nummer, 8a0e.... wird aber auch als AlarmID verwendet */
@@ -3365,9 +3389,33 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_seqnum,
           { "Sequence number", "s7comm-plus.data.seqnum", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Sequence number (for reference)", HFILL }},
-        { &hf_s7commp_data_unknown1,
-          { "Unknown 1", "s7comm-plus.data.unknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
-            "Unknown 1. Maybe flags or split into nibbles", HFILL }},
+        { &hf_s7commp_data_transportflags,
+          { "Transport flags", "s7comm-plus.data.transportflags", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit0,
+          { "Bit0", "s7comm-plus.data.transportflags.bit0", FT_BOOLEAN, 8, NULL, 0x01,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit1,
+          { "Bit1-SometimesSet?", "s7comm-plus.data.transportflags.bit1", FT_BOOLEAN, 8, NULL, 0x02,
+            "This flag is in most telegrams not set. Its often set when there is no object qualifier, but not always", HFILL }},
+        { &hf_s7commp_data_transportflags_bit2,
+          { "Bit2-AlwaysSet?", "s7comm-plus.data.transportflags.bit2", FT_BOOLEAN, 8, NULL, 0x04,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit3,
+          { "Bit3", "s7comm-plus.data.transportflags.bit3", FT_BOOLEAN, 8, NULL, 0x08,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit4,
+          { "Bit4-AlwaysSet?", "s7comm-plus.data.transportflags.bit4", FT_BOOLEAN, 8, NULL, 0x10,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit5,
+          { "Bit5-AlwaysSet?", "s7comm-plus.data.transportflags.bit5", FT_BOOLEAN, 8, NULL, 0x20,
+            NULL, HFILL }},
+        { &hf_s7commp_data_transportflags_bit6,
+          { "Bit6-NoResponseExpected?", "s7comm-plus.data.transportflags.bit6", FT_BOOLEAN, 8, NULL, 0x40,
+            "If this flag is set in a request, there is no response", HFILL }},
+        { &hf_s7commp_data_transportflags_bit7,
+          { "Bit7", "s7comm-plus.data.transportflags.bit7", FT_BOOLEAN, 8, NULL, 0x80,
+            NULL, HFILL }},
         { &hf_s7commp_data_sessionid,
           { "Session Id", "s7comm-plus.data.sessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
             "Session Id, negotiated on session start", HFILL }},
@@ -3923,7 +3971,7 @@ proto_register_s7commp (void)
           { "Unknown", "s7comm-plus.setvar.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_setvar_objectid,
-          { "In Object Id", "s7comm-plus.setvar.objectid", FT_UINT32, BASE_HEX, NULL, 0x0,
+          { "In Object Id", "s7comm-plus.setvar.objectid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_setvar_itemcount,
           { "Item count", "s7comm-plus.setvar.itemcount", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -3931,6 +3979,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_setvar_itemaddrcount,
           { "Item address count", "s7comm-plus.setvar.itemaddrcount", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ: Item address count", HFILL }},
+        { &hf_s7commp_setvar_rawvaluelen,
+          { "Raw value length", "s7comm-plus.setvar.rawvaluelen", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "VLQ: Raw value length", HFILL }},
 
         /* GetMultiVariables/GetVariable */
         { &hf_s7commp_getmultivar_unknown1,
@@ -4270,6 +4321,7 @@ proto_register_s7commp (void)
         &ett_s7commp,
         &ett_s7commp_header,
         &ett_s7commp_data,
+        &ett_s7commp_data_transportflags,
         &ett_s7commp_data_item,
         &ett_s7commp_data_returnvalue,
         &ett_s7commp_trailer,
@@ -4440,7 +4492,7 @@ static guint32
 tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
 {
     int counter;
-    gint32 val = 0;
+    guint32 val = 0;
     guint8 octet;
     guint8 cont;
     for (counter = 1; counter <= 4+1; counter++) {        /* grosse Werte benoetigen 5 Bytes: 4*7 bit + 4 bit */
@@ -6672,9 +6724,9 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
         offset += octet_count;
         /* add result object ids to info column, usually it's only one single id */
         if (i == 0) {
-            col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+            s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
         } else {
-            col_append_fstr(pinfo->cinfo, COL_INFO, ",0x%08x", object_id);
+            s7commp_pinfo_append_idname(pinfo, object_id, ", ");
         }
     }
     /* Ein Daten-Objekt gibt es nur beim Connect.
@@ -6699,7 +6751,7 @@ s7commp_decode_request_deleteobject(tvbuff_t *tvb,
     guint32 object_id;
     object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_object_deleteobjid, tvb, offset, 4, object_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+    s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
     offset += 4;
 
     return offset;
@@ -6724,7 +6776,7 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
     object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_object_deleteobjid, tvb, offset, 4, object_id);
     offset += 4;
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+    s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
 
     if (errorextension) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
@@ -7135,7 +7187,7 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         proto_item_set_len(list_item_tree, offset - list_start_offset);
     } else {
         proto_tree_add_uint(tree, hf_s7commp_setvar_objectid, tvb, offset-4, 4, value);
-        col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", value);
+        s7commp_pinfo_append_idname(pinfo, value, " ObjId=");
         proto_tree_add_ret_varuint32(tree, hf_s7commp_setvar_itemcount, tvb, offset, &octet_count, &item_count);
         offset += octet_count;
         proto_tree_add_ret_varuint32(tree, hf_s7commp_setvar_itemaddrcount, tvb, offset, &octet_count, &item_address_count);
@@ -7387,7 +7439,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
     /* 4 Bytes Subscription Object Id */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_subscrobjectid, tvb, offset, 4, subscr_object_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", subscr_object_id);
+    s7commp_pinfo_append_idname(pinfo, subscr_object_id, " ObjId=");
     offset += 4;
 
     /* 6/7: Unbekannt */
@@ -7499,7 +7551,7 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
     /* 4 Bytes Subscription Object Id -> scheint hier nicht der Fall zu sein? */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_subscrobjectid, tvb, offset, 4, subscr_object_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", subscr_object_id);
+    s7commp_pinfo_append_idname(pinfo, subscr_object_id, " ObjId=");
     offset += 4;
 
     proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));
@@ -7624,27 +7676,48 @@ s7commp_decode_request_setvariable(tvbuff_t *tvb,
                                    guint32 offset)
 {
     guint32 object_id;
-    guint8 octet_count;
-    guint32 item_count;
+    guint8 octet_count = 0;
+    guint32 item_address_count = 0;
     guint32 i;
+    int struct_level = 0;
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset;
 
     object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_setvar_objectid, tvb, offset, 4, object_id);
-    col_append_fstr(pinfo->cinfo, COL_INFO, " ObjId=0x%08x", object_id);
+    s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
     offset += 4;
 
-    proto_tree_add_ret_varuint32(tree, hf_s7commp_setvar_itemcount, tvb, offset, &octet_count, &item_count);
+    proto_tree_add_ret_varuint32(tree, hf_s7commp_setvar_itemaddrcount, tvb, offset, &octet_count, &item_address_count);
     offset += octet_count;
+
+    list_start_offset = offset;
+    list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
+    list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
+    /* Wenn count == 1 dann folgt nur eine ID. Wenn z.B. count == 4, dann folgen 2 IDs, eine Null
+     * und dann eine Laengenangabe die mit der Roh-Laenge im folgenden Value-Teil identisch ist.
+     * Warum diese Redundanz ist nicht klar. Vermutetes Schema was zumindest bei den bisherigen
+     * Aufzeichnungen funktioniert:
+     * Wenn innerhalb Schleife ein Nullwert auftritt, dann folgt danach noch eine Laenge.
+     */
+    for (i = 1; i <= item_address_count; i++) {
+        proto_tree_add_ret_varuint32(list_item_tree, hf_s7commp_data_id_number, tvb, offset, &octet_count, &object_id);
+        offset += octet_count;
+        if (object_id == 0) {
+            proto_tree_add_varuint32(list_item_tree, hf_s7commp_setvar_rawvaluelen, tvb, offset, &octet_count);
+            offset += octet_count;
+            i += 1;
+        }
+    }
+    proto_item_set_len(list_item_tree, offset - list_start_offset);
+
     list_start_offset = offset;
     list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
-    for (i = 1; i <= item_count; i++) {
-        offset = s7commp_decode_id_value_list(tvb, pinfo, list_item_tree, offset, FALSE);
-    }
+    offset = s7commp_decode_value(tvb, pinfo, list_item_tree, offset, &struct_level, 0);
     proto_item_set_len(list_item_tree, offset - list_start_offset);
+
     return offset;
 }
 /*******************************************************************************************************
@@ -8461,7 +8534,8 @@ s7commp_decode_data(tvbuff_t *tvb,
                 offset += 4;
                 dlength -= 4;
 
-                proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
+                proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_data_transportflags,
+                    ett_s7commp_data_transportflags, s7commp_data_transportflags_fields, ENC_BIG_ENDIAN);
                 offset += 1;
                 dlength -= 1;
 
@@ -8520,7 +8594,8 @@ s7commp_decode_data(tvbuff_t *tvb,
                 proto_item_set_len(item_tree, offset - offset_save);
                 dlength = dlength - (offset - offset_save);
             } else if ((opcode == S7COMMP_OPCODE_RES) || (opcode == S7COMMP_OPCODE_RES2)) {
-                proto_tree_add_item(tree, hf_s7commp_data_unknown1, tvb, offset, 1, FALSE);
+                proto_tree_add_bitmask(tree, tvb, offset, hf_s7commp_data_transportflags,
+                    ett_s7commp_data_transportflags, s7commp_data_transportflags_fields, ENC_BIG_ENDIAN);
                 offset += 1;
                 dlength -= 1;
 

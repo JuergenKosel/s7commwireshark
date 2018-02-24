@@ -20,10 +20,15 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 include $(top_srcdir)/Makefile.am.inc
-include ../Makefile.am.inc
+include $(top_srcdir)/plugins/epan/Makefile.am.inc
 
 # the name of the plugin
 PLUGIN_NAME = s7comm_plus
+
+PLUGIN_VERSION = 0.0.5
+
+BUILT_SOURCES = \
+	plugin.c
 
 # Non-generated sources to be scanned for registration routines
 NONGENERATED_REGISTER_C_FILES = \
@@ -40,13 +45,14 @@ CLEAN_HEADER_FILES = \
 HEADER_FILES = \
 	$(CLEAN_HEADER_FILES)
 
-plugin_LTLIBRARIES = s7comm_plus.la
+epan_plugin_LTLIBRARIES = s7comm_plus.la
 
 s7comm_plus_la_SOURCES = \
-	plugin.c \
-	moduleinfo.h \
 	$(SRC_FILES)	\
 	$(HEADER_FILES)
+
+nodist_s7comm_plus_la_SOURCES = \
+	plugin.c
 
 s7comm_plus_la_CPPFLAGS = $(AM_CPPFLAGS) $(PLUGIN_CPPFLAGS)
 
@@ -54,14 +60,8 @@ s7comm_plus_la_CFLAGS = $(AM_CFLAGS) $(PLUGIN_CFLAGS)
 
 s7comm_plus_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 
-CLEANFILES = \
-	s7comm_plus \
-	*~
-
-MAINTAINERCLEANFILES = \
-	Makefile.in	\
+DISTCLEANFILES = \
 	plugin.c
 
 EXTRA_DIST = \
-	plugin.rc.in		\
 	CMakeLists.txt

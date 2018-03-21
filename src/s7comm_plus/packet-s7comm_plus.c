@@ -5196,7 +5196,9 @@ DIAG_ON(cast-qual)
         retcode = inflate(streamp, Z_FINISH);
 
         if (retcode == Z_NEED_DICT) {
-            pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset + 2, 4, streamp->adler);
+            pi = proto_tree_add_uint(subtree, hf_s7commp_compressedblob_dictionary_id, tvb, offset + 2, 4,
+                                     /* explicit cast to allow build with clang compiler: */
+                                     (guint32) streamp->adler);
             PROTO_ITEM_SET_GENERATED(pi);
             switch (streamp->adler) {
                 case S7COMMP_DICTID_BodyDesc_90000001:

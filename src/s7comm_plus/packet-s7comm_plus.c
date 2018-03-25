@@ -621,6 +621,7 @@ static const int *s7commp_object_classflags_fields[] = {
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_BITOFFSET           0x0007      /* Bits 01..03 */
 
 /* Offsetinfo type for tag description (S7-1500) */
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY                   0
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD             1
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRING          2
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAY1DIM       3
@@ -638,6 +639,7 @@ static const int *s7commp_object_classflags_fields[] = {
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM               15
 
 static const value_string tagdescr_offsetinfotype2_names[] = {
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY,                    "FB_Array" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD,              "LibStructElem_Std" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRING,           "LibStructElem_String" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAY1DIM,        "LibStructElem_Array1Dim" },
@@ -652,7 +654,7 @@ static const value_string tagdescr_offsetinfotype2_names[] = {
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT,                      "Struct" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM,                  "StructArray1Dim" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM,                  "StructArrayMDim" },
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM,                "ProgramAlarm" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM,                "FB/ProgramAlarm" },
     { 0,                                                            NULL }
 };
 
@@ -6372,6 +6374,28 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     break;
             }
 
+            /* sub-FB/ProgramAlarm data */
+            switch (offsetinfotype) {
+                /*************************************************************************/
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM:
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Relation-Id: 0x%08x", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 4: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 5: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 6: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 7: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Retain Section Offset: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Volatile Section Offset: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    break;
+            }
+
             /* array dimensions */
             switch (offsetinfotype) {
                 /*************************************************************************/
@@ -6398,6 +6422,27 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     array_elementcount = (gint32)tvb_get_letohl(tvb, offset);
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_arrayelementcount, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
+                    break;
+                /*************************************************************************/
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY:
+                    array_elementcount = (gint32)tvb_get_letohl(tvb, offset);
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_arrayelementcount, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Classic Section Size: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Retain Section Size: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Volatile Section Size: %u", tvb_get_letohl(tvb, offset));
+                    offset += 4;
+                    break;
+            }
+            switch (offsetinfotype) {
+                /*************************************************************************/
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAYMDIM:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCTMDIM:
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY:
                     /* Multidimensional Array max. 6 dimensions */
                     for (d = 0; d < 6; d++) {
                         mdarray_lowerbounds[d] = (gint32)tvb_get_letohl(tvb, offset);
@@ -6427,7 +6472,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     break;
             }
 
-            /* struct info, alarms */
+            /* struct info */
             switch (offsetinfotype) {
                 /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM:
@@ -6451,23 +6496,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 6: %u", tvb_get_letohl(tvb, offset));
                     offset += 4;
                     proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 7: %u", tvb_get_letohl(tvb, offset));
-                    offset += 4;
-                    break;
-                /*************************************************************************/
-                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM:
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Relation-Id: 0x%08x", tvb_get_letohl(tvb, offset));
-                    offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 4: %u", tvb_get_letohl(tvb, offset));
-                    offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 5: %u", tvb_get_letohl(tvb, offset));
-                    offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 6: %u", tvb_get_letohl(tvb, offset));
-                    offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 7: %u", tvb_get_letohl(tvb, offset));
-                    offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 8: %u", tvb_get_letohl(tvb, offset));
-                    offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "ProgramAlarm Info 9: %u", tvb_get_letohl(tvb, offset));
                     offset += 4;
                     break;
             }

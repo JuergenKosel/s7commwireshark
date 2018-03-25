@@ -3277,6 +3277,8 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
             g_snprintf(result, ITEM_LABEL_LENGTH, "FC.%u", section);
         } else if (id_number >= 0x8a200000 && id_number <= 0x8a20ffff) {
             g_snprintf(result, ITEM_LABEL_LENGTH, "S_FB.%u", section);
+        } else if (id_number >= 0x8a210000 && id_number <= 0x8a21ffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "S_FC.%u", section);
         } else if (id_number >= 0x8a240000 && id_number <= 0x8a24ffff) {
             g_snprintf(result, ITEM_LABEL_LENGTH, "S_UDT.%u", section);
         } else if (id_number >= 0x8a320000 && id_number <= 0x8a32ffff) {

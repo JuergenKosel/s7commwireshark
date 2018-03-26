@@ -40,7 +40,7 @@ set(CLEAN_FILES
 set_source_files_properties(
 	${CLEAN_FILES}
 	PROPERTIES
-	COMPILE_FLAGS ${WERROR_COMMON_FLAGS}
+	COMPILE_FLAGS "${WERROR_COMMON_FLAGS}"
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -51,6 +51,8 @@ register_plugin_files(plugin.c
 )
 
 add_plugin_library(s7comm_plus epan)
+
+target_link_libraries(s7comm_plus epan)
 
 install_plugin(s7comm_plus epan)
 

@@ -977,24 +977,13 @@ static const value_string tagdescr_accessability_names[] = {
     { 0,        NULL }
 };
 
+/* Evtl. sind hier noch weniger Werte erlaubt */
 static const value_string lid_access_aid_names[] = {
     { 1,        "LID_OMS_STB_DescriptionRID" },
     { 2,        "LID_OMS_STB_Structured" },
     { 3,        "LID_OMS_STB_ClassicBlob" },
     { 4,        "LID_OMS_STB_RetainBlob" },
     { 5,        "LID_OMS_STB_VolatileBlob" },
-    { 6,        "LID_OMS_STB_TypeInfoModificationTime" },
-    { 8,        "LID_OMS_STB_BaseClass" },
-    { 9,        "LID_OMS_STB_1stFreeLID" },
-    { 11,       "LID_PoolUsagePoolName" },
-    { 13,       "LID_PoolUsageItemsTotal" },
-    { 14,       "LID_PoolUsageItemsUsedCur" },
-    { 15,       "LID_PoolUsageBytesUsedCur" },
-    { 16,       "LID_PoolUsageItemsUsedMax" },
-    { 17,       "LID_PoolUsageAllocCounter" },
-    { 18,       "LID_PoolUsageBytesUsedMax" },
-    { 19,       "LID_PoolUsageBytesTotal" },
-    { 20,       "LID_PoolUsageAllocSize" },
     { 0,        NULL }
 };
 
@@ -2787,6 +2776,7 @@ static gint hf_s7commp_itemaddr_dbnumber = -1;
 static gint hf_s7commp_itemaddr_area_sub = -1;
 static gint hf_s7commp_itemaddr_lid_value = -1;
 static gint hf_s7commp_itemaddr_idcount = -1;
+static gint hf_s7commp_itemaddr_filter_sequence = -1;
 
 /* Item Value */
 static gint hf_s7commp_itemval_itemnumber = -1;
@@ -3489,6 +3479,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemaddr_idcount,
           { "Number of following IDs", "s7comm-plus.item.addr.idcount", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Number of following IDs", HFILL }},
+        { &hf_s7commp_itemaddr_filter_sequence,
+          { "Item address sequence", "s7comm-plus.item.addr.address_filter_sequence", FT_STRING, BASE_NONE, NULL, 0x0,
+            "Combined string of all access relevant parts. Can be used as a filter", HFILL }},
 
         /*** Item value ***/
         { &hf_s7commp_itemval_itemnumber,
@@ -6902,6 +6895,14 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
     gboolean is_datablock_access = FALSE;
     gboolean is_iqmct_access = FALSE;
     gboolean is_classicblob_access = FALSE;
+    guint32 a_offs, a_cnt, a_bitoffs;
+    guint32 start_offset;
+    proto_item *pi = NULL;
+    int str_len = 0;
+    /* Z.Zt. max. Schachtelungstiefe von 8 erlaubt. = (10+1)*8 + 8+1
+     * plus ggf. Arrayindizes, 256 sollten fuer alle Eventualitaeten reichen.
+     */
+    gchar addr_filter_seq_str[256];
 
     /**************************************************************
      * 4. Feld
@@ -6930,44 +6931,53 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
     is_iqmct_access = ((id_value >= 80) && (id_value <= 84));                         /* 80=I, 81=Q, 82=M, 83=C, 84=T */
     is_classicblob_access = (crc == 0) && (is_datablock_access || is_iqmct_access);
 
+    start_offset = offset;
+    str_len = g_snprintf(addr_filter_seq_str, sizeof(addr_filter_seq_str), "%08X", id_value);
+
     if (lid_nest_depth > 1) {
         if (is_classicblob_access) {
             lid_cnt = 2;
-            /* 1. LID: Zugriffsart */
             first_lid = tvb_get_varuint32(tvb, &octet_count, offset);
-            proto_tree_add_text(tree, tvb, offset, octet_count, "LID-access Aid: %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
-            proto_item_append_text(tree, ", %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
-            offset += octet_count;
-            lid_cnt += 1;
-            *number_of_fields += 1;
-            /* Wenn Zugriffsart == 3 (ClassicBlob), dann wird mit Absolutadressen gearbeitet */
+            /* Wenn Zugriffsart == 3 (ClassicBlob), dann wird mit Absolutadressen gearbeitet.
+             * Das Prinzip funktioniert nur, wenn als erste LID keiner dieser Werte erlaubt ist.
+             * Andernfalls waere der Zugriff nicht eindeutig zu unterscheiden.
+             * Es ist zur Zeit auch nur die Funktion von 3 bekannt.
+             */
             if (first_lid == 3) {
+                /* 1. LID: Zugriffsart */
+                proto_tree_add_text(tree, tvb, offset, octet_count, "LID-access Aid: %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
+                proto_item_append_text(tree, ", %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
+                offset += octet_count;
+                lid_cnt += 1;
+                *number_of_fields += 1;
                 /* 2. Startadresse */
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(tree, tvb, offset, octet_count, "Blob startoffset: %u", value);
-                proto_item_append_text(tree, ", Offs=%u", value);
+                a_offs = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(tree, tvb, offset, octet_count, "Blob startoffset: %u", a_offs);
                 offset += octet_count;
                 lid_cnt += 1;
                 *number_of_fields += 1;
                 /* 3. Anzahl an Bytes */
-                value = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(tree, tvb, offset, octet_count, "Blob bytecount: %u", value);
-                proto_item_append_text(tree, ", Cnt=%u", value);
+                a_cnt = tvb_get_varuint32(tvb, &octet_count, offset);
+                proto_tree_add_text(tree, tvb, offset, octet_count, "Blob bytecount: %u", a_cnt);
                 offset += octet_count;
                 lid_cnt += 1;
                 *number_of_fields += 1;
                 /* Wenn jetzt noch ein Feld folgt, dann ist es ein Bitoffset */
                 if (lid_nest_depth >= lid_cnt) {
-                    value = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_text(tree, tvb, offset, octet_count, "Blob bitoffset: %u", value);
-                    proto_item_append_text(tree, ", Bitoffs=%u", value);
+                    a_bitoffs = tvb_get_varuint32(tvb, &octet_count, offset);
+                    proto_tree_add_text(tree, tvb, offset, octet_count, "Blob bitoffset: %u", a_bitoffs);
                     offset += octet_count;
                     lid_cnt += 1;
                     *number_of_fields += 1;
+                    proto_item_append_text(tree, ", Offs=%u, Cnt=%u, Bitoffs=%u", a_offs, a_cnt, a_bitoffs);
+                    str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".O%u.C%u.B%u", a_offs, a_cnt, a_bitoffs);
+                } else {
+                    proto_item_append_text(tree, ", Offs=%u, Cnt=%u", a_offs, a_cnt);
+                    str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".O%u.C%u", a_offs, a_cnt);
                 }
             }
             /* TODO: Wenn jetzt noch LIDs folgen, erstmal als weitere IDs anzeigen */
-            if (lid_nest_depth > lid_cnt) {
+            if (lid_nest_depth >= lid_cnt) {
                 proto_item_append_text(tree, ", LID=");
             }
             /* lid_cnt initialized/set above */
@@ -6979,6 +6989,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                 } else {
                     proto_item_append_text(tree, "%u.", value);
                 }
+                str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".%u", value);
                 offset += octet_count;
                 *number_of_fields += 1;
             }
@@ -6993,11 +7004,16 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                 } else {
                     proto_item_append_text(tree, "%u.", value);
                 }
+                str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".%u", value);
                 offset += octet_count;
                 *number_of_fields += 1;
             }
         }
     }
+    /* Gesamte Sequenz als filterbaren Eintrag generieren */
+    pi = proto_tree_add_string_format(tree, hf_s7commp_itemaddr_filter_sequence, tvb, start_offset,
+        offset - start_offset, addr_filter_seq_str, "Item address sequence: %s", addr_filter_seq_str);
+    PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
 /*******************************************************************************************************

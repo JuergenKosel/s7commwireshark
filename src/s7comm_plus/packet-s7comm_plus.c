@@ -8895,7 +8895,7 @@ dissect_s7commp(tvbuff_t *tvb,
               Letztes Fragment
             */
 
-            if (!pinfo->fd->flags.visited) {        /* first pass */
+            if (!pinfo->fd->visited) {        /* first pass */
                 /* Vorabcheck: opcode und function herausfinden
                  * Da z.B. SetVarSubstreamed einen anderen Mechanismus verwendet!
                  */

@@ -52,7 +52,7 @@ register_plugin_files(plugin.c
 
 add_plugin_library(s7comm_plus epan)
 
-target_link_libraries(s7comm_plus epan)
+target_link_libraries(s7comm_plus epan ${ZLIB_LIBRARIES})
 
 install_plugin(s7comm_plus epan)
 

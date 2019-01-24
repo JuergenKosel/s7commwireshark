@@ -22,7 +22,7 @@
 include(WiresharkPlugin)
 
 # Plugin name and version info (major minor micro extra)
-set_module_info(s7comm_plus 0 0 5 0)
+set_module_info(s7comm_plus 0 0 6 0)
 
 set(DISSECTOR_SRC
 	packet-s7comm_plus.c
@@ -43,7 +43,9 @@ set_source_files_properties(
 	COMPILE_FLAGS "${WERROR_COMMON_FLAGS}"
 )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}
+	${ZLIB_INCLUDE_DIR}
+)
 
 register_plugin_files(plugin.c
 	plugin
@@ -52,7 +54,11 @@ register_plugin_files(plugin.c
 
 add_plugin_library(s7comm_plus epan)
 
-target_link_libraries(s7comm_plus epan)
+target_link_libraries(
+	s7comm_plus
+	epan
+	${ZLIB_LIBRARIES}
+)
 
 install_plugin(s7comm_plus epan)
 

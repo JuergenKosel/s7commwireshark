@@ -3640,7 +3640,7 @@ proto_register_s7commp (void)
           { "Packed struct", "s7comm-plus.item.packedstruct", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_packedstruct_interfacetimestamp,
-          { "Interface timestamp", "s7comm-plus.item.packedstruct.interfacetimestamp", FT_STRING, BASE_NONE, NULL, 0x0,
+          { "Interface timestamp", "s7comm-plus.item.packedstruct.interfacetimestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_packedstruct_transpsize,
           { "Unknown (Transport size?)", "s7comm-plus.item.packedstruct.transpsize", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -5444,7 +5444,7 @@ s7commp_decode_packed_struct(tvbuff_t *tvb,
     guint32 start_offset = 0;
     guint64 uint64val = 0;
     guint32 element_count = 0;
-    gchar *str_val = NULL;
+    nstime_t tmptime;
     guint8 octet_count = 0;
     proto_item *value_item = NULL;
     proto_tree *value_item_tree = NULL;
@@ -5453,13 +5453,10 @@ s7commp_decode_packed_struct(tvbuff_t *tvb,
     value_item = proto_tree_add_item(tree, hf_s7commp_packedstruct, tvb, offset, -1, FALSE);
     value_item_tree = proto_item_add_subtree(value_item, ett_s7commp_packedstruct);
 
-    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
-    str_val[0] = '\0';
-
     uint64val = tvb_get_ntoh64(tvb, offset);
-    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
-    proto_tree_add_string_format(value_item_tree, hf_s7commp_packedstruct_interfacetimestamp, tvb, offset, 8,
-        str_val, "Interface timestamp: %s", str_val);
+    tmptime.secs = (time_t)(uint64val / 1000000000);
+    tmptime.nsecs = uint64val % 1000000000;
+    proto_tree_add_time(value_item_tree, hf_s7commp_packedstruct_interfacetimestamp, tvb, offset, 8, &tmptime);
     offset += 8;
 
     /* Bisher war an dieser Stelle immer eine 2, was theoretisch fuer USint stehen koennte.
@@ -5941,10 +5938,10 @@ s7commp_decode_value(tvbuff_t *tvb,
                 if (sparsearray_key == 0) {
                     break;
                 }
+            }
             /*
             } else {
                 TODO: Add array index to value item, like "Value [1]: ..."
-            }
             */
         }
         /* Erweitertes Decodieren der Daten ausgewaehlter IDs */

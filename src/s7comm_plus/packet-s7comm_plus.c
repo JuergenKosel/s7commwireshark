@@ -2804,6 +2804,31 @@ static gint hf_s7commp_itemval_datatype = -1;
 static gint hf_s7commp_itemval_arraysize = -1;
 static gint hf_s7commp_itemval_value = -1;
 
+static gint hf_s7commp_itemval_bool = -1;
+static gint hf_s7commp_itemval_usint = -1;
+static gint hf_s7commp_itemval_uint = -1;
+static gint hf_s7commp_itemval_udint = -1;
+static gint hf_s7commp_itemval_ulint = -1;
+static gint hf_s7commp_itemval_sint = -1;
+static gint hf_s7commp_itemval_int = -1;
+static gint hf_s7commp_itemval_dint = -1;
+static gint hf_s7commp_itemval_lint = -1;
+static gint hf_s7commp_itemval_byte = -1;
+static gint hf_s7commp_itemval_word = -1;
+static gint hf_s7commp_itemval_dword = -1;
+static gint hf_s7commp_itemval_lword = -1;
+static gint hf_s7commp_itemval_real = -1;
+static gint hf_s7commp_itemval_lreal = -1;
+static gint hf_s7commp_itemval_timestamp = -1;
+static gint hf_s7commp_itemval_timespan = -1;
+static gint hf_s7commp_itemval_rid = -1;
+static gint hf_s7commp_itemval_aid = -1;
+static gint hf_s7commp_itemval_blob = -1;
+static gint hf_s7commp_itemval_wstring = -1;
+static gint hf_s7commp_itemval_variant = -1;
+static gint hf_s7commp_itemval_struct = -1;
+static gint hf_s7commp_itemval_s7string = -1;
+
 /* Get/Set a packed struct */
 static gint ett_s7commp_packedstruct = -1;
 static gint hf_s7commp_packedstruct = -1;
@@ -3536,12 +3561,86 @@ proto_register_s7commp (void)
           { "Value", "s7comm-plus.item.val.value", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
 
+        /* Values of different datatypes */
+        { &hf_s7commp_itemval_bool,
+          { "Value", "s7comm-plus.value.bool", FT_UINT8, BASE_DEC, NULL, 0x0,
+            "Value (Bool)", HFILL }},
+        { &hf_s7commp_itemval_usint,
+          { "Value", "s7comm-plus.value.usint", FT_UINT8, BASE_DEC, NULL, 0x0,
+            "Value (USInt)", HFILL }},
+        { &hf_s7commp_itemval_uint,
+          { "Value", "s7comm-plus.value.uint", FT_UINT16, BASE_DEC, NULL, 0x0,
+            "Value (UInt)", HFILL }},
+        { &hf_s7commp_itemval_udint,
+          { "Value", "s7comm-plus.value.udint", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "Value (UDInt)", HFILL }},
+        { &hf_s7commp_itemval_ulint,
+          { "Value", "s7comm-plus.value.ulint", FT_UINT64, BASE_DEC, NULL, 0x0,
+            "Value (ULInt)", HFILL }},
+        { &hf_s7commp_itemval_sint,
+          { "Value", "s7comm-plus.value.sint", FT_INT8, BASE_DEC, NULL, 0x0,
+            "Value (SInt)", HFILL }},
+        { &hf_s7commp_itemval_int,
+          { "Value", "s7comm-plus.value.int", FT_INT16, BASE_DEC, NULL, 0x0,
+            "Value (Int)", HFILL }},
+        { &hf_s7commp_itemval_dint,
+          { "Value", "s7comm-plus.value.dint", FT_INT32, BASE_DEC, NULL, 0x0,
+            "Value (DInt)", HFILL }},
+        { &hf_s7commp_itemval_lint,
+          { "Value", "s7comm-plus.value.lint", FT_INT64, BASE_DEC, NULL, 0x0,
+            "Value (LInt)", HFILL }},
+        { &hf_s7commp_itemval_byte,
+          { "Value", "s7comm-plus.value.byte", FT_UINT8, BASE_HEX, NULL, 0x0,
+            "Value (Byte)", HFILL }},
+        { &hf_s7commp_itemval_word,
+          { "Value", "s7comm-plus.value.word", FT_UINT16, BASE_HEX, NULL, 0x0,
+            "Value (Word)", HFILL }},
+        { &hf_s7commp_itemval_dword,
+          { "Value", "s7comm-plus.value.dword", FT_UINT32, BASE_HEX, NULL, 0x0,
+            "Value (DWord)", HFILL }},
+        { &hf_s7commp_itemval_lword,
+          { "Value", "s7comm-plus.value.lword", FT_UINT64, BASE_HEX, NULL, 0x0,
+            "Value (LWord)", HFILL }},
+        { &hf_s7commp_itemval_real,
+          { "Value", "s7comm-plus.value.real", FT_FLOAT, BASE_NONE, NULL, 0x0,
+            "Value (Real)", HFILL }},
+        { &hf_s7commp_itemval_lreal,
+          { "Value", "s7comm-plus.value.lreal", FT_DOUBLE, BASE_NONE, NULL, 0x0,
+            "Value (LReal)", HFILL }},
+        { &hf_s7commp_itemval_timestamp,
+          { "Value", "s7comm-plus.value.timestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
+            "Value (Timestamp)", HFILL }},
+        { &hf_s7commp_itemval_timespan,
+          { "Value", "s7comm-plus.value.timespan", FT_RELATIVE_TIME, BASE_NONE, NULL, 0x0,
+            "Value (Timespan)", HFILL }},
+        { &hf_s7commp_itemval_rid,
+          { "Value", "s7comm-plus.value.rid", FT_UINT32, BASE_HEX, NULL, 0x0,
+            "Value (RID)", HFILL }},
+        { &hf_s7commp_itemval_aid,
+          { "Value", "s7comm-plus.value.aid", FT_UINT32, BASE_HEX, NULL, 0x0,
+            "Value (AID)", HFILL }},
+        { &hf_s7commp_itemval_blob,
+          { "Value", "s7comm-plus.value.blob", FT_BYTES, BASE_NONE, NULL, 0x0,
+            "Value (Blob)", HFILL }},
+        { &hf_s7commp_itemval_wstring,
+          { "Value", "s7comm-plus.value.wstring", FT_STRING, STR_UNICODE, NULL, 0x0,
+            "Value (WString)", HFILL }},
+        { &hf_s7commp_itemval_variant,
+          { "Value", "s7comm-plus.value.variant", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "Value (Variant)", HFILL }},
+        { &hf_s7commp_itemval_struct,
+          { "Value", "s7comm-plus.value.struct", FT_UINT32, BASE_DEC, NULL, 0x0,
+            "Value (Struct)", HFILL }},
+        { &hf_s7commp_itemval_s7string,
+          { "Value", "s7comm-plus.value.s7string", FT_NONE, BASE_NONE, NULL, 0x0,
+            "Value (S7String)", HFILL }},
+
         /* Get/Set a packed struct */
         { &hf_s7commp_packedstruct,
           { "Packed struct", "s7comm-plus.item.packedstruct", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_packedstruct_interfacetimestamp,
-          { "Interface timestamp", "s7comm-plus.item.packedstruct.interfacetimestamp", FT_STRING, BASE_NONE, NULL, 0x0,
+          { "Interface timestamp", "s7comm-plus.item.packedstruct.interfacetimestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_packedstruct_transpsize,
           { "Unknown (Transport size?)", "s7comm-plus.item.packedstruct.transpsize", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -5345,7 +5444,7 @@ s7commp_decode_packed_struct(tvbuff_t *tvb,
     guint32 start_offset = 0;
     guint64 uint64val = 0;
     guint32 element_count = 0;
-    gchar *str_val = NULL;
+    nstime_t tmptime;
     guint8 octet_count = 0;
     proto_item *value_item = NULL;
     proto_tree *value_item_tree = NULL;
@@ -5354,13 +5453,10 @@ s7commp_decode_packed_struct(tvbuff_t *tvb,
     value_item = proto_tree_add_item(tree, hf_s7commp_packedstruct, tvb, offset, -1, FALSE);
     value_item_tree = proto_item_add_subtree(value_item, ett_s7commp_packedstruct);
 
-    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
-    str_val[0] = '\0';
-
     uint64val = tvb_get_ntoh64(tvb, offset);
-    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
-    proto_tree_add_string_format(value_item_tree, hf_s7commp_packedstruct_interfacetimestamp, tvb, offset, 8,
-        str_val, "Interface timestamp: %s", str_val);
+    tmptime.secs = (time_t)(uint64val / 1000000000);
+    tmptime.nsecs = uint64val % 1000000000;
+    proto_tree_add_time(value_item_tree, hf_s7commp_packedstruct_interfacetimestamp, tvb, offset, 8, &tmptime);
     offset += 8;
 
     /* Bisher war an dieser Stelle immer eine 2, was theoretisch fuer USint stehen koennte.
@@ -5488,6 +5584,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint32 array_index = 0;
 
     proto_item *array_item = NULL;
+    proto_item *value_item = NULL;
     proto_tree *array_item_tree = NULL;
     proto_tree *current_tree = NULL;
 
@@ -5499,6 +5596,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint8 uint8val = 0;
     gint64 int64val = 0;
     gint8 int8val = 0;
+    nstime_t tmptime;
     gchar *str_val = NULL;          /* Value of one single item */
     gchar *str_arrval = NULL;       /* Value of array values */
     guint32 sparsearray_key = 0;
@@ -5611,40 +5709,46 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 1;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", tvb_get_guint8(tvb, offset) ? "True" : "False");
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_bool, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_USINT:
                 length_of_value = 1;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_guint8(tvb, offset));
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_usint, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_UINT:
                 length_of_value = 2;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_ntohs(tvb, offset));
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_uint, tvb, offset, length_of_value, tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_UDINT:
                 value_start_offset = offset;
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
-                offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_udint, tvb, offset, length_of_value, uint32val);
+                offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_ULINT:
                 value_start_offset = offset;
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
-                offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "u", uint64val);
+                value_item = proto_tree_add_uint64(current_tree, hf_s7commp_itemval_ulint, tvb, offset, length_of_value, uint64val);
+                offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_LINT:
                 value_start_offset = offset;
                 int64val = tvb_get_varint64(tvb, &octet_count, offset);
-                offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "d", int64val);
+                value_item = proto_tree_add_int64(current_tree, hf_s7commp_itemval_lint, tvb, offset, length_of_value, int64val);
+                offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_SINT:
                 value_start_offset = offset;
@@ -5652,6 +5756,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 memcpy(&int8val, &uint8val, sizeof(int8val));
                 length_of_value = 1;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%d", int8val);
+                value_item = proto_tree_add_int(current_tree, hf_s7commp_itemval_sint, tvb, offset, length_of_value, int8val);
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_INT:
@@ -5660,25 +5765,29 @@ s7commp_decode_value(tvbuff_t *tvb,
                 memcpy(&int16val, &uint16val, sizeof(int16val));
                 length_of_value = 2;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%d", int16val);
+                value_item = proto_tree_add_int(current_tree, hf_s7commp_itemval_int, tvb, offset, length_of_value, int16val);
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_DINT:
                 value_start_offset = offset;
                 int32val = tvb_get_varint32(tvb, &octet_count, offset);
-                offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%d", int32val);
+                value_item = proto_tree_add_int(current_tree, hf_s7commp_itemval_dint, tvb, offset, length_of_value, int32val);
+                offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_BYTE:
                 length_of_value = 1;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%02x", tvb_get_guint8(tvb, offset));
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_byte, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_WORD:
                 length_of_value = 2;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%04x", tvb_get_ntohs(tvb, offset));
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_word, tvb, offset, length_of_value, tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_STRUCT:
@@ -5689,30 +5798,35 @@ s7commp_decode_value(tvbuff_t *tvb,
                 struct_resultstring = (gchar *)wmem_alloc(wmem_packet_scope(), ITEM_LABEL_LENGTH);
                 s7commp_idname_fmt(struct_resultstring, struct_value);
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u (%s)", struct_value, struct_resultstring);
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_struct, tvb, offset, length_of_value, struct_value);
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_DWORD:
                 length_of_value = 4;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_dword, tvb, offset, length_of_value, tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LWORD:
                 length_of_value = 8;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%016" G_GINT64_MODIFIER "x", tvb_get_ntoh64(tvb, offset));
+                value_item = proto_tree_add_uint64(current_tree, hf_s7commp_itemval_lword, tvb, offset, length_of_value, tvb_get_ntoh64(tvb, offset));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_REAL:
                 length_of_value = 4;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_float(tvb, offset));
+                value_item = proto_tree_add_float(current_tree, hf_s7commp_itemval_real, tvb, offset, length_of_value, tvb_get_ntohieee_float(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LREAL:
                 length_of_value = 8;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_double(tvb, offset));
+                value_item = proto_tree_add_double(current_tree, hf_s7commp_itemval_lreal, tvb, offset, length_of_value, tvb_get_ntohieee_double(tvb, offset));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESTAMP:
@@ -5720,27 +5834,35 @@ s7commp_decode_value(tvbuff_t *tvb,
                 value_start_offset = offset;
                 uint64val = tvb_get_ntoh64(tvb, offset);
                 s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
+                tmptime.secs = (time_t)(uint64val / 1000000000);
+                tmptime.nsecs = uint64val % 1000000000;
+                value_item = proto_tree_add_time(current_tree, hf_s7commp_itemval_timestamp, tvb, offset, length_of_value, &tmptime);
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESPAN:
                 value_start_offset = offset;
                 int64val = tvb_get_varint64(tvb, &octet_count, offset);
-                offset += octet_count;
                 length_of_value = octet_count;
                 s7commp_get_timespan_from_int64(int64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
+                tmptime.secs = (time_t)(int64val / 1000000000);
+                tmptime.nsecs = int64val % 1000000000;
+                value_item = proto_tree_add_time(current_tree, hf_s7commp_itemval_timespan, tvb, offset, length_of_value, &tmptime);
+                offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_RID:
                 length_of_value = 4;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_rid, tvb, offset, length_of_value, tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_AID:
                 value_start_offset = offset;
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
-                offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_aid, tvb, offset, length_of_value, uint32val);
+                offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_WSTRING:
                 proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_stringactlen, tvb, offset, &octet_count, &length_of_value);
@@ -5748,14 +5870,16 @@ s7commp_decode_value(tvbuff_t *tvb,
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s",
                        tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
+                value_item = proto_tree_add_item(current_tree, hf_s7commp_itemval_wstring, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA);
                 offset += length_of_value;
                 break;
             case S7COMMP_ITEM_DATATYPE_VARIANT:
                 value_start_offset = offset;
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
-                offset += octet_count;
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
+                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_aid, tvb, offset, length_of_value, uint32val);
+                offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_BLOB:
                 proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobrootid, tvb, offset, &octet_count, &uint32val);
@@ -5777,6 +5901,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                     value_start_offset = offset;
                     if (length_of_value > 0) {
                         g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
+                        value_item = proto_tree_add_item(current_tree, hf_s7commp_itemval_blob, tvb, offset, length_of_value, ENC_NA);
                     } else {
                         g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
                     }
@@ -5810,13 +5935,14 @@ s7commp_decode_value(tvbuff_t *tvb,
                 g_strlcat(str_arrval, "...", S7COMMP_ITEMVAL_STR_ARRVAL_MAX);
             }
             if (is_sparsearray) {
-                proto_tree_add_text(array_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
                 if (sparsearray_key == 0) {
                     break;
                 }
-            } else {
-                proto_tree_add_text(array_item_tree, tvb, offset - length_of_value, length_of_value, "Value[%u]: %s", array_index, str_val);
             }
+            /*
+            } else {
+                TODO: Add array index to value item, like "Value [1]: ..."
+            */
         }
         /* Erweitertes Decodieren der Daten ausgewaehlter IDs */
         s7commp_decode_value_extended(tvb, pinfo, current_tree, value_start_offset, datatype, datatype_flags, sparsearray_key, length_of_value, id_number);
@@ -5853,9 +5979,6 @@ s7commp_decode_value(tvbuff_t *tvb,
             *struct_level = -1;       /* Zur Signalisierung benutzen, dass anschliessend keine Item-ID sondern eine Element-ID folgen muss. */
         }
     } else { /* not an array or address array */
-        if (length_of_value > 0) {
-            proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
-        }
         proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_val);
     }
     /* Sonderbehandlung bei Datentyp struct bestimmten IDs:

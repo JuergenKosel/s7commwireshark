@@ -5584,7 +5584,6 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint32 array_index = 0;
 
     proto_item *array_item = NULL;
-    proto_item *value_item = NULL;
     proto_tree *array_item_tree = NULL;
     proto_tree *current_tree = NULL;
 
@@ -5709,21 +5708,21 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 1;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", tvb_get_guint8(tvb, offset) ? "True" : "False");
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_bool, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_bool, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_USINT:
                 length_of_value = 1;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_guint8(tvb, offset));
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_usint, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_usint, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_UINT:
                 length_of_value = 2;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_ntohs(tvb, offset));
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_uint, tvb, offset, length_of_value, tvb_get_ntohs(tvb, offset));
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_uint, tvb, offset, length_of_value, tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_UDINT:
@@ -5731,7 +5730,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_udint, tvb, offset, length_of_value, uint32val);
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_udint, tvb, offset, length_of_value, uint32val);
                 offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_ULINT:
@@ -5739,7 +5738,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "u", uint64val);
-                value_item = proto_tree_add_uint64(current_tree, hf_s7commp_itemval_ulint, tvb, offset, length_of_value, uint64val);
+                proto_tree_add_uint64(current_tree, hf_s7commp_itemval_ulint, tvb, offset, length_of_value, uint64val);
                 offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_LINT:
@@ -5747,7 +5746,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 int64val = tvb_get_varint64(tvb, &octet_count, offset);
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%" G_GINT64_MODIFIER "d", int64val);
-                value_item = proto_tree_add_int64(current_tree, hf_s7commp_itemval_lint, tvb, offset, length_of_value, int64val);
+                proto_tree_add_int64(current_tree, hf_s7commp_itemval_lint, tvb, offset, length_of_value, int64val);
                 offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_SINT:
@@ -5756,7 +5755,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 memcpy(&int8val, &uint8val, sizeof(int8val));
                 length_of_value = 1;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%d", int8val);
-                value_item = proto_tree_add_int(current_tree, hf_s7commp_itemval_sint, tvb, offset, length_of_value, int8val);
+                proto_tree_add_int(current_tree, hf_s7commp_itemval_sint, tvb, offset, length_of_value, int8val);
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_INT:
@@ -5765,7 +5764,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 memcpy(&int16val, &uint16val, sizeof(int16val));
                 length_of_value = 2;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%d", int16val);
-                value_item = proto_tree_add_int(current_tree, hf_s7commp_itemval_int, tvb, offset, length_of_value, int16val);
+                proto_tree_add_int(current_tree, hf_s7commp_itemval_int, tvb, offset, length_of_value, int16val);
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_DINT:
@@ -5773,21 +5772,21 @@ s7commp_decode_value(tvbuff_t *tvb,
                 int32val = tvb_get_varint32(tvb, &octet_count, offset);
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%d", int32val);
-                value_item = proto_tree_add_int(current_tree, hf_s7commp_itemval_dint, tvb, offset, length_of_value, int32val);
+                proto_tree_add_int(current_tree, hf_s7commp_itemval_dint, tvb, offset, length_of_value, int32val);
                 offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_BYTE:
                 length_of_value = 1;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%02x", tvb_get_guint8(tvb, offset));
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_byte, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_byte, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_WORD:
                 length_of_value = 2;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%04x", tvb_get_ntohs(tvb, offset));
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_word, tvb, offset, length_of_value, tvb_get_ntohs(tvb, offset));
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_word, tvb, offset, length_of_value, tvb_get_ntohs(tvb, offset));
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_STRUCT:
@@ -5798,35 +5797,35 @@ s7commp_decode_value(tvbuff_t *tvb,
                 struct_resultstring = (gchar *)wmem_alloc(wmem_packet_scope(), ITEM_LABEL_LENGTH);
                 s7commp_idname_fmt(struct_resultstring, struct_value);
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u (%s)", struct_value, struct_resultstring);
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_struct, tvb, offset, length_of_value, struct_value);
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_struct, tvb, offset, length_of_value, struct_value);
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_DWORD:
                 length_of_value = 4;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_dword, tvb, offset, length_of_value, tvb_get_ntohl(tvb, offset));
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_dword, tvb, offset, length_of_value, tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LWORD:
                 length_of_value = 8;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%016" G_GINT64_MODIFIER "x", tvb_get_ntoh64(tvb, offset));
-                value_item = proto_tree_add_uint64(current_tree, hf_s7commp_itemval_lword, tvb, offset, length_of_value, tvb_get_ntoh64(tvb, offset));
+                proto_tree_add_uint64(current_tree, hf_s7commp_itemval_lword, tvb, offset, length_of_value, tvb_get_ntoh64(tvb, offset));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_REAL:
                 length_of_value = 4;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_float(tvb, offset));
-                value_item = proto_tree_add_float(current_tree, hf_s7commp_itemval_real, tvb, offset, length_of_value, tvb_get_ntohieee_float(tvb, offset));
+                proto_tree_add_float(current_tree, hf_s7commp_itemval_real, tvb, offset, length_of_value, tvb_get_ntohieee_float(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LREAL:
                 length_of_value = 8;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_double(tvb, offset));
-                value_item = proto_tree_add_double(current_tree, hf_s7commp_itemval_lreal, tvb, offset, length_of_value, tvb_get_ntohieee_double(tvb, offset));
+                proto_tree_add_double(current_tree, hf_s7commp_itemval_lreal, tvb, offset, length_of_value, tvb_get_ntohieee_double(tvb, offset));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESTAMP:
@@ -5836,7 +5835,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
                 tmptime.secs = (time_t)(uint64val / 1000000000);
                 tmptime.nsecs = uint64val % 1000000000;
-                value_item = proto_tree_add_time(current_tree, hf_s7commp_itemval_timestamp, tvb, offset, length_of_value, &tmptime);
+                proto_tree_add_time(current_tree, hf_s7commp_itemval_timestamp, tvb, offset, length_of_value, &tmptime);
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESPAN:
@@ -5846,14 +5845,14 @@ s7commp_decode_value(tvbuff_t *tvb,
                 s7commp_get_timespan_from_int64(int64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
                 tmptime.secs = (time_t)(int64val / 1000000000);
                 tmptime.nsecs = int64val % 1000000000;
-                value_item = proto_tree_add_time(current_tree, hf_s7commp_itemval_timespan, tvb, offset, length_of_value, &tmptime);
+                proto_tree_add_time(current_tree, hf_s7commp_itemval_timespan, tvb, offset, length_of_value, &tmptime);
                 offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_RID:
                 length_of_value = 4;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_rid, tvb, offset, length_of_value, tvb_get_ntohl(tvb, offset));
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_rid, tvb, offset, length_of_value, tvb_get_ntohl(tvb, offset));
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_AID:
@@ -5861,7 +5860,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_aid, tvb, offset, length_of_value, uint32val);
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_aid, tvb, offset, length_of_value, uint32val);
                 offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_WSTRING:
@@ -5870,7 +5869,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s",
                        tvb_get_string_enc(wmem_packet_scope(), tvb, offset, length_of_value, ENC_UTF_8|ENC_NA));
-                value_item = proto_tree_add_item(current_tree, hf_s7commp_itemval_wstring, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA);
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_wstring, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA);
                 offset += length_of_value;
                 break;
             case S7COMMP_ITEM_DATATYPE_VARIANT:
@@ -5878,7 +5877,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
-                value_item = proto_tree_add_uint(current_tree, hf_s7commp_itemval_aid, tvb, offset, length_of_value, uint32val);
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_aid, tvb, offset, length_of_value, uint32val);
                 offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_BLOB:
@@ -5901,7 +5900,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                     value_start_offset = offset;
                     if (length_of_value > 0) {
                         g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
-                        value_item = proto_tree_add_item(current_tree, hf_s7commp_itemval_blob, tvb, offset, length_of_value, ENC_NA);
+                        proto_tree_add_item(current_tree, hf_s7commp_itemval_blob, tvb, offset, length_of_value, ENC_NA);
                     } else {
                         g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
                     }

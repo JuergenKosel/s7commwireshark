@@ -2827,7 +2827,6 @@ static gint hf_s7commp_itemval_blob = -1;
 static gint hf_s7commp_itemval_wstring = -1;
 static gint hf_s7commp_itemval_variant = -1;
 static gint hf_s7commp_itemval_struct = -1;
-static gint hf_s7commp_itemval_s7string = -1;
 
 /* Get/Set a packed struct */
 static gint ett_s7commp_packedstruct = -1;
@@ -3631,9 +3630,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_struct,
           { "Value", "s7comm-plus.value.struct", FT_UINT32, BASE_DEC, NULL, 0x0,
             "Value (Struct)", HFILL }},
-        { &hf_s7commp_itemval_s7string,
-          { "Value", "s7comm-plus.value.s7string", FT_NONE, BASE_NONE, NULL, 0x0,
-            "Value (S7String)", HFILL }},
 
         /* Get/Set a packed struct */
         { &hf_s7commp_packedstruct,
@@ -5877,7 +5873,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 uint32val = tvb_get_varuint32(tvb, &octet_count, offset);
                 length_of_value = octet_count;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", uint32val);
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_aid, tvb, offset, length_of_value, uint32val);
+                proto_tree_add_uint(current_tree, hf_s7commp_itemval_variant, tvb, offset, length_of_value, uint32val);
                 offset += octet_count;
                 break;
             case S7COMMP_ITEM_DATATYPE_BLOB:

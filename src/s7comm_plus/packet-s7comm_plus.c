@@ -268,7 +268,7 @@ static const value_string itemval_elementid_names[] = {
  * The IDs seem to be unique for all telegrams in which they occur.
  * Add the datatype for this value in parentheses.
  */
- #ifdef USE_INTERNALS
+#ifdef USE_INTERNALS
     #include "internals/packet-s7comm_plus-aid-names.h"
 #else
 static const value_string id_number_names[] = {

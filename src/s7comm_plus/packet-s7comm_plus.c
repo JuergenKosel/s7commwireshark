@@ -7508,6 +7508,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
     guint32 start_offset;
     guint8 octet_count;
     guint8 item_return_value;
+    guint32 cnt1, cnt2;
     int struct_level;
     int n_access_errors = 0;
     /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
@@ -7567,6 +7568,21 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, FALSE);
             } else if (item_return_value == 0x83) {     /* Vermutlich nur in Protokoll Version v1*/
                 offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, 0);
+             } else if (item_return_value == 0x05) {
+                /* In einer Aufzeichnung einer S7-1500 gesehen, bei der laut Angabe im TIA-Portal
+                 * die Geraetekonfiguration online geoeffnet war.
+                 * Es sind zwei Zaehlwerte. Wenn der zweite ueberlaeuft, dann wird der
+                 * Wert des ersten (VLQ) um 1 erhoeht. Ein Zeitwert scheint es nicht zu sein, weil das
+                 * nicht mit den Zeitstempeln der Aufzeichnung uebereinstimmt.
+                 * In der vorliegenden Aufzeichnung ist das der erste Wert in der Wertliste.
+                 */
+                cnt1 = tvb_get_varint32(tvb, &octet_count, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Unknown Counter value 1: %u", cnt1);
+                offset += octet_count;
+                cnt2 = tvb_get_ntohl(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Unknown Counter value 2: %u", cnt2);
+                offset += 4;
+                proto_item_append_text(data_item_tree, ": %u, %u", cnt1, cnt2);
             } else {
                 expert_add_info_format(pinfo, data_item_tree, &ei_s7commp_notification_returnvalue_unknown, "Notification unknown return value: 0x%02x", item_return_value);
                 proto_item_set_len(data_item_tree, offset - start_offset);

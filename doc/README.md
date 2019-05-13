@@ -1,3 +1,9 @@
+# Install packages for Debian Buster
+
+Unless expired, installer packages of Wireshark with s7comm-plus
+dissector integrated for Debian Buster are available as
+continous integration build atifact at ( https://gitlab.com/juergen.kosel.jk/wireshark/-/jobs/artifacts/s7commwireshark/download?job=build-debian-deb )
+
 # Build wireshark with s7comm_plus dissector
 
 To build the wireshark s7comm_plus dissector, which is provided by this project

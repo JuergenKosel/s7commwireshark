@@ -3013,7 +3013,7 @@ static gint hf_s7commp_notification_unknown4 = -1;
 static gint hf_s7commp_notification_credittick = -1;
 static gint hf_s7commp_notification_seqnum_vlq = -1;
 static gint hf_s7commp_notification_seqnum_uint8 = -1;
-static gint hf_s7commp_notification_unknown5 = -1;
+static gint hf_s7commp_notification_subscrccnt = -1;
 static gint hf_s7commp_notification_p2_subscrobjectid = -1;
 static gint hf_s7commp_notification_p2_unknown1 = -1;
 static gint hf_s7commp_notification_p2_unknown2 = -1;
@@ -4132,8 +4132,8 @@ proto_register_s7commp (void)
         { &hf_s7commp_notification_seqnum_uint8,
           { "Notification sequence number", "s7comm-plus.notification.seqnum_ui8", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_notification_unknown5,
-          { "Unknown5", "s7comm-plus.notification.unknown5", FT_UINT8, BASE_HEX, NULL, 0x0,
+        { &hf_s7commp_notification_subscrccnt,
+          { "Subscription change counter", "s7comm-plus.notification.subscritionchangecnt", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
 
         { &hf_s7commp_notification_p2_subscrobjectid,
@@ -7508,6 +7508,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
     guint32 start_offset;
     guint8 octet_count;
     guint8 item_return_value;
+    guint32 cnt1, cnt2;
     int struct_level;
     int n_access_errors = 0;
     /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
@@ -7567,6 +7568,21 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, FALSE);
             } else if (item_return_value == 0x83) {     /* Vermutlich nur in Protokoll Version v1*/
                 offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, 0);
+             } else if (item_return_value == 0x05) {
+                /* In einer Aufzeichnung einer S7-1500 gesehen, bei der laut Angabe im TIA-Portal
+                 * die Geraetekonfiguration online geoeffnet war.
+                 * Es sind zwei Zaehlwerte. Wenn der zweite ueberlaeuft, dann wird der
+                 * Wert des ersten (VLQ) um 1 erhoeht. Ein Zeitwert scheint es nicht zu sein, weil das
+                 * nicht mit den Zeitstempeln der Aufzeichnung uebereinstimmt.
+                 * In der vorliegenden Aufzeichnung ist das der erste Wert in der Wertliste.
+                 */
+                cnt1 = tvb_get_varint32(tvb, &octet_count, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Unknown Counter value 1: %u", cnt1);
+                offset += octet_count;
+                cnt2 = tvb_get_ntohl(tvb, offset);
+                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Unknown Counter value 2: %u", cnt2);
+                offset += 4;
+                proto_item_append_text(data_item_tree, ": %u, %u", cnt1, cnt2);
             } else {
                 expert_add_info_format(pinfo, data_item_tree, &ei_s7commp_notification_returnvalue_unknown, "Notification unknown return value: 0x%02x", item_return_value);
                 proto_item_set_len(data_item_tree, offset - start_offset);
@@ -7595,8 +7611,8 @@ s7commp_decode_notification(tvbuff_t *tvb,
     guint16 unknown2;
     guint32 subscr_object_id, subscr_object_id2;
     guint8 credit_tick;
+    guint8 subscrccnt;
     guint32 seqnum;
-    guint8 item_return_value;
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
     guint8 octet_count = 0;
@@ -7618,48 +7634,39 @@ s7commp_decode_notification(tvbuff_t *tvb,
     offset += 2;
 
     if (unknown2 == 0x0400) {
-        /* Bei V13 und einer 1200 werden hiermit Daten vom HMI zyklisch
-         * bei AEnderung uebermittelt. Daten sind nur enthalten wenn sich etwas aendert.
-         * Sonst gibt es ein verkuerztes (Status?)-Telegramm.
-         */
         proto_tree_add_item(tree, hf_s7commp_notification_unknown4, tvb, offset, 2, ENC_BIG_ENDIAN);
         offset += 2;
 
-        /* Es gibt zwei Nummern:
+        /* Es gibt drei Nummern:
          * 1) Nummerierung fuer Creditlimit: Wird bei Aufbau der notification-session ein Wert angegeben, so erfolgt die UEbertragung
          *                                  bis zur in modifiy-session angegebenen Limit.
          * 2) Sequenznummer: Wurde beim Session-Aufbau -1 angegeben, so ist die Zahl bei 1) Null, und es folgt hier eine aufsteigende Nummer.
-         *
-         * Bei der Sequenznummer scheint es einen Unterschied zwischen 1200 und 1500 zu geben.
-         * Bei der 1200 ist diese immer nur 1 Byte, bei der 1500 ist es ein VLQ!
+         * 3) Subscription Change Counter: Erhoeht sich um 1 wenn eine Subscription geaendert wurde
+         *                                 (z.B. loeschen oder hinzufuegen von weiteren Variablen)
+         * Bei der Sequenznummer gibt es Unterschied zwischen der 1200 (vor FW3?) und der 1500 zu geben.
+         * Bei der 1200 ist diese immer nur 1 Byte, bei der 1500 ist es ein VLQ.
          * Es scheint abhaengig von der ersten ID zu sein. Ist diese groesser 0x7000000 dann ist es ein VLQ.
          * Es scheint generell so, dass eine 1200 IDs beginnend mit 0x1.. und eine 1500 mit 0x7.. verwendet.
          * Eine 1200 mit FW4 verwendet ebenfall > 0x700000. An der Protokollversion kann es nicht festgemacht werden.
          */
-        credit_tick = tvb_get_guint8(tvb, offset);
-        proto_tree_add_uint(tree, hf_s7commp_notification_credittick, tvb, offset, 1, credit_tick);
-        offset += 1;
-        if (subscr_object_id > 0x70000000) {
-            proto_tree_add_ret_varuint32(tree, hf_s7commp_notification_seqnum_vlq, tvb, offset, &octet_count, &seqnum);
-            offset += octet_count;
-        } else {
+        if (subscr_object_id < 0x70000000) {
             seqnum = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(tree, hf_s7commp_notification_seqnum_uint8, tvb, offset, 1, seqnum);
             offset += 1;
-        }
-        col_append_fstr(pinfo->cinfo, COL_INFO, " Ctick=%u NSeq=%u", credit_tick, seqnum);
-
-        item_return_value = tvb_get_guint8(tvb, offset);
-        /* Woran zu erkennen ist, dass hier ein eingeschobener Wert folgt ist noch nicht bekannt.
-         * Wenn vorhanden, wird dieser Wert (gelegentlich) jedes Telegramm erhoeht, sodass auch normal "gueltige"
-         * retval Werte einer Variable moeglich sind.
-         * Ist es ein retval der Variable, dann folgt ueblicherweise min. ein 0xff da die Referenznummern von
-         * 0xffffffff abwaerts gezaehlt werden.
-         * Hier besteht auf jeden Fall noch Analysebedarf.
-         */
-        if ((subscr_object_id > 0x70000000) && (item_return_value != 0x00 && (tvb_get_guint8(tvb, offset + 1) != 0xff))) {
-            proto_tree_add_uint(tree, hf_s7commp_notification_unknown5, tvb, offset, 1, item_return_value);
+            subscrccnt = tvb_get_guint8(tvb, offset);
+            proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
             offset += 1;
+            col_append_fstr(pinfo->cinfo, COL_INFO, " NSeq=%u ChngCnt=%u", seqnum, subscrccnt);
+        } else {
+            credit_tick = tvb_get_guint8(tvb, offset);
+            proto_tree_add_uint(tree, hf_s7commp_notification_credittick, tvb, offset, 1, credit_tick);
+            offset += 1;
+            proto_tree_add_ret_varuint32(tree, hf_s7commp_notification_seqnum_vlq, tvb, offset, &octet_count, &seqnum);
+            offset += octet_count;
+            subscrccnt = tvb_get_guint8(tvb, offset);
+            proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
+            offset += 1;
+            col_append_fstr(pinfo->cinfo, COL_INFO, " Ctick=%u NSeq=%u ChngCnt=%u", credit_tick, seqnum, subscrccnt);
         }
 
         list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);

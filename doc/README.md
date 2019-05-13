@@ -30,10 +30,11 @@ Therrefore run the following commands:
 ## Build
 
 Finally follow the build instructions of the Wireshark project.
-E.g. for Linux with autoconf, automake and libtool installed:
+E.g. for Linux with cmake and other tools installed:
 
-   ./autogen.sh
-   ./configure
+   mkdir build
+   cd build
+   cmake ..
    make -j`nproc`
 
 To build on Windows, including the installer is described at:

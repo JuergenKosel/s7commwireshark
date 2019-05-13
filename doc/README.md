@@ -21,7 +21,7 @@ Then you need to checkout the sources of this dissector into the wireshark sourc
      cd wireshark
      svn checkout svn://svn.code.sf.net/p/s7commwireshark/code/trunk/src plugins
 
-Then you need to add the s7comm_plus sources to epan/dissectors/CMakeLists.txt and epan/dissectors/Makefile.am, as it is done in https://github.com/JuergenKosel/wireshark/commit/c22e6cb3b1b068746bededda5409590f6fb7b433
+Then you need to add the s7comm_plus sources to epan/dissectors/CMakeLists.txt and epan/dissectors/Makefile.am, as it is done in [https://github.com/JuergenKosel/wireshark/commit/c22e6cb3b](https://github.com/JuergenKosel/wireshark/commit/c22e6cb3b1b068746bededda5409590f6fb7b433).
 
 ## 2 Use prepared wireshark git repository
 
@@ -37,12 +37,14 @@ Therrefore run the following commands:
 Finally follow the build instructions of the Wireshark project.
 E.g. for Linux with cmake and other tools installed:
 
-   mkdir build
-   cd build
-   cmake ..
-   make -j`nproc`
+```shell
+mkdir build
+cd build
+cmake ..
+make -j`nproc`
+```
 
 To build on Windows, including the installer is described at:
-https://www.wireshark.org/docs/wsdg_html_chunked/ChSetupWin32.html .
+[https://www.wireshark.org/docs/wsdg_html_chunked/ChSetupWin32.html](https://www.wireshark.org/docs/wsdg_html_chunked/ChSetupWin32.html).
 A template script to build on Windows is available in:
 https://github.com/JuergenKosel/wireshark/blob/s7commwireshark/build4windows.bat

@@ -2982,6 +2982,7 @@ static gint hf_s7commp_object_blocklength = -1;
 static gint hf_s7commp_object_createobjidcount = -1;
 static gint hf_s7commp_object_createobjid = -1;
 static gint hf_s7commp_object_deleteobjid = -1;
+static gint hf_s7commp_object_deleteobj_fill = -1;
 
 /* Setmultivar/Setvariable */
 static gint hf_s7commp_setvar_unknown1 = -1;
@@ -2989,6 +2990,7 @@ static gint hf_s7commp_setvar_objectid = -1;
 static gint hf_s7commp_setvar_itemcount = -1;
 static gint hf_s7commp_setvar_itemaddrcount = -1;
 static gint hf_s7commp_setvar_rawvaluelen = -1;
+static gint hf_s7commp_setvar_fill = -1;
 
 /* Getmultivar/Getvariable */
 static gint hf_s7commp_getmultivar_unknown1 = -1;
@@ -4057,6 +4059,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_object_deleteobjid,
           { "Delete Object Id", "s7comm-plus.object.deleteobjid", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
+        { &hf_s7commp_object_deleteobj_fill,
+          { "Filling byte", "s7comm-plus.object.req_deleteobj_fill", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
 
         /* Setmultivar/Setvariable */
         { &hf_s7commp_setvar_unknown1,
@@ -4074,6 +4079,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_setvar_rawvaluelen,
           { "Raw value length", "s7comm-plus.setvar.rawvaluelen", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ: Raw value length", HFILL }},
+        { &hf_s7commp_setvar_fill,
+          { "Filling byte", "s7comm-plus.setvar.req_setmultivar_fill", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
 
         /* GetMultiVariables/GetVariable */
         { &hf_s7commp_getmultivar_unknown1,
@@ -6896,7 +6904,9 @@ s7commp_decode_request_deleteobject(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_object_deleteobjid, tvb, offset, 4, object_id);
     s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
     offset += 4;
-
+    /* Fuellbyte oder andere Funktion? */
+    proto_tree_add_item(tree, hf_s7commp_object_deleteobj_fill, tvb, offset, 1, FALSE);
+    offset += 1;
     return offset;
 }
 /*******************************************************************************************************
@@ -7389,6 +7399,9 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         }
         proto_item_set_len(list_item_tree, offset - list_start_offset);
     }
+    /* Fuellbyte oder andere Funktion? */
+    proto_tree_add_item(tree, hf_s7commp_setvar_fill, tvb, offset, 1, FALSE);
+    offset += 1;
     return offset;
 }
 /*******************************************************************************************************
@@ -8535,40 +8548,19 @@ static guint32
 s7commp_decode_objectqualifier(tvbuff_t *tvb,
                                packet_info *pinfo,
                                proto_tree *tree,
-                               gint16 dlength,
                                guint32 offset)
 {
     guint32 offset_save;
-    guint32 offsetmax;
-    guint16 id = 0;
     proto_item *objectqualifier_item = NULL;
     proto_tree *objectqualifier_tree = NULL;
 
     offset_save = offset;
-    offsetmax = offset + dlength-2;
-
-    while (offset < offsetmax) {
-        id = tvb_get_ntohs(tvb, offset);
-        if (id == 0x4e8) {
-            /* alles dazwischen mit Dummy-Bytes auffuellen */
-            if ((offset+2 - offset_save) > 0) {
-                proto_tree_add_item(tree, hf_s7commp_data_data, tvb, offset_save, offset - offset_save, ENC_NA);
-            }
-            dlength = dlength - (offset - offset_save);
-            offset_save = offset;
-            objectqualifier_item = proto_tree_add_item(tree, hf_s7commp_objectqualifier, tvb, offset, -1, FALSE );
-            objectqualifier_tree = proto_item_add_subtree(objectqualifier_item, ett_s7commp_objectqualifier);
-            proto_tree_add_uint(objectqualifier_tree, hf_s7commp_data_id_number, tvb, offset, 2, id);
-            offset += 2;
-            offset = s7commp_decode_id_value_list_in_new_tree(tvb, pinfo, objectqualifier_tree, offset, TRUE);
-            proto_item_set_len(objectqualifier_tree, offset - offset_save);
-            break;
-        }
-        offset += 1;
-    }
-    if (id != 0x4e8) {
-        offset = offset_save; /* Offset zuruecksetzen wenn nicht gefunden */
-    }
+    objectqualifier_item = proto_tree_add_item(tree, hf_s7commp_objectqualifier, tvb, offset, -1, FALSE );
+    objectqualifier_tree = proto_item_add_subtree(objectqualifier_item, ett_s7commp_objectqualifier);
+    proto_tree_add_item(objectqualifier_tree, hf_s7commp_data_id_number, tvb, offset, 4, ENC_BIG_ENDIAN);
+    offset += 4;
+    offset = s7commp_decode_id_value_list_in_new_tree(tvb, pinfo, objectqualifier_tree, offset, TRUE);
+    proto_item_set_len(objectqualifier_tree, offset - offset_save);
     return offset;
 }
 /*******************************************************************************************************
@@ -8831,7 +8823,7 @@ s7commp_decode_data(tvbuff_t *tvb,
          */
         if (has_objectqualifier && dlength > 10) {
             offset_save = offset;
-            offset = s7commp_decode_objectqualifier(tvb, pinfo, tree, dlength, offset);
+            offset = s7commp_decode_objectqualifier(tvb, pinfo, tree, offset);
             dlength = dlength - (offset - offset_save);
         }
 

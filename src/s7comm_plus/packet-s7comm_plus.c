@@ -5887,10 +5887,12 @@ s7commp_decode_value(tvbuff_t *tvb,
             case S7COMMP_ITEM_DATATYPE_BLOB:
                 proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobrootid, tvb, offset, &octet_count, &uint32val);
                 offset += octet_count;
-                /* Wenn Wert > 0 dann Spezialformat, welches im Prinzip bis auf die 9 eingeschobenen Bytes
+                /* Wenn Wert > 1 dann Spezialformat, welches im Prinzip bis auf die 9 eingeschobenen Bytes
                  * identisch zum Aufbau einer Struct ist. Verwendung z.B. mit ID 1848.
+                 * Beim Projekt-Laden eines HMI-Panels wird dieses ebenfalls mit ID=1 verwendet,
+                 * hier besitzt der Datensatz keine zusaetzlichen Bytes.
                  */
-                if (uint32val > 0) {
+                if (uint32val > 1) {
                     g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "<Blob special for ID: %u>", uint32val);
                     proto_tree_add_text(current_tree, tvb, offset, 9, "Blob special unknown 9 bytes (always zero?)");
                     offset += 9;

@@ -6936,8 +6936,15 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
     if (errorextension) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
-    /* If the id is < 0x7000000 there is no integrity-id in integrity dataset at the end (only for 1500) */
-    if (object_id > 0x70000000) {
+    /* Wann hier eine Id folgt kann an keinem der vorherigen Werte festgemacht werden.
+     * Die erste Vermutung es an einer hohen object_id festzumachen scheiterte, da bei einer 1200 mit FW4.1
+     * der Wert auch bei 0xd3 aufgetreten ist.
+     * Da sich der folgende Wert mit (Sequence-Number + integrity_id) des Requests berechnet, kann der Wert
+     * nicht Null sein. Da er VLQ-codiert ist und es sich immer meistens 4 Nullbytes vor dem Trailer befinden,
+     * pruefen wir hier der Einfachheit halber ob das naechste Byte != null ist solange keine bessere Loesung
+     * in Sicht ist.
+     */
+    if (tvb_get_guint8(tvb, offset)) {
         *has_integrity_id = TRUE;
     } else {
         *has_integrity_id = FALSE;

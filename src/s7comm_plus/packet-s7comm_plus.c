@@ -3014,14 +3014,15 @@ static gint hf_s7commp_notification_subscrobjectid = -1;
 static gint hf_s7commp_notification_unknown2 = -1;
 static gint hf_s7commp_notification_unknown3 = -1;
 static gint hf_s7commp_notification_unknown4 = -1;
+static gint hf_s7commp_notification_unknown5 = -1;
 static gint hf_s7commp_notification_credittick = -1;
 static gint hf_s7commp_notification_seqnum_vlq = -1;
 static gint hf_s7commp_notification_seqnum_uint8 = -1;
 static gint hf_s7commp_notification_subscrccnt = -1;
+static gint hf_s7commp_notification_subscrccnt2 = -1;
 static gint hf_s7commp_notification_p2_subscrobjectid = -1;
 static gint hf_s7commp_notification_p2_unknown1 = -1;
-static gint hf_s7commp_notification_p2_unknown2 = -1;
-static gint hf_s7commp_notification_unknown3b = -1;
+static gint hf_s7commp_notification_timetick = -1;
 
 /* SubscriptionReferenceList */
 static gint hf_s7commp_subscrreflist = -1;
@@ -4149,7 +4150,16 @@ proto_register_s7commp (void)
           { "Notification sequence number", "s7comm-plus.notification.seqnum_ui8", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_notification_subscrccnt,
-          { "Subscription change counter", "s7comm-plus.notification.subscritionchangecnt", FT_UINT8, BASE_DEC, NULL, 0x0,
+          { "Subscription change counter", "s7comm-plus.notification.subscriptionchangecnt", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_notification_unknown5,
+          { "Add-1 Notification unknown", "s7comm-plus.notification.unknown5", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_notification_subscrccnt2,
+          { "Add-1 Notification subscription change counter", "s7comm-plus.notification.subscriptionchangecnt2", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_notification_timetick,
+          { "Add-1 Notification timetick", "s7comm-plus.notification.timetick", FT_RELATIVE_TIME, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
 
         { &hf_s7commp_notification_p2_subscrobjectid,
@@ -4157,12 +4167,6 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_notification_p2_unknown1,
           { "Part 2 - Unknown 1", "s7comm-plus.notification.p2.unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_notification_p2_unknown2,
-          { "Part 2 - Unknown 2", "s7comm-plus.notification.p2.unknown2", FT_UINT16, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_notification_unknown3b,
-          { "Unknown additional 3 bytes, because 1st Object ID > 0x70000000", "s7comm-plus.notification.unknown3b", FT_UINT24, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
 
         /* SubscriptionReferenceList */
@@ -7557,21 +7561,21 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
     guint32 start_offset;
     guint8 octet_count;
     guint8 item_return_value;
-    guint32 cnt1, cnt2;
     int struct_level;
     int n_access_errors = 0;
     /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
      * Aufbau aus den anderen Telegrammen.
      * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte uebertragen. Dann ist Datatype=NULL
      * Folgende Rueckgabewerte wurden gesichtet:
-     *  0x03 -> Fehler bei einer Adresse (S7-1500 - Plcsim)
-     *  0x13 -> Fehler bei einer Adresse (S7-1200) und 1500-Plcsim
-     *  0x81 -> Standard Objekt beginnend mit 0xa1 (nur bei Protokoll-Version v1?)
-     *  0x83 -> Standard value Aufbau, dann notification value-list (nur bei Protokoll-Version v1?)
-     *  0x92 -> Erfolg (S7-1200)
-     *  0x9b -> Bei 1500 und 1200 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
-     *  0x9c -> Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
-     *  => Bit 15 = true bei Erfolg?
+     *  hex       bin       ref-id  value
+     *  0x03 = 0000 0011 -> ntohl   -       Fehler bei einer Adresse (S7-1500 - Plcsim), wie 0x13
+     *  0x13 = 0001 0011 -> ntohl   -       Fehler bei einer Adresse (S7-1200) und 1500-Plcsim
+     *  0x81 = 1000 0001 ->         object  Standard Objekt beginnend mit 0xa1 (nur bei Protokoll-Version v1?)
+     *  0x83 = 1000 0011 ->         value   Standard value Aufbau, dann notification value-list (nur bei Protokoll-Version v1?)
+     *  0x92 = 1001 0010 -> ntohl   value   Erfolg (S7-1200)
+     *  0x9b = 1001 1011 -> vlq32   value   Bei 1500 und 1200 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
+     *  0x9c = 1001 1100 -> ntohl   ?       Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
+     *         +-> Bit 8 = true bei Erfolg?
      * Danach koennen noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
      */
     do {
@@ -7613,32 +7617,17 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
                 offset += 4;
                 n_access_errors++;
-            } else if (item_return_value == 0x81) {     /* Vermutlich nur in Protokoll Version v1*/
-                offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, FALSE);
+            } else if (item_return_value == 0x81) {     /* Bei Protokoll Version v1, sowie auch bei 1500 im 2. Teil zur Uebertragung von ProgramAlarm */
+                offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, TRUE);
             } else if (item_return_value == 0x83) {     /* Vermutlich nur in Protokoll Version v1*/
                 offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, 0);
-             } else if (item_return_value == 0x05) {
-                /* In einer Aufzeichnung einer S7-1500 gesehen, bei der laut Angabe im TIA-Portal
-                 * die Geraetekonfiguration online geoeffnet war.
-                 * Es sind zwei Zaehlwerte. Wenn der zweite ueberlaeuft, dann wird der
-                 * Wert des ersten (VLQ) um 1 erhoeht. Ein Zeitwert scheint es nicht zu sein, weil das
-                 * nicht mit den Zeitstempeln der Aufzeichnung uebereinstimmt.
-                 * In der vorliegenden Aufzeichnung ist das der erste Wert in der Wertliste.
-                 */
-                cnt1 = tvb_get_varint32(tvb, &octet_count, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, octet_count, "Unknown Counter value 1: %u", cnt1);
-                offset += octet_count;
-                cnt2 = tvb_get_ntohl(tvb, offset);
-                proto_tree_add_text(data_item_tree, tvb, offset, 4, "Unknown Counter value 2: %u", cnt2);
-                offset += 4;
-                proto_item_append_text(data_item_tree, ": %u, %u", cnt1, cnt2);
             } else {
                 expert_add_info_format(pinfo, data_item_tree, &ei_s7commp_notification_returnvalue_unknown, "Notification unknown return value: 0x%02x", item_return_value);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
             }
             if (struct_level > 0) {
-                offset = s7commp_decode_notification_value_list(tvb, pinfo, data_item_tree, offset, TRUE);
+                offset = s7commp_decode_id_value_list(tvb, pinfo, data_item_tree, offset, TRUE);
             }
             proto_item_set_len(data_item_tree, offset - start_offset);
         }
@@ -7661,6 +7650,8 @@ s7commp_decode_notification(tvbuff_t *tvb,
     guint32 subscr_object_id, subscr_object_id2;
     guint8 credit_tick;
     guint8 subscrccnt;
+    guint64 timetck;
+    nstime_t tmptime;
     guint32 seqnum;
     proto_item *list_item = NULL;
     proto_tree *list_item_tree = NULL;
@@ -7691,7 +7682,10 @@ s7commp_decode_notification(tvbuff_t *tvb,
          *                                  bis zur in modifiy-session angegebenen Limit.
          * 2) Sequenznummer: Wurde beim Session-Aufbau -1 angegeben, so ist die Zahl bei 1) Null, und es folgt hier eine aufsteigende Nummer.
          * 3) Subscription Change Counter: Erhoeht sich um 1 wenn eine Subscription geaendert wurde
-         *                                 (z.B. loeschen oder hinzufuegen von weiteren Variablen)
+         *                                 (z.B. loeschen oder hinzufuegen von weiteren Variablen).
+         *                                 Es gibt seit neuestem eine zweite Variante wie dieser Wert uebertragen wird.
+         *                                 Wenn ein Werteintrag mit Returnvalue 0x05 folgt, dann steht dort der Aenderungszaehler.
+         *                                 Das Feld hier ist aber trotzdem vorhanden, nur der Wert ist dann 0.
          * Bei der Sequenznummer gibt es Unterschied zwischen der 1200 (vor FW3?) und der 1500 zu geben.
          * Bei der 1200 ist diese immer nur 1 Byte, bei der 1500 ist es ein VLQ.
          * Es scheint abhaengig von der ersten ID zu sein. Ist diese groesser 0x7000000 dann ist es ein VLQ.
@@ -7705,7 +7699,11 @@ s7commp_decode_notification(tvbuff_t *tvb,
             subscrccnt = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
             offset += 1;
-            col_append_fstr(pinfo->cinfo, COL_INFO, " NSeq=%u ChngCnt=%u", seqnum, subscrccnt);
+            if (subscrccnt > 0) {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " NSeq=%u ChngCnt=%u", seqnum, subscrccnt);
+            } else {
+                col_append_fstr(pinfo->cinfo, COL_INFO, " NSeq=%u", seqnum);
+            }
         } else {
             credit_tick = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(tree, hf_s7commp_notification_credittick, tvb, offset, 1, credit_tick);
@@ -7715,6 +7713,26 @@ s7commp_decode_notification(tvbuff_t *tvb,
             subscrccnt = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
             offset += 1;
+            if (subscrccnt == 0) {
+                /* Mit neueren S7-1500 wenn subscrccnt vorher 0 war:
+                 * Nach einem Byte mit bisher gesehenen 0x04 oder 0x05 folgt ein 6 Byte langer Time-Tick
+                 * auf Microsekunden-Basis und dann der eigentliche Wert von subscrccnt.
+                 * Der Zaehler setzt auch nach SPS Run-Stop oder Spannungsausfall beim alten Wert fort.
+                 * Bei einer Test-CPU ergab ein rueckrechnen auf 0 einen Zeitpunkt im Jahr 2014, es
+                 * scheint keine bekannten Zeitformat zu entsprechen.
+                 * TODO: Es sind mehr Daten von anderen CPUs notwendig um ein paar Vergleichswerte zu bekommen.
+                 */
+                proto_tree_add_item(tree, hf_s7commp_notification_unknown5, tvb, offset, 1, ENC_BIG_ENDIAN);
+                offset += 1;
+                timetck = tvb_get_ntoh48(tvb, offset);
+                tmptime.secs = (time_t)(timetck / 1000000);
+                tmptime.nsecs = (timetck % 1000000) * 1000;
+                proto_tree_add_time(tree, hf_s7commp_notification_timetick, tvb, offset, 6, &tmptime);
+                offset += 6;
+                subscrccnt = tvb_get_guint8(tvb, offset);
+                proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt2, tvb, offset, 1, subscrccnt);
+                offset += 1;
+            }
             col_append_fstr(pinfo->cinfo, COL_INFO, " Ctick=%u NSeq=%u ChngCnt=%u", credit_tick, seqnum, subscrccnt);
         }
 
@@ -7727,7 +7745,9 @@ s7commp_decode_notification(tvbuff_t *tvb,
             add_data_info_column = TRUE;
         }
 
-        /* Noch ein spezial Datensatz, mit ein paar unbekannten Werten davor und einer Standard Objekt-Datenstruktur. */
+        /* Noch ein spezial Datensatz, mit ein paar unbekannten Werten davor und einer Standard Objekt-Datenstruktur.
+         * Dieses wird z.B. zur Uebertragung von ProgramAlarm Ereignissen verwendet.
+         */
         if (tvb_get_guint8(tvb, offset) != 0) {
             subscr_object_id2 = tvb_get_ntohl(tvb, offset);
             if (subscr_object_id2 != 0) {
@@ -7735,20 +7755,12 @@ s7commp_decode_notification(tvbuff_t *tvb,
                 offset += 4;
                 proto_tree_add_item(tree, hf_s7commp_notification_p2_unknown1, tvb, offset, 2, ENC_BIG_ENDIAN);
                 offset += 2;
-                proto_tree_add_item(tree, hf_s7commp_notification_p2_unknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
-                offset += 1;
-                if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-                    offset =  s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
-                }
+                list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
+                list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
+                list_start_offset = offset;
+                offset = s7commp_decode_notification_value_list(tvb, pinfo, list_item_tree, offset, TRUE);
+                proto_item_set_len(list_item_tree, offset - list_start_offset);
             }
-        }
-        /* Nur wenn die id > 0x70000000 dann folgen noch 3 Bytes, die bisher immer null waren.
-         * Das ist hier weiterhin notwendig, da ansonsten ein ggf. vorhandener Integritaetsteil nicht erkannt wuerde.
-         */
-        if (subscr_object_id > 0x70000000) {
-            /* Unknown additional 3 bytes, because 1st Object ID > 0x70000000 */
-            proto_tree_add_item(tree, hf_s7commp_notification_unknown3b, tvb, offset, 3, ENC_BIG_ENDIAN);
-            offset += 3;
         }
         if (add_data_info_column) {
             col_append_str(pinfo->cinfo, COL_INFO, " <Contains values>");

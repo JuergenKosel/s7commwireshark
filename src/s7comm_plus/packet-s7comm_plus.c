@@ -3638,7 +3638,7 @@ proto_register_s7commp (void)
           { "Value", "s7comm-plus.value.variant", FT_UINT32, BASE_DEC, NULL, 0x0,
             "Value (Variant)", HFILL }},
         { &hf_s7commp_itemval_struct,
-          { "Value", "s7comm-plus.value.struct", FT_UINT32, BASE_DEC, NULL, 0x0,
+          { "Value", "s7comm-plus.value.struct", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "Value (Struct)", HFILL }},
 
         /* Get/Set a packed struct */

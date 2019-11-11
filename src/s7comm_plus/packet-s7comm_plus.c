@@ -2800,6 +2800,8 @@ static gint hf_s7commp_itemval_sparsearray_key = -1;
 static gint hf_s7commp_itemval_stringactlen = -1;
 static gint hf_s7commp_itemval_blobrootid = -1;
 static gint hf_s7commp_itemval_blobsize = -1;
+static gint hf_s7commp_itemval_blob_unknown1 = -1;
+static gint hf_s7commp_itemval_blobtype = -1;
 static gint hf_s7commp_itemval_datatype = -1;
 static gint hf_s7commp_itemval_arraysize = -1;
 static gint hf_s7commp_itemval_value = -1;
@@ -3551,6 +3553,12 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_blobsize,
           { "Blob size", "s7comm-plus.item.val.blobsize", FT_UINT32, BASE_DEC, NULL, 0x0,
             "VLQ", HFILL }},
+        { &hf_s7commp_itemval_blob_unknown1,
+          { "Blob special unknown 8 bytes (always zero?)", "s7comm-plus.item.val.blob_unknown1", FT_BYTES, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_itemval_blobtype,
+          { "Blob type", "s7comm-plus.item.val.blobtype", FT_UINT8, BASE_HEX, NULL, 0x0,
+            "Blob type: 0x00=ID-Value-List, 0x03=RawBlock", HFILL }},
 
         { &hf_s7commp_itemval_datatype,
           { "Datatype", "s7comm-plus.item.val.datatype", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
@@ -5586,6 +5594,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     gboolean is_struct_addressarray = FALSE;
     guint32 array_size = 1;     /* use 1 as default, so non-arrays can be dissected in the same way as arrays */
     guint32 array_index = 0;
+    guint32 blobtype = 0;
 
     proto_item *array_item = NULL;
     proto_tree *array_item_tree = NULL;
@@ -5887,19 +5896,37 @@ s7commp_decode_value(tvbuff_t *tvb,
             case S7COMMP_ITEM_DATATYPE_BLOB:
                 proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobrootid, tvb, offset, &octet_count, &uint32val);
                 offset += octet_count;
-                /* Wenn Wert > 1 dann Spezialformat, welches im Prinzip bis auf die 9 eingeschobenen Bytes
-                 * identisch zum Aufbau einer Struct ist. Verwendung z.B. mit ID 1848.
-                 * Beim Projekt-Laden eines HMI-Panels wird dieses ebenfalls mit ID=1 verwendet,
-                 * hier besitzt der Datensatz keine zusaetzlichen Bytes.
+                /* Wenn Wert > 1 dann Spezialformat, mit 8 zusaetzlichen Bytes + 1 Typkennung + entsprechende Auswertung.
+                 * Beim HMI-Projekttransfer mit erfolgt eine Uebertragung mit ID=1 (als SubStream) jedoch dann ohne extra Bytes.
                  */
                 if (uint32val > 1) {
-                    g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "<Blob special for ID: %u>", uint32val);
-                    proto_tree_add_text(current_tree, tvb, offset, 9, "Blob special unknown 9 bytes (always zero?)");
-                    offset += 9;
-                    value_start_offset = offset;
-                    /* Sub-Elemente rekursiv abarbeiten. Bisher sind hier immer nur zwei Standard-Blobs enthalten. */
-                    offset = s7commp_decode_id_value_list(tvb, pinfo, current_tree, offset, TRUE);
-                    length_of_value = 0;
+                    proto_tree_add_item(current_tree, hf_s7commp_itemval_blob_unknown1, tvb, offset, 8, ENC_NA);
+                    offset += 8;
+                    /* - Wenn der folgende Wert 0x03, dann folgt eine Laengenangabe und die angegebene Anzahl an Bytes.
+                     *   Dies wird z.B. bei Alarm-Begleitwerten verwendet, dann innerhalb eines Blob-Arrays.
+                     * - Wenn der folgende Wert 0x00, dann folgt eine ID-Value Liste (z.B. bei Programm-Transfer).
+                     */
+                    proto_tree_add_item_ret_uint(current_tree, hf_s7commp_itemval_blobtype, tvb, offset, 1, ENC_BIG_ENDIAN, &blobtype);
+                    offset += 1;
+                    if (blobtype == 0x00) {
+                        offset = s7commp_decode_id_value_list(tvb, pinfo, current_tree, offset, TRUE);
+                    } else if (blobtype == 0x03) {
+                        proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, &octet_count, &length_of_value);
+                        offset += octet_count;
+                        value_start_offset = offset;
+                        if (length_of_value > 0) {
+                            g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s", tvb_bytes_to_str(wmem_packet_scope(), tvb, offset, length_of_value));
+                            proto_tree_add_item(current_tree, hf_s7commp_itemval_blob, tvb, offset, length_of_value, ENC_NA);
+                        } else {
+                            g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
+                        }
+                        offset += length_of_value;
+                    } else {
+                        unknown_type_occured = TRUE;
+                        expert_add_info(pinfo, current_tree, &ei_s7commp_value_unknown_type);
+                        g_strlcpy(str_val, "Unknown Blobtype occured. Could not interpret value!", S7COMMP_ITEMVAL_STR_VAL_MAX);
+                        break;
+                    }
                 } else {
                     proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, &octet_count, &length_of_value);
                     offset += octet_count;

@@ -5725,21 +5725,21 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 1;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", tvb_get_guint8(tvb, offset) ? "True" : "False");
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_bool, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_bool, tvb, offset, length_of_value, ENC_NA);
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_USINT:
                 length_of_value = 1;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_guint8(tvb, offset));
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_usint, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_usint, tvb, offset, length_of_value, ENC_NA);
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_UINT:
                 length_of_value = 2;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%u", tvb_get_ntohs(tvb, offset));
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_uint, tvb, offset, length_of_value, tvb_get_ntohs(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_uint, tvb, offset, length_of_value, ENC_LITTLE_ENDIAN);
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_UDINT:
@@ -5796,14 +5796,14 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 1;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%02x", tvb_get_guint8(tvb, offset));
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_byte, tvb, offset, length_of_value, tvb_get_guint8(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_byte, tvb, offset, length_of_value, ENC_NA);
                 offset += 1;
                 break;
             case S7COMMP_ITEM_DATATYPE_WORD:
                 length_of_value = 2;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%04x", tvb_get_ntohs(tvb, offset));
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_word, tvb, offset, length_of_value, tvb_get_ntohs(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_word, tvb, offset, length_of_value, ENC_LITTLE_ENDIAN);
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_STRUCT:
@@ -5821,28 +5821,28 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 4;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_dword, tvb, offset, length_of_value, tvb_get_ntohl(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_dword, tvb, offset, length_of_value, ENC_LITTLE_ENDIAN);
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LWORD:
                 length_of_value = 8;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%016" G_GINT64_MODIFIER "x", tvb_get_ntoh64(tvb, offset));
-                proto_tree_add_uint64(current_tree, hf_s7commp_itemval_lword, tvb, offset, length_of_value, tvb_get_ntoh64(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_lword, tvb, offset, length_of_value, ENC_LITTLE_ENDIAN);
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_REAL:
                 length_of_value = 4;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_float(tvb, offset));
-                proto_tree_add_float(current_tree, hf_s7commp_itemval_real, tvb, offset, length_of_value, tvb_get_ntohieee_float(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_real, tvb, offset, length_of_value, ENC_LITTLE_ENDIAN);
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_LREAL:
                 length_of_value = 8;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%f", tvb_get_ntohieee_double(tvb, offset));
-                proto_tree_add_double(current_tree, hf_s7commp_itemval_lreal, tvb, offset, length_of_value, tvb_get_ntohieee_double(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_lreal, tvb, offset, length_of_value, ENC_LITTLE_ENDIAN);
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESTAMP:
@@ -5869,7 +5869,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 4;
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%08x", tvb_get_ntohl(tvb, offset));
-                proto_tree_add_uint(current_tree, hf_s7commp_itemval_rid, tvb, offset, length_of_value, tvb_get_ntohl(tvb, offset));
+                proto_tree_add_item(current_tree, hf_s7commp_itemval_rid, tvb, offset, length_of_value, ENC_LITTLE_ENDIAN);
                 offset += 4;
                 break;
             case S7COMMP_ITEM_DATATYPE_AID:

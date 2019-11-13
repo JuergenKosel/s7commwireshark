@@ -5293,7 +5293,7 @@ s7commp_decompress_blob(tvbuff_t *tvb,
         blobptr = tvb_get_ptr(tvb, offset, length_comp_blob);
 
         streamp = wmem_new0(wmem_packet_scope(), z_stream);
-        retcode = inflateInit(streamp);
+        inflateInit(streamp);
         streamp->avail_in = length_comp_blob;
 #ifdef z_const
         streamp->next_in = (z_const Bytef *)blobptr;
@@ -5591,11 +5591,11 @@ s7commp_decode_value(tvbuff_t *tvb,
     guint8 datatype;
     guint8 datatype_of_value;
     guint8 datatype_flags;
-    gboolean is_array = FALSE;
-    gboolean is_address_array = FALSE;
-    gboolean is_sparsearray = FALSE;
+    gboolean is_array;
+    gboolean is_address_array;
+    gboolean is_sparsearray;
     gboolean unknown_type_occured = FALSE;
-    gboolean is_struct_addressarray = FALSE;
+    gboolean is_struct_addressarray;
     guint32 array_size = 1;     /* use 1 as default, so non-arrays can be dissected in the same way as arrays */
     guint32 array_index = 0;
     guint32 blobtype = 0;
@@ -7357,7 +7357,6 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
                                    guint32 offset)
 {
     guint32 item_count = 0;
-    guint32 number_of_fields_in_complete_set = 0;
     guint32 i = 0;
     guint32 number_of_fields = 0;
     guint32 value;
@@ -7381,7 +7380,7 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         proto_tree_add_ret_varuint32(tree, hf_s7commp_item_count, tvb, offset, &octet_count, &item_count);
         offset += octet_count;
 
-        proto_tree_add_ret_varuint32(tree, hf_s7commp_item_no_of_fields, tvb, offset, &octet_count, &number_of_fields_in_complete_set);
+        proto_tree_add_varuint32(tree, hf_s7commp_item_no_of_fields, tvb, offset, &octet_count);
         offset += octet_count;
         /* Es lassen sich mehrere Variablen mit einem write schreiben.
          * Danach folgen erst die Adressen und dann die Werte.
@@ -7391,7 +7390,6 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
         for (i = 1; i <= item_count; i++) {
             offset = s7commp_decode_item_address(tvb, list_item_tree, &number_of_fields, i, offset);
-            number_of_fields_in_complete_set -= number_of_fields;
         }
         proto_item_set_len(list_item_tree, offset - list_start_offset);
 
@@ -7455,7 +7453,6 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
                                    guint32 offset)
 {
     guint32 item_count = 0;
-    guint32 number_of_fields_in_complete_set = 0;
     guint32 i = 0;
     guint32 number_of_fields = 0;
     guint32 value;
@@ -7477,14 +7474,13 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
     proto_tree_add_ret_varuint32(tree, hf_s7commp_item_count, tvb, offset, &octet_count, &item_count);
     offset += octet_count;
     if (value == 0x0) {
-        proto_tree_add_ret_varuint32(tree, hf_s7commp_item_no_of_fields, tvb, offset, &octet_count, &number_of_fields_in_complete_set);
+        proto_tree_add_varuint32(tree, hf_s7commp_item_no_of_fields, tvb, offset, &octet_count);
         offset += octet_count;
         list_start_offset = offset;
         list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
         for (i = 1; i <= item_count; i++) {
             offset = s7commp_decode_item_address(tvb, list_item_tree, &number_of_fields, i, offset);
-            number_of_fields_in_complete_set -= number_of_fields;
         }
         proto_item_set_len(list_item_tree, offset - list_start_offset);
     } else {
@@ -9274,7 +9270,6 @@ dissect_s7commp(tvbuff_t *tvb,
             proto_item_append_text(s7commp_trailer_tree, ": Protocol version=%s", val_to_str(tvb_get_guint8(next_tvb, offset), protocolversion_names, "0x%02x"));
             offset += 1;
             proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_datlg, next_tvb, offset, 2, ENC_BIG_ENDIAN);
-            offset += 2;
         }
     }
     col_set_fence(pinfo->cinfo, COL_INFO);

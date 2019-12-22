@@ -8425,11 +8425,12 @@ s7commp_decode_response_invoke(tvbuff_t *tvb,
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
-    /* Ein Panel TPxy mit V14 schiebt hier bei der Antwort noch ein Null-Byte ein.
-     * Solange es anschliessend keine leere ValueList gibt, funktioniert das auch. */
-    if (tvb_get_guint8(tvb, offset) == 0) {
-        proto_tree_add_item(tree, hf_s7commp_invoke_resunknown1, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset += 1;
+    /* Die Itemnummer in der folgenden ValueList beginnt was bisher gesehen wurde immer mit 1.
+     * Ist hier ein anderer Wert vorhanden, dann folgt ein weiterer 64 Bit VLQ der soweit keine
+     * weiteren Informationen vorliegen als weiterer Errorcode angezeigt wird.
+     */
+    if (tvb_get_guint8(tvb, offset) != 1) {
+        offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     }
     offset = s7commp_decode_itemnumber_value_list_in_new_tree(tvb, pinfo, tree, offset, TRUE);
     proto_tree_add_item(tree, hf_s7commp_invoke_resunknown1, tvb, offset, 1, ENC_BIG_ENDIAN);

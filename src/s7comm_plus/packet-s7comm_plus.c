@@ -7947,6 +7947,9 @@ s7commp_decode_request_setvariable(tvbuff_t *tvb,
     list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
     offset = s7commp_decode_value(tvb, pinfo, list_item_tree, offset, &struct_level, 0);
+    if (struct_level > 0) {
+        offset = s7commp_decode_id_value_list(tvb, pinfo, list_item_tree, offset, TRUE);
+    }
     proto_item_set_len(list_item_tree, offset - list_start_offset);
 
     return offset;

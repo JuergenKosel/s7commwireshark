@@ -103,7 +103,7 @@ static const value_string protocolversion_names[] = {
     { S7COMMP_PROTOCOLVERSION_1,                "V1" },
     { S7COMMP_PROTOCOLVERSION_2,                "V2" },
     { S7COMMP_PROTOCOLVERSION_3,                "V3" },
-    { S7COMMP_PROTOCOLVERSION_254,              "Ext. Keep Alive" },    /* Extended Keep Alive? */
+    { S7COMMP_PROTOCOLVERSION_254,              "Ext. Keep Alive" },    /* Extended Keep Alive? But also seen as LOGOUT confirmation */
     { S7COMMP_PROTOCOLVERSION_255,              "Keep Alive" },
     { 0,                                        NULL }
 };

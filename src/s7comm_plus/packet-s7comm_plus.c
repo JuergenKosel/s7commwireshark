@@ -3035,7 +3035,10 @@ static gint hf_s7commp_subscrreflist_item_head = -1;
 static gint ett_s7commp_subscrreflist_item_head = -1;
 static gint hf_s7commp_subscrreflist_item_head_unknown = -1;
 static gint hf_s7commp_subscrreflist_item_head_lidcnt = -1;
-static const int *s7commp_subscrreflist_item_head_fields[] = {
+/* s7commp_subscrreflist_item_head_fields needs to match the definition of the 6th argument from
+ * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h:2759
+ */
+static int * const s7commp_subscrreflist_item_head_fields[] = {
     &hf_s7commp_subscrreflist_item_head_unknown,
     &hf_s7commp_subscrreflist_item_head_lidcnt,
     NULL

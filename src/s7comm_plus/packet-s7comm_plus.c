@@ -2673,7 +2673,7 @@ static gint hf_s7commp_data_seqnum = -1;
 static gint hf_s7commp_objectqualifier = -1;
 
 static gint ett_s7commp_data_transportflags = -1;
-static const int *s7commp_data_transportflags_fields[] = {
+static int * const s7commp_data_transportflags_fields[] = {
     &hf_s7commp_data_transportflags_bit0,
     &hf_s7commp_data_transportflags_bit1,
     &hf_s7commp_data_transportflags_bit2,

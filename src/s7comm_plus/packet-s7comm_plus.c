@@ -549,7 +549,7 @@ static gint s7commp_object_classflags_bit30 = -1;
 static gint s7commp_object_classflags_bit31 = -1;
 
 static gint ett_s7commp_object_classflags = -1;
-static const int *s7commp_object_classflags_fields[] = {
+static int * const s7commp_object_classflags_fields[] = {
     &s7commp_object_classflags_bit00,
     &s7commp_object_classflags_bit01,
     &s7commp_object_classflags_bit02,
@@ -2734,7 +2734,10 @@ static gint hf_s7commp_data_retval_servererror = -1;
 static gint hf_s7commp_data_retval_debuginfo = -1;
 static gint hf_s7commp_data_retval_errorextension = -1;
 /* Z.Zt. nicht verwendet, da 64 Bit Feld nicht vernuenftig unterstuetzt wird. */
-static const int *s7commp_data_returnvalue_fields[] = {
+/* y needs to match the definition of the 6th argument from
+ * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h
+ */
+static int * const s7commp_data_returnvalue_fields[] = {
     &hf_s7commp_data_retval_errorcode,
     &hf_s7commp_data_retval_omsline,
     &hf_s7commp_data_retval_errorsource,
@@ -2787,7 +2790,10 @@ static gint hf_s7commp_itemval_datatype_flags_address_array = -1;       /* 0x20 
 static gint hf_s7commp_itemval_datatype_flags_sparsearray = -1;         /* 0x40 for nullterminated array with key/value */
 static gint hf_s7commp_itemval_datatype_flags_0x80unkn = -1;            /* 0x80 unknown, seen in S7-1500 */
 static gint ett_s7commp_itemval_datatype_flags = -1;
-static const int *s7commp_itemval_datatype_flags_fields[] = {
+/* s7commp_itemval_datatype_flags_fields needs to match the definition of the 6th argument from
+ * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h
+ */
+static int * const s7commp_itemval_datatype_flags_fields[] = {
     &hf_s7commp_itemval_datatype_flags_array,
     &hf_s7commp_itemval_datatype_flags_address_array,
     &hf_s7commp_itemval_datatype_flags_sparsearray,
@@ -2887,7 +2893,10 @@ static gint hf_s7commp_tagdescr_attributeflags_isin = -1;
 static gint hf_s7commp_tagdescr_attributeflags_appwriteable = -1;
 static gint hf_s7commp_tagdescr_attributeflags_appreadable = -1;
 static gint ett_s7commp_tagdescr_attributeflags = -1;
-static const int *s7commp_tagdescr_attributeflags_fields[] = {
+/* s7commp_tagdescr_attributeflags_fields needs to match the definition of the 6th argument from
+ * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h:2759
+ */
+static int * const s7commp_tagdescr_attributeflags_fields[] = {
     &hf_s7commp_tagdescr_attributeflags_hostrelevant,
     &hf_s7commp_tagdescr_attributeflags_retain,
     &hf_s7commp_tagdescr_attributeflags_classic,
@@ -2924,7 +2933,7 @@ static gint hf_s7commp_tagdescr_attributeflags2_section = -1;       /* 3 Bits, m
 static gint hf_s7commp_tagdescr_attributeflags2_bit04 = -1;
 static gint hf_s7commp_tagdescr_attributeflags2_bitoffset = -1;     /* 3 Bits, mask 0x0007 */
 
-static const int *s7commp_tagdescr_attributeflags2_fields[] = {
+static int * const s7commp_tagdescr_attributeflags2_fields[] = {
     &hf_s7commp_tagdescr_attributeflags2_offsetinfotype,
     &hf_s7commp_tagdescr_attributeflags2_hmivisible,
     &hf_s7commp_tagdescr_attributeflags2_bit11,
@@ -2944,7 +2953,7 @@ static gint hf_s7commp_tagdescr_bitoffsetinfo_classic = -1;
 static gint hf_s7commp_tagdescr_bitoffsetinfo_optbitoffset = -1;      /* 3 Bits, mask 0x07 */
 static gint ett_s7commp_tagdescr_bitoffsetinfo = -1;
 
-static const int *s7commp_tagdescr_bitoffsetinfo_fields[] = {
+static int * const s7commp_tagdescr_bitoffsetinfo_fields[] = {
     &hf_s7commp_tagdescr_bitoffsetinfo_retain,
     &hf_s7commp_tagdescr_bitoffsetinfo_nonoptbitoffset,
     &hf_s7commp_tagdescr_bitoffsetinfo_classic,
@@ -3036,7 +3045,7 @@ static gint ett_s7commp_subscrreflist_item_head = -1;
 static gint hf_s7commp_subscrreflist_item_head_unknown = -1;
 static gint hf_s7commp_subscrreflist_item_head_lidcnt = -1;
 /* s7commp_subscrreflist_item_head_fields needs to match the definition of the 6th argument from
- * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h:2759
+ * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h
  */
 static int * const s7commp_subscrreflist_item_head_fields[] = {
     &hf_s7commp_subscrreflist_item_head_unknown,

@@ -3152,7 +3152,7 @@ static const value_string attrib_blocklanguage_names[] = {
     { 0,        NULL }
 };
 
-static const value_string attrib_serversessionrole[] = {
+static const value_string attrib_serversessionrole_names[] = {
     { 0x00000000,   "Undefined" },
     { 0x00000001,   "ES" },
     { 0x00000002,   "HMI" },
@@ -3160,7 +3160,7 @@ static const value_string attrib_serversessionrole[] = {
     { 0,            NULL }
 };
 
-static const value_string attrib_filteroperation[] = {
+static const value_string attrib_filteroperation_names[] = {
     { 1,            "Equal" },
     { 2,            "Unequal" },
     { 3,            "LessThan" },
@@ -5256,6 +5256,12 @@ static gint hf_s7commp_hmiinfo_version = -1;
 static gint hf_s7commp_hmiinfo_clientalarmid = -1;
 static gint hf_s7commp_hmiinfo_priority = -1;
 
+/* Ext. decoded ID values */
+static gint hf_s7commp_attrib_timestamp = -1;
+static gint hf_s7commp_attrib_serversessionrole = -1;
+static gint hf_s7commp_attrib_filteroperation = -1;
+static gint hf_s7commp_attrib_blocklanguage = -1;
+
 /* Getlink */
 static gint hf_s7commp_getlink_requnknown1 = -1;
 static gint hf_s7commp_getlink_requnknown2 = -1;
@@ -6432,6 +6438,20 @@ proto_register_s7commp (void)
           { "Priority", "s7comm-plus.hmiinfo.priority", FT_UINT8, BASE_DEC, NULL, 0x0,
             "Priority of the alarm", HFILL }},
 
+        /* Ext. decoded ID values */
+        { &hf_s7commp_attrib_timestamp,
+          { "Timestamp", "s7comm-plus.attrib.timestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_attrib_serversessionrole,
+          { "ServerSessionRole", "s7comm-plus.attrib.serversessionrole", FT_UINT32, BASE_DEC, VALS(attrib_serversessionrole_names), 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_attrib_filteroperation,
+          { "FilterOperation", "s7comm-plus.attrib.filteroperation", FT_INT32, BASE_DEC, VALS(attrib_filteroperation_names), 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_attrib_blocklanguage,
+          { "Blocklanguage", "s7comm-plus.attrib.blocklanguage", FT_UINT16, BASE_DEC, VALS(attrib_blocklanguage_names), 0x0,
+            NULL, HFILL }},
+
         /* Getlink */
         { &hf_s7commp_getlink_requnknown1,
           { "Request unknown 1", "s7comm-plus.getlink.requnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -6847,7 +6867,6 @@ proto_tree_add_ret_varuint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint 
     return proto_tree_add_uint(tree, hfindex, tvb, start, *octet_count, value);
 }
 /*******************************************************************************************************/
-#if 0 // the following function causes an unused function warning
 static proto_item *
 proto_tree_add_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start, guint8 *octet_count)
 {
@@ -6857,7 +6876,6 @@ proto_tree_add_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start
     value = tvb_get_varint32(tvb, octet_count, start);
     return proto_tree_add_int(tree, hfindex, tvb, start, *octet_count, value);
 }
-#endif
 /*******************************************************************************************************/
 static proto_item *
 proto_tree_add_ret_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start, guint8 *octet_count, gint32 *retval)
@@ -7094,22 +7112,20 @@ s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
 {
     guint64 uint64val = 0;
     guint8 octet_count = 0;
-    gchar *str_val = NULL;
     proto_item *pi = NULL;
+    nstime_t tmptime;
 
     if (datatype != S7COMMP_ITEM_DATATYPE_ULINT) {
         return offset;
     }
 
-    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
-    str_val[0] = '\0';
-
     uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
-    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
-    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "Timestamp: %s", str_val);
+    tmptime.secs = (time_t)(uint64val / 1000000000LL);
+    tmptime.nsecs = uint64val % 1000000000LL;
+    pi = proto_tree_add_time(tree, hf_s7commp_attrib_timestamp, tvb, offset, octet_count, &tmptime);
+    PROTO_ITEM_SET_GENERATED(pi);
     offset += octet_count;
 
-    PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
 
@@ -7124,18 +7140,16 @@ s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
                                     guint32 offset,
                                     guint8 datatype)
 {
-    guint16 blocklang;
     proto_item *pi = NULL;
 
     if (datatype != S7COMMP_ITEM_DATATYPE_UINT) {
         return offset;
     }
 
-    blocklang = tvb_get_ntohs(tvb, offset);
-    pi = proto_tree_add_text(tree, tvb, offset, 2, "Blocklanguage: %s", val_to_str(blocklang, attrib_blocklanguage_names, "Unknown Blocklanguage: %u"));
+    pi = proto_tree_add_item(tree, hf_s7commp_attrib_blocklanguage, tvb, offset, 2, ENC_BIG_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(pi);
     offset += 2;
 
-    PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
 /*******************************************************************************************************
@@ -7149,7 +7163,6 @@ s7commp_decode_attrib_serversessionrole(tvbuff_t *tvb,
                                         guint32 offset,
                                         guint8 datatype)
 {
-    guint32 role;
     guint8 octet_count = 0;
     proto_item *pi = NULL;
 
@@ -7157,10 +7170,9 @@ s7commp_decode_attrib_serversessionrole(tvbuff_t *tvb,
         return offset;
     }
 
-    role = tvb_get_varuint32(tvb, &octet_count, offset);
-    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "ServerSessionRole: %s", val_to_str(role, attrib_serversessionrole, "Unknown ServerSessionRole: 0x%08x"));
-    offset += octet_count;
+    pi = proto_tree_add_varuint32(tree, hf_s7commp_attrib_serversessionrole, tvb, offset, &octet_count);
     PROTO_ITEM_SET_GENERATED(pi);
+    offset += octet_count;
 
     return offset;
 }
@@ -7266,7 +7278,6 @@ s7commp_decode_attrib_filteroperation(tvbuff_t *tvb,
                                     guint32 offset,
                                     guint8 datatype)
 {
-    gint32 operation;
     guint8 octet_count = 0;
     proto_item *pi = NULL;
 
@@ -7274,11 +7285,10 @@ s7commp_decode_attrib_filteroperation(tvbuff_t *tvb,
         return offset;
     }
 
-    operation = tvb_get_varint32(tvb, &octet_count, offset);
-    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "FilterOperation: %s", val_to_str(operation, attrib_filteroperation, "Unknown operation: %d"));
+    pi = proto_tree_add_varint32(tree, hf_s7commp_attrib_filteroperation, tvb, offset, &octet_count);
+    PROTO_ITEM_SET_GENERATED(pi);
     offset += octet_count;
 
-    PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
 /*******************************************************************************************************

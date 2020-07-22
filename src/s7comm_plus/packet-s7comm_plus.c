@@ -5082,6 +5082,7 @@ static int * const s7commp_tagdescr_bitoffsetinfo_fields[] = {
     NULL
 };
 
+static gint hf_s7commp_tagdescr_unknown1 = -1;
 static gint hf_s7commp_tagdescr_lid = -1;
 static gint hf_s7commp_tagdescr_subsymbolcrc = -1;
 static gint hf_s7commp_tagdescr_s7stringlength = -1;
@@ -5102,6 +5103,24 @@ static gint hf_s7commp_tagdescr_nonoptimized_addr_16 = -1;
 static gint hf_s7commp_tagdescr_optimized_addr_16 = -1;
 static gint hf_s7commp_tagdescr_nonoptimized_struct_size = -1;
 static gint hf_s7commp_tagdescr_optimized_struct_size = -1;
+static gint hf_s7commp_tagdescr_fb_pa_relid = -1;
+static gint hf_s7commp_tagdescr_fb_pa_info4 = -1;
+static gint hf_s7commp_tagdescr_fb_pa_info5 = -1;
+static gint hf_s7commp_tagdescr_fb_pa_info6 = -1;
+static gint hf_s7commp_tagdescr_fb_pa_info7 = -1;
+static gint hf_s7commp_tagdescr_fb_pa_retainoffset = -1;
+static gint hf_s7commp_tagdescr_fb_pa_volatileoffset = -1;
+static gint hf_s7commp_tagdescr_fbarr_classicsize = -1;
+static gint hf_s7commp_tagdescr_fbarr_retainsize = -1;
+static gint hf_s7commp_tagdescr_fbarr_volatilesize = -1;
+static gint hf_s7commp_tagdescr_struct_info4 = -1;
+static gint hf_s7commp_tagdescr_struct_info5 = -1;
+static gint hf_s7commp_tagdescr_struct_info6 = -1;
+static gint hf_s7commp_tagdescr_struct_info7 = -1;
+static gint hf_s7commp_tagdescr_unspoffsetinfo1 = -1;
+static gint hf_s7commp_tagdescr_unspoffsetinfo2 = -1;
+static gint hf_s7commp_tagdescr_sfbinstoffset1 = -1;
+static gint hf_s7commp_tagdescr_sfbinstoffset2 = -1;
 
 /* Object */
 static gint hf_s7commp_object_relid = -1;
@@ -5972,6 +5991,9 @@ proto_register_s7commp (void)
           { "Optimized Bitoffset", "s7comm-plus.tagdescr.bitoffsetinfo.bitoffset.optimized", FT_UINT8, BASE_DEC, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_OPTBITOFFSET,
             NULL, HFILL }},
 
+        { &hf_s7commp_tagdescr_unknown1,
+          { "Unknown in first Block (LittleEndian)", "s7comm-plus.tagdescr.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_lid,
           { "LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
             "varuint32: Tag description - LID", HFILL }},
@@ -6031,6 +6053,60 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_optimized_struct_size,
           { "Optimized structure size", "s7comm-plus.tagdescr.structsize.optimized", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_relid,
+          { "FB/ProgramAlarm Relation-Id", "s7comm-plus.tagdescr.fb_pa.relid", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_info4,
+          { "FB/ProgramAlarm Info 4", "s7comm-plus.tagdescr.fb_pa.info4", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_info5,
+          { "FB/ProgramAlarm Info 5", "s7comm-plus.tagdescr.fb_pa.info5", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_info6,
+          { "FB/ProgramAlarm Info 6", "s7comm-plus.tagdescr.fb_pa.info6", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_info7,
+          { "FB/ProgramAlarm Info 7", "s7comm-plus.tagdescr.fb_pa.info7", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_retainoffset,
+          { "Retain Section Offset", "s7comm-plus.tagdescr.fb_pa.retainoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_volatileoffset,
+          { "Volatile Section Offset", "s7comm-plus.tagdescr.fb_pa.volatileoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fbarr_classicsize,
+          { "Classic Section Size", "s7comm-plus.tagdescr.fbarr.classicsize", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fbarr_retainsize,
+          { "Retain Section Size", "s7comm-plus.tagdescr.fbarr.retainsize", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fbarr_volatilesize,
+          { "Volatile Section Size", "s7comm-plus.tagdescr.fbarr.volatilesize", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_struct_info4,
+          { "Struct Info 4", "s7comm-plus.tagdescr.struct.info4", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_struct_info5,
+          { "Struct Info 5", "s7comm-plus.tagdescr.struct.info5", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_struct_info6,
+          { "Struct Info 6", "s7comm-plus.tagdescr.struct.info6", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_struct_info7,
+          { "Struct Info 7", "s7comm-plus.tagdescr.struct.info7", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_unspoffsetinfo1,
+          { "Unspecified Offsetinfo 1 (unused?)", "s7comm-plus.tagdescr.unspoffsetinfo1", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_unspoffsetinfo2,
+          { "Unspecified Offsetinfo 2 (unused?)", "s7comm-plus.tagdescr.unspoffsetinfo2", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_sfbinstoffset1,
+          { "Unknown SFB Instance Offset 1", "s7comm-plus.tagdescr.sfbinstoffset1", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_sfbinstoffset2,
+          { "Unknown SFB Instance Offset 2", "s7comm-plus.tagdescr.sfbinstoffset2", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
 
         { &hf_s7commp_tagdescr_accessability,
@@ -8501,11 +8577,10 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     }
     /* Passt nicht ins Schema oben, unbekannt wozu die weiteren zwei Werte dienen */
     if (offsetinfotype == 0x08) {
-        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Unknown SFB Instance Offset 1: %u", vlq_value);
+        /* Unknown SFB Instance Offsets 1 and 2 */
+        proto_tree_add_varuint32(offsetinfo_tree, hf_s7commp_tagdescr_sfbinstoffset1, tvb, offset, &octet_count);
         offset += octet_count;
-        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Unknown SFB Instance Offset 2: %u", vlq_value);
+        proto_tree_add_varuint32(offsetinfo_tree, hf_s7commp_tagdescr_sfbinstoffset2, tvb, offset, &octet_count);
         offset += octet_count;
     }
     proto_item_set_len(offsetinfo_tree, offset - start_offset);
@@ -8549,7 +8624,8 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
     offset += 2;
     max_offset = offset + block_len;
 
-    proto_tree_add_text(tree, tvb, offset, 4, "Unknown in first Block (LittleEndian): 0x%08x / %u", tvb_get_letohl(tvb, offset), tvb_get_letohl(tvb, offset));
+    /* Unknown in first Block (LittleEndian) */
+    proto_tree_add_item(tree, hf_s7commp_tagdescr_unknown1, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     offset += 4;
 
     while (block_len > 0) {
@@ -8640,17 +8716,17 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                         softdatatype == S7COMMP_SOFTDATATYPE_WSTRING) {
                         proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_s7stringlength, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     } else {
-                        proto_tree_add_text(tag_tree, tvb, offset, 2, "General Offsetinfo 1: %u (unused?)", tvb_get_letohs(tvb, offset));
+                        proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo1, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     }
                     offset += 2;
-                    proto_tree_add_text(tag_tree, tvb, offset, 2, "General Offsetinfo 2: %u (unused?)", tvb_get_letohs(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo2, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     break;
                 /*************************************************************************/
                 default:
-                    proto_tree_add_text(tag_tree, tvb, offset, 2, "General Offsetinfo 1: %u (unused?)", tvb_get_letohs(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo1, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
-                    proto_tree_add_text(tag_tree, tvb, offset, 2, "General Offsetinfo 2: %u (unused?)", tvb_get_letohs(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo2, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     break;
             }
@@ -8676,19 +8752,19 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                 /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM:
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Relation-Id: 0x%08x", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_relid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 4: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info4, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 5: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info5, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 6: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info6, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 7: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info7, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Retain Section Offset: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_retainoffset, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Volatile Section Offset: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_volatileoffset, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
                     break;
             }
@@ -8725,11 +8801,11 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     array_elementcount = (gint32)tvb_get_letohl(tvb, offset);
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_arrayelementcount, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Classic Section Size: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fbarr_classicsize, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Retain Section Size: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fbarr_retainsize, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Volatile Section Size: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fbarr_volatilesize, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
                     break;
             }
@@ -8786,13 +8862,13 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT:
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_structrelid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 4: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_struct_info4, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 5: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_struct_info5, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 6: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_struct_info6, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 7: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_struct_info7, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
                     break;
             }

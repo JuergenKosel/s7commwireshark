@@ -7047,35 +7047,6 @@ proto_tree_add_ret_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint s
 }
 /*******************************************************************************************************
  *
- * Returns a timestamp as string from a unix-timestamp 64 bit value. Needs a char array of size 34.
- * Format:
- * Jan 31, 2014 23:59:59.999.999.999
- *
- *******************************************************************************************************/
-static void
-s7commp_get_timestring_from_uint64(guint64 timestamp, char *str, gint max)
-{
-    guint16 nanosec, microsec, millisec;
-    struct tm *mt;
-    time_t t;
-
-    nanosec = timestamp % 1000;
-    timestamp /= 1000;
-    microsec = timestamp % 1000;
-    timestamp /= 1000;
-    millisec = timestamp % 1000;
-    timestamp /= 1000;
-    t = timestamp;
-    mt = gmtime(&t);
-    str[0] = '\0';
-    if (mt != NULL) {
-        g_snprintf(str, max, "%s %2d, %d %02d:%02d:%02d.%03d.%03d.%03d", mon_names[mt->tm_mon], mt->tm_mday,
-            mt->tm_year + 1900, mt->tm_hour, mt->tm_min, mt->tm_sec,
-            millisec, microsec, nanosec);
-    }
-}
-/*******************************************************************************************************
- *
  * Timespan (LT / LTIME) is interpreted as nanoseconds.
  * Use the display style from programming software:
  * LT#-106751d_23h_47m_16s_854ms_775us_808ns
@@ -7901,6 +7872,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     proto_item *array_item = NULL;
     proto_tree *array_item_tree = NULL;
     proto_tree *current_tree = NULL;
+    proto_item *pi = NULL;
 
     guint64 uint64val = 0;
     guint32 uint32val = 0;
@@ -8147,10 +8119,10 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 8;
                 value_start_offset = offset;
                 uint64val = tvb_get_ntoh64(tvb, offset);
-                s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
                 tmptime.secs = (time_t)(uint64val / 1000000000);
                 tmptime.nsecs = uint64val % 1000000000;
-                proto_tree_add_time(current_tree, hf_s7commp_itemval_timestamp, tvb, offset, length_of_value, &tmptime);
+                pi = proto_tree_add_time(current_tree, hf_s7commp_itemval_timestamp, tvb, offset, length_of_value, &tmptime);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", proto_item_get_display_repr(wmem_packet_scope(), pi));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESPAN:

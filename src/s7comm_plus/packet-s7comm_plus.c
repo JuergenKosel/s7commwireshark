@@ -54,8 +54,6 @@ void proto_register_s7commp(void);
 static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint32 offset, gboolean recursive);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
-/* #define DEBUG_REASSEMBLING */
-
  /*******************************************************
  * It's only possible to use this plugin for dissection of hexdumps (user-link-layer),
  * but only when the dissector isn't registered as heuristic dissector.
@@ -11345,9 +11343,6 @@ dissect_s7commp(tvbuff_t *tvb,
                 reasm_opcode = tvb_get_guint8(tvb, offset);
                 reasm_function = tvb_get_ntohs(tvb, offset + 3);
 
-                #ifdef DEBUG_REASSEMBLING
-                printf("Reassembling pass 1: Frame=%3d HasTrailer=%d", pinfo->fd->num, has_trailer);
-                #endif
                 /* Conversation:
                  * find_conversation() ist dazu gedacht eine Konversation in beiden Richtungen zu finden.
                  * D.h. es wurde z.B. Port 2000->102 wie auch 102->2000 gefunden. Das ist an dieser Stelle jedoch
@@ -11362,9 +11357,6 @@ dissect_s7commp(tvbuff_t *tvb,
                     conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
                                                     (const endpoint_type) pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
                                                     0, NO_PORT2);
-                    #ifdef DEBUG_REASSEMBLING
-                    printf(" NewConv" );
-                    #endif
                 }
                 conversation_state = (conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
                 if (conversation_state == NULL) {
@@ -11374,26 +11366,12 @@ dissect_s7commp(tvbuff_t *tvb,
                     conversation_state->start_opcode = 0;
                     conversation_state->start_function = 0;
                     conversation_add_proto_data(conversation, proto_s7commp, conversation_state);
-                    #ifdef DEBUG_REASSEMBLING
-                    printf(" NewConvState" );
-                    #endif
                 }
-                #ifdef DEBUG_REASSEMBLING
-                printf(" ConvState->state=%d", conversation_state->state);
-                #endif
 
                 if (has_trailer) {
                     if (conversation_state->state == CONV_STATE_NEW) {
-                        #ifdef DEBUG_REASSEMBLING
-                        printf(" no_fragment=1");
-                        #endif
                     } else {
                         last_fragment = TRUE;
-                        /* ruecksetzen */
-                        #ifdef DEBUG_REASSEMBLING
-                        col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG: A state=%d)", conversation_state->state);
-                        printf(" last_fragment=1, delete_proto_data");
-                        #endif
                         conversation_state->state = CONV_STATE_NOFRAG;
                         conversation_delete_proto_data(conversation, proto_s7commp);
                     }
@@ -11404,19 +11382,11 @@ dissect_s7commp(tvbuff_t *tvb,
                         conversation_state->start_frame = pinfo->fd->num;
                         conversation_state->start_opcode = reasm_opcode;
                         conversation_state->start_function = reasm_function;
-                        #ifdef DEBUG_REASSEMBLING
-                        printf(" first_fragment=1, set state=%d, start_frame=%d", conversation_state->state, conversation_state->start_frame);
-                        #endif
                     } else {
                         inner_fragment = TRUE;
                         conversation_state->state = CONV_STATE_INNER;
                     }
                 }
-                #ifdef DEBUG_REASSEMBLING
-                printf(" => Conv->state=%d", conversation_state->state);
-                printf(" => Conv->start_frame=%3d", conversation_state->start_frame);
-                printf("\n");
-                #endif
             }
 
             save_fragmented = pinfo->fragmented;
@@ -11431,9 +11401,6 @@ dissect_s7commp(tvbuff_t *tvb,
                 packet_state->start_frame = conversation_state->start_frame;
                 packet_state->start_opcode = conversation_state->start_opcode;
                 packet_state->start_function = conversation_state->start_function;
-                #ifdef DEBUG_REASSEMBLING
-                col_append_str(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: INIT-packet_state)");
-                #endif
             } else {
                 first_fragment = packet_state->first_fragment;
                 inner_fragment = packet_state->inner_fragment;
@@ -11451,15 +11418,10 @@ dissect_s7commp(tvbuff_t *tvb,
                 tvbuff_t* new_tvb = NULL;
                 fragment_head *fd_head;
                 guint32 frag_data_len;
-                /* guint32 frag_number; */
                 gboolean more_frags;
-                #ifdef DEBUG_REASSEMBLING
-                col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: F=%d I=%d L=%d N=%u)", first_fragment, inner_fragment, last_fragment, packet_state->start_frame);
-                #endif
 
                 frag_id       = packet_state->start_frame;
                 frag_data_len = tvb_reported_length_remaining(tvb, offset);     /* Dieses ist der reine Data-Teil, da offset hinter dem Header steht */
-                /* frag_number   = pinfo->fd->num; */
                 more_frags    = !last_fragment;
 
                 pinfo->fragmented = TRUE;

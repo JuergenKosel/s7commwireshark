@@ -54,15 +54,6 @@ void proto_register_s7commp(void);
 static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint32 offset, gboolean recursive);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
- /*******************************************************
- * It's only possible to use this plugin for dissection of hexdumps (user-link-layer),
- * but only when the dissector isn't registered as heuristic dissector.
- * See how to use this:
- * http://wiki.wireshark.org/HowToDissectAnything
- * https://www.wireshark.org/docs/man-pages/text2pcap.html
- */
-//#define DONT_ADD_AS_HEURISTIC_DISSECTOR
-
 /* Setting ENABLE_PROTO_TREE_ADD_TEXT to 1 enables the proto_tree_add_text
  * function which is convenient for quick development.
  */
@@ -5431,11 +5422,7 @@ proto_reg_handoff_s7commp(void)
     static gboolean initialized = FALSE;
     if (!initialized) {
         xml_handle = find_dissector_add_dependency("xml", proto_s7commp);
-        #ifdef DONT_ADD_AS_HEURISTIC_DISSECTOR
-            register_dissector("dlt", dissect_s7commp, proto_s7commp);
-        #else
-            heur_dissector_add("cotp", dissect_s7commp, "S7 Communication Plus over COTP", "s7comm_plus_cotp", proto_s7commp, HEURISTIC_ENABLE);
-        #endif
+        heur_dissector_add("cotp", dissect_s7commp, "S7 Communication Plus over COTP", "s7comm_plus_cotp", proto_s7commp, HEURISTIC_ENABLE);
         initialized = TRUE;
     }
 }

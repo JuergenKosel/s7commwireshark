@@ -107,7 +107,7 @@ static const value_string protocolversion_names[] = {
 #define S7COMMP_OPCODE_REQ                      0x31
 #define S7COMMP_OPCODE_RES                      0x32
 #define S7COMMP_OPCODE_NOTIFICATION             0x33
-#define S7COMMP_OPCODE_RES2                     0x02    /* V13 HMI bei zyklischen Daten, dann ist in dem Request Typ2=0x74 anstatt 0x34 */
+#define S7COMMP_OPCODE_RES2                     0x02                    /* Seen with V13 HMI on cyclic data, but then in request Typ2=0x74 instead of 0x34 */
 
 static const value_string opcode_names[] = {
     { S7COMMP_OPCODE_REQ,                       "Request" },
@@ -260,26 +260,6 @@ static const value_string itemval_elementid_names[] = {
  */
 static const value_string id_number_names[] = {
     { 0,        "None" },
-    /*  Are these 20 IDs only for attributes? */
-    /*
-    { 1,        "LID_OMS_STB_DescriptionRID" },
-    { 2,        "LID_OMS_STB_Structured" },
-    { 3,        "LID_OMS_STB_ClassicBlob" },
-    { 4,        "LID_OMS_STB_RetainBlob" },
-    { 5,        "LID_OMS_STB_VolatileBlob" },
-    { 6,        "LID_OMS_STB_TypeInfoModificationTime" },
-    { 8,        "LID_OMS_STB_BaseClass" },
-    { 9,        "LID_OMS_STB_1stFreeLID" },
-    { 11,       "LID_PoolUsagePoolName" },
-    { 13,       "LID_PoolUsageItemsTotal" },
-    { 14,       "LID_PoolUsageItemsUsedCur" },
-    { 15,       "LID_PoolUsageBytesUsedCur" },
-    { 16,       "LID_PoolUsageItemsUsedMax" },
-    { 17,       "LID_PoolUsageAllocCounter" },
-    { 18,       "LID_PoolUsageBytesUsedMax" },
-    { 19,       "LID_PoolUsageBytesTotal" },
-    { 20,       "LID_PoolUsageAllocSize" },
-    */
     { 1,        "NativeObjects.theASRoot_Rid" },
     { 2,        "NativeObjects.theHWConfiguration_Rid" },
     { 3,        "NativeObjects.thePLCProgram_Rid" },
@@ -2813,7 +2793,7 @@ static const value_string tagdescr_offsetinfotype_names[] = {
 #define S7COMMP_TAGDESCR_SECTION_OPERAND           7
 
 static const value_string tagdescr_section_names[] = {
-    { S7COMMP_TAGDESCR_SECTION_NONE,             "Undefined" },
+    { S7COMMP_TAGDESCR_SECTION_NONE,            "Undefined" },
     { S7COMMP_TAGDESCR_SECTION_INPUT,           "Input" },
     { S7COMMP_TAGDESCR_SECTION_OUTPUT,          "Output" },
     { S7COMMP_TAGDESCR_SECTION_INOUT,           "InOut" },
@@ -4757,8 +4737,6 @@ static const char s7commp_dict_CompilerSettings_90000001[] = {
     0x6f, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x61, 0x6c, 0x6c, 0x79
 };
 
-/**************************************************************************
- **************************************************************************/
 /* Header Block */
 static gint hf_s7commp_header = -1;
 static gint hf_s7commp_header_protid = -1;              /* Header Byte  0 */
@@ -4849,10 +4827,7 @@ static gint hf_s7commp_data_retval_genericerrorcode = -1;
 static gint hf_s7commp_data_retval_servererror = -1;
 static gint hf_s7commp_data_retval_debuginfo = -1;
 static gint hf_s7commp_data_retval_errorextension = -1;
-/* Z.Zt. nicht verwendet, da 64 Bit Feld nicht vernuenftig unterstuetzt wird. */
-/* y needs to match the definition of the 6th argument from
- * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h
- */
+
 static int * const s7commp_data_returnvalue_fields[] = {
     &hf_s7commp_data_retval_errorcode,
     &hf_s7commp_data_retval_omsline,
@@ -4864,8 +4839,7 @@ static int * const s7commp_data_returnvalue_fields[] = {
     NULL
 };
 
-/* These are the ids of the subtrees that we are creating */
-static gint ett_s7commp = -1;                           /* S7 communication tree, parent of all other subtree */
+static gint ett_s7commp = -1;                           /* S7 communication tree, parent of all other subtrees */
 static gint ett_s7commp_header = -1;                    /* Subtree for header block */
 static gint ett_s7commp_data = -1;                      /* Subtree for data block */
 static gint ett_s7commp_data_returnvalue = -1;          /* Subtree for returnvalue */
@@ -4910,9 +4884,7 @@ static gint hf_s7commp_itemval_datatype_flags_address_array = -1;       /* 0x20 
 static gint hf_s7commp_itemval_datatype_flags_sparsearray = -1;         /* 0x40 for nullterminated array with key/value */
 static gint hf_s7commp_itemval_datatype_flags_0x80unkn = -1;            /* 0x80 unknown, seen in S7-1500 */
 static gint ett_s7commp_itemval_datatype_flags = -1;
-/* s7commp_itemval_datatype_flags_fields needs to match the definition of the 6th argument from
- * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h
- */
+
 static int * const s7commp_itemval_datatype_flags_fields[] = {
     &hf_s7commp_itemval_datatype_flags_array,
     &hf_s7commp_itemval_datatype_flags_address_array,
@@ -5014,9 +4986,7 @@ static gint hf_s7commp_tagdescr_attributeflags_isin = -1;
 static gint hf_s7commp_tagdescr_attributeflags_appwriteable = -1;
 static gint hf_s7commp_tagdescr_attributeflags_appreadable = -1;
 static gint ett_s7commp_tagdescr_attributeflags = -1;
-/* s7commp_tagdescr_attributeflags_fields needs to match the definition of the 6th argument from
- * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h:2759
- */
+
 static int * const s7commp_tagdescr_attributeflags_fields[] = {
     &hf_s7commp_tagdescr_attributeflags_hostrelevant,
     &hf_s7commp_tagdescr_attributeflags_retain,
@@ -5197,9 +5167,7 @@ static gint hf_s7commp_subscrreflist_item_head = -1;
 static gint ett_s7commp_subscrreflist_item_head = -1;
 static gint hf_s7commp_subscrreflist_item_head_unknown = -1;
 static gint hf_s7commp_subscrreflist_item_head_lidcnt = -1;
-/* s7commp_subscrreflist_item_head_fields needs to match the definition of the 6th argument from
- * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h
- */
+
 static int * const s7commp_subscrreflist_item_head_fields[] = {
     &hf_s7commp_subscrreflist_item_head_unknown,
     &hf_s7commp_subscrreflist_item_head_lidcnt,
@@ -5394,17 +5362,15 @@ typedef struct {
     guint16 start_function;
 } conv_state_t;
 
-/* options */
-static gboolean s7commp_reassemble = TRUE;
+/* Options */
+static gboolean s7commp_opt_reassemble = TRUE;
 #ifdef HAVE_ZLIB
 static gboolean s7commp_opt_decompress_blobs = TRUE;
 #else
 static gboolean s7commp_opt_decompress_blobs = FALSE;
 #endif
 
-/*
- * reassembly of S7COMMP
- */
+/* Reassembly of S7COMMP */
 static reassembly_table s7commp_reassembly_table;
 
 static void
@@ -5413,7 +5379,6 @@ s7commp_defragment_init(void)
     reassembly_table_init(&s7commp_reassembly_table,
                           &addresses_reassembly_table_functions);
 }
-
 
 /* Register this protocol */
 void
@@ -5445,7 +5410,6 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
     if ((str = try_val_to_str_ext(id_number, &id_number_names_ext))) {
         g_snprintf(result, ITEM_LABEL_LENGTH, "%s", str);
     } else {
-        /*cls = ((id_number & 0xff000000) >> 24);*/
         xindex = ((id_number & 0x00ff0000) >> 16);
         section = (id_number & 0xffff);
 
@@ -5519,7 +5483,7 @@ void
 proto_register_s7commp (void)
 {
     static hf_register_info hf[] = {
-        /*** Header fields ***/
+        /* Header fields */
         { &hf_s7commp_header,
           { "Header", "s7comm-plus.header", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is the header of S7 communication plus", HFILL }},
@@ -5538,15 +5502,13 @@ proto_register_s7commp (void)
         { &hf_s7commp_header_keepalive_res1,
           { "Reserved", "s7comm-plus.header.keepalive_res1", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
-        /*** Fields in data part ***/
+        /* Fields in data part */
         { &hf_s7commp_data,
           { "Data", "s7comm-plus.data", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is the data part of S7 communication plus", HFILL }},
-
         { &hf_s7commp_data_returnvalue,
           { "Return value", "s7comm-plus.returnvalue", FT_UINT64, BASE_HEX, NULL, 0x0,
-            "varuint64: Return value", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_data_retval_errorcode,
           { "Error code", "s7comm-plus.returnvalue.errorcode", FT_INT64, BASE_DEC|BASE_VAL64_STRING, VALS64(errorcode_names), G_GUINT64_CONSTANT(0x000000000000ffff),
             NULL, HFILL }},
@@ -5568,7 +5530,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_retval_errorextension,
           { "Error extension", "s7comm-plus.returnvalue.errorextension", FT_BOOLEAN, 64, NULL, G_GUINT64_CONSTANT(0x4000000000000000),
             NULL, HFILL }},
-
         { &hf_s7commp_data_opcode,
           { "Opcode", "s7comm-plus.data.opcode", FT_UINT8, BASE_HEX, VALS(opcode_names), 0x0,
             NULL, HFILL }},
@@ -5614,18 +5575,15 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_sessionid,
           { "Session Id", "s7comm-plus.data.sessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
             "Session Id, negotiated on session start", HFILL }},
-
         { &hf_s7commp_data_item_address,
           { "Item Address", "s7comm-plus.data.item_address", FT_NONE, BASE_NONE, NULL, 0x0,
             "Address of one Item", HFILL }},
         { &hf_s7commp_data_item_value,
           { "Item Value", "s7comm-plus.data.item_value", FT_NONE, BASE_NONE, NULL, 0x0,
             "Value of one item", HFILL }},
-
         { &hf_s7commp_data_data,
           { "Data unknown", "s7comm-plus.data.data", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_data_req_set,
           { "Request Set", "s7comm-plus.data.req_set", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is a set of data in a request telegram", HFILL }},
@@ -5635,10 +5593,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_notification_set,
           { "Notification Data Set", "s7comm-plus.notification_dataset", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is a set of data in a notification data telegram", HFILL }},
-
         { &hf_s7commp_data_id_number,
           { "ID Number", "s7comm-plus.data.id_number", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
-            "varuint32: ID Number for function", HFILL }},
+            NULL, HFILL }},
         /* Lists */
         { &hf_s7commp_valuelist,
           { "ValueList", "s7comm-plus.valuelist", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -5652,16 +5609,16 @@ proto_register_s7commp (void)
         /* Item Address */
         { &hf_s7commp_item_count,
           { "Item Count", "s7comm-plus.item.count", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Number of items following", HFILL }},
+            "Number of items following", HFILL }},
         { &hf_s7commp_item_no_of_fields,
           { "Number of fields in complete Item-Dataset", "s7comm-plus.item.no_of_fields", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Number of fields in complete Item-Dataset", HFILL }},
+            "Number of fields in complete Item-Dataset", HFILL }},
         { &hf_s7commp_itemaddr_crc,
           { "Symbol CRC", "s7comm-plus.item.addr.symbol_crc", FT_UINT32, BASE_HEX, NULL, 0x0,
             "CRC generated out of symbolic name with (x^32+x^31+x^30+x^29+x^28+x^26+x^23+x^21+x^19+x^18+x^15+x^14+x^13+x^12+x^9+x^8+x^4+x+1)", HFILL }},
         { &hf_s7commp_itemaddr_area,
           { "Access base-area", "s7comm-plus.item.addr.area", FT_UINT32, BASE_HEX, NULL, 0x0,
-            "varuint32: Base area inside Datablock with Number", HFILL }},
+            "Base area inside Datablock with Number", HFILL }},
         { &hf_s7commp_itemaddr_area1,
           { "Accessing area", "s7comm-plus.item.addr.area1", FT_UINT16, BASE_HEX, VALS(var_item_area1_names), 0x0,
             "Always 0x8a0e for Datablock", HFILL }},
@@ -5676,10 +5633,10 @@ proto_register_s7commp (void)
             "This is the sub area for all following IDs", HFILL }},
         { &hf_s7commp_itemaddr_lid_value,
           { "LID Value", "s7comm-plus.item.addr.lid_value", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: LID Value", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemaddr_idcount,
           { "Number of following IDs", "s7comm-plus.item.addr.idcount", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Number of following IDs", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemaddr_filter_sequence,
           { "Item address sequence", "s7comm-plus.item.addr.address_filter_sequence", FT_STRING, BASE_NONE, NULL, 0x0,
             "Combined string of all access relevant parts. Can be used as a filter", HFILL }},
@@ -5695,11 +5652,10 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemaddr_blob_bitoffset,
           { "Blob bitoffset", "s7comm-plus.item.addr.blob_bitoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-
-        /*** Item value ***/
+        /* Item value */
         { &hf_s7commp_itemval_itemnumber,
           { "Item Number", "s7comm-plus.item.val.item_number", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Item Number", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemval_elementid,
           { "Element Tag-Id", "s7comm-plus.item.val.elementid", FT_UINT8, BASE_HEX, VALS(itemval_elementid_names), 0x0,
             NULL, HFILL }},
@@ -5719,7 +5675,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_datatype_flags_0x80unkn,
           { "Unknown-Flag1", "s7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
             "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
-
         { &hf_s7commp_itemval_sparsearray_term,
           { "Sparsearray key terminating Null", "s7comm-plus.item.val.sparsearray_term", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
@@ -5731,30 +5686,28 @@ proto_register_s7commp (void)
             "VLQ", HFILL }},
         { &hf_s7commp_itemval_stringactlen,
           { "String actual length", "s7comm-plus.item.val.stringactlen", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemval_blobrootid,
           { "Blob root ID", "s7comm-plus.item.val.blobrootid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "If 0 then standard format. If >0 then special format similar to struct", HFILL }},
         { &hf_s7commp_itemval_blobsize,
           { "Blob size", "s7comm-plus.item.val.blobsize", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemval_blob_unknown1,
           { "Blob special unknown 8 bytes (always zero?)", "s7comm-plus.item.val.blob_unknown1", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_itemval_blobtype,
           { "Blob type", "s7comm-plus.item.val.blobtype", FT_UINT8, BASE_HEX, NULL, 0x0,
             "Blob type: 0x00=ID-Value-List, 0x03=RawBlock", HFILL }},
-
         { &hf_s7commp_itemval_datatype,
           { "Datatype", "s7comm-plus.item.val.datatype", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
             "Type of data following", HFILL }},
         { &hf_s7commp_itemval_arraysize,
           { "Array size", "s7comm-plus.item.val.arraysize", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Number of values of the specified datatype following", HFILL }},
+            "Array size: Number of values of the specified datatype following", HFILL }},
         { &hf_s7commp_itemval_value,
           { "Value", "s7comm-plus.item.val.value", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* Values of different datatypes */
         { &hf_s7commp_itemval_bool,
           { "Value", "s7comm-plus.value.bool", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -5825,7 +5778,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_struct,
           { "Value", "s7comm-plus.value.struct", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "Value (Struct)", HFILL }},
-
         /* Get/Set a packed struct */
         { &hf_s7commp_packedstruct,
           { "Packed struct", "s7comm-plus.item.packedstruct", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -5842,7 +5794,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_packedstruct_data,
           { "Packed struct data", "s7comm-plus.item.packedstruct.data", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* List elements */
         { &hf_s7commp_listitem_terminator,
           { "Terminating Item/List", "s7comm-plus.listitem_terminator", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -5853,7 +5804,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_errorvaluelist_terminator,
           { "Terminating ErrorValueList", "s7comm-plus.errorvaluelist_terminator", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* Exploring plc */
         { &hf_s7commp_explore_req_id,
           { "Explore request ID (Root/Link-ID?)", "s7comm-plus.explore.req_id", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
@@ -5879,7 +5829,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_explore_resseqinteg,
           { "Explore Seq+IntegrId from Request", "s7comm-plus.explore.resseqinteg", FT_UINT32, BASE_DEC, NULL, 0x0,
             "Can be calculated by adding Sequencenumber + IntegrityId from corresponding request", HFILL }},
-
          /* Explore result, variable (tag) description */
         { &hf_s7commp_tagdescr_offsetinfo,
           { "Offset Info", "s7comm-plus.tagdescr.offsetinfo", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -5889,7 +5838,7 @@ proto_register_s7commp (void)
             "Describes how to interpret the last VLQ values", HFILL }},
         { &hf_s7commp_tagdescr_namelength,
           { "Length of name", "s7comm-plus.tagdescr.namelength", FT_UINT8, BASE_DEC, NULL, 0x0,
-            "varuint32: Tag description - Length of name", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_name,
           { "Name", "s7comm-plus.tagdescr.name", FT_STRING, STR_UNICODE, NULL, 0x0,
             NULL, HFILL }},
@@ -5902,7 +5851,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_softdatatype,
           { "SoftDataType", "s7comm-plus.tagdescr.softdatatype", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &tagdescr_softdatatype_names_ext, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_tagdescr_attributeflags,
           { "Attributes", "s7comm-plus.tagdescr.attributeflags", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -5972,7 +5920,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_attributeflags_appreadable,
           { "App-Readable", "s7comm-plus.tagdescr.attributeflags.appreadable", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_APPREADABLE,
             NULL, HFILL }},
-
         { &hf_s7commp_tagdescr_attributeflags2,
           { "Attributes", "s7comm-plus.tagdescr.attributeflags", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -6003,7 +5950,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_attributeflags2_bitoffset,
           { "Bitoffset", "s7comm-plus.tagdescr.attributeflags.bitoffset", FT_UINT16, BASE_DEC, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_BITOFFSET,
             NULL, HFILL }},
-
         { &hf_s7commp_tagdescr_bitoffsetinfo,
           { "Bitoffsetinfo", "s7comm-plus.tagdescr.bitoffsetinfo", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -6019,13 +5965,12 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_bitoffsetinfo_optbitoffset,
           { "Optimized Bitoffset", "s7comm-plus.tagdescr.bitoffsetinfo.bitoffset.optimized", FT_UINT8, BASE_DEC, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_OPTBITOFFSET,
             NULL, HFILL }},
-
         { &hf_s7commp_tagdescr_unknown1,
           { "Unknown in first Block (LittleEndian)", "s7comm-plus.tagdescr.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_lid,
           { "LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "Tag description - LID", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_subsymbolcrc,
           { "Subsymbol CRC", "s7comm-plus.tagdescr.subsymbolcrc", FT_UINT32, BASE_HEX, NULL, 0x0,
             "Calculated CRC from symbol name plus softdatatype-id", HFILL }},
@@ -6149,7 +6094,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_section,
           { "Section", "s7comm-plus.tagdescr.section", FT_UINT32, BASE_DEC, VALS(tagdescr_section_names), 0x0,
             NULL, HFILL }},
-
         /* Fields for object traversion */
         { &hf_s7commp_element_object,
           { "Object", "s7comm-plus.object", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -6166,11 +6110,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_element_block,
           { "Block", "s7comm-plus.block", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_objectqualifier,
           { "ObjectQualifier", "s7comm-plus.objectqualifier", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* Extended Keep alive */
         { &hf_s7commp_extkeepalive_reserved1,
           { "Reseved 1", "s7comm-plus.extkeepalive.reserved1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -6187,14 +6129,13 @@ proto_register_s7commp (void)
         { &hf_s7commp_extkeepalive_message,
           { "Message", "s7comm-plus.extkeepalive.message", FT_STRING, STR_ASCII, NULL, 0x0,
             NULL, HFILL }},
-
         /* Object */
         { &hf_s7commp_object_relid,
           { "Relation Id", "s7comm-plus.object.relid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_object_classid,
           { "Class Id", "s7comm-plus.object.classid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
-            "varuint32: Class Id", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_object_classflags,
           { "Class Flags", "s7comm-plus.object.classflags", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -6294,26 +6235,24 @@ proto_register_s7commp (void)
         { &s7commp_object_classflags_bit31,
           { "Bit31", "s7comm-plus.object.classflags.bit31", FT_BOOLEAN, 32, NULL, 0x80000000,
             NULL, HFILL }},
-
         { &hf_s7commp_object_attributeid,
           { "Attribute Id", "s7comm-plus.object.attributeid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
-            "varuint32: Attribute Id", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_object_attributeidflags,
           { "Attribute Id Flags", "s7comm-plus.object.attributeidflags", FT_UINT32, BASE_HEX, NULL, 0x0,
-            "varuint32: Attribute Id Flags", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_object_relunknown1,
           { "Unknown Value 1", "s7comm-plus.object.relunknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_object_blocklength,
           { "Block length", "s7comm-plus.object.blocklength", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_object_createobjidcount,
           { "Number of following Object Ids", "s7comm-plus.object.createobjidcount", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_object_createobjid,
           { "Object Id", "s7comm-plus.object.createobjid", FT_UINT32, BASE_HEX, NULL, 0x0,
-            "varuint32: Object Id", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_object_createobjrequnknown1,
           { "Unknown value 1", "s7comm-plus.object.createobjrequnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -6326,7 +6265,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_object_deleteobj_fill,
           { "Filling byte", "s7comm-plus.object.req_deleteobj_fill", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* Setmultivar/Setvariable */
         { &hf_s7commp_setvar_unknown1,
           { "Unknown", "s7comm-plus.setvar.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -6339,17 +6277,16 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_setvar_itemcount,
           { "Item count", "s7comm-plus.setvar.itemcount", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Item count", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_setvar_itemaddrcount,
           { "Item address count", "s7comm-plus.setvar.itemaddrcount", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Item address count", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_setvar_rawvaluelen,
           { "Raw value length", "s7comm-plus.setvar.rawvaluelen", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Raw value length", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_setvar_fill,
           { "Filling byte", "s7comm-plus.setvar.req_setmultivar_fill", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* GetMultiVariables/GetVariable */
         { &hf_s7commp_getmultivar_unknown1,
           { "Unknown", "s7comm-plus.getmultivar.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -6359,11 +6296,10 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_getmultivar_itemaddrcount,
           { "Item address count", "s7comm-plus.getmultivar.itemaddrcount", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Item address count", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_getvar_itemcount,
           { "Item count", "s7comm-plus.getvar.itemcount", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-
         /* GetVarSubStreamed */
         { &hf_s7commp_getvarsubstr_res_unknown1,
           { "GetVarSubStreamed response unknown 1", "s7comm-plus.getvarsubstr.res_unknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -6371,7 +6307,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_getvarsubstr_req_unknown1,
           { "GetVarSubStreamed request unknown 1", "s7comm-plus.getvarsubstr.req_unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* SetVarSubstreamed, stream data */
         { &hf_s7commp_streamdata,
           { "Stream data", "s7comm-plus.streamdata", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -6385,7 +6320,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_setvarsubstr_req_unknown1,
           { "Request SetVarSubStreamed unknown 1", "s7comm-plus.setvarsubstr.req_unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* Notification */
         { &hf_s7commp_notification_vl_retval,
           { "Return value", "s7comm-plus.notification.vl.retval", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -6396,7 +6330,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_notification_vl_unknown0x9c,
           { "Unknown value after value 0x9c", "s7comm-plus.notification.vl.refnumber", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_notification_subscrobjectid,
           { "Subscription Object Id", "s7comm-plus.notification.subscrobjectid", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -6423,7 +6356,7 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_notification_seqnum_vlq,
           { "Notification sequence number (VLQ)", "s7comm-plus.notification.seqnum_vlq", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Notification sequence number", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_notification_seqnum_uint8,
           { "Notification sequence number", "s7comm-plus.notification.seqnum_ui8", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
@@ -6439,14 +6372,12 @@ proto_register_s7commp (void)
         { &hf_s7commp_notification_timetick,
           { "Add-1 Notification timetick", "s7comm-plus.notification.timetick", FT_RELATIVE_TIME, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_notification_p2_subscrobjectid,
           { "Part 2 - Subscription Object Id", "s7comm-plus.notification.p2.subscrobjectid", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_notification_p2_unknown1,
           { "Part 2 - Unknown 1", "s7comm-plus.notification.p2.unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* SubscriptionReferenceList */
         { &hf_s7commp_subscrreflist,
           { "SubscriptionReferenceList", "s7comm-plus.subscrreflist", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -6478,7 +6409,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_subscrreflist_item_unknown1,
           { "Unknown 1", "s7comm-plus.subscrreflist.item.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* SecurityKeyEncryptedKey */
         { &hf_s7commp_securitykeyencryptedkey,
           { "Encrypted key", "s7comm-plus.securitykeyencryptedkey", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -6522,7 +6452,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_securitykeyencryptedkey_encrypted_challenge,
           { "Encrypted challenge", "s7comm-plus.securitykeyencryptedkey.encrypted_challenge", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* zlib compressed blob */
         { &hf_s7commp_compressedblob,
           { "zlib compressed blob", "s7comm-plus.compressedblob", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -6533,7 +6462,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_compressedblob_dictionary_id,
           { "Dictionary checksum (Adler-32)", "s7comm-plus.compressedblob.dictionary_id", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* MultipleStai */
         { &hf_s7commp_multiplestai,
           { "MultipleStai", "s7comm-plus.multiplestai", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -6552,14 +6480,13 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_multiplestai_hmiinfo_length,
           { "HmiInfo length", "s7comm-plus.multiplestai.hmiinfo_length", FT_UINT16, BASE_DEC, NULL, 0x0,
-            "HmiInfo length, constant 9", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_multiplestai_lidcount,
           { "LidCount", "s7comm-plus.multiplestai.lidcount", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_multiplestai_lid,
           { "Lids", "s7comm-plus.multiplestai.lids", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-
         /* HmiInfo */
         { &hf_s7commp_hmiinfo,
           { "HmiInfo", "s7comm-plus.hmiinfo", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -6576,7 +6503,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_hmiinfo_priority,
           { "Priority", "s7comm-plus.hmiinfo.priority", FT_UINT8, BASE_DEC, NULL, 0x0,
             "Priority of the alarm", HFILL }},
-
         /* Ext. decoded ID values */
         { &hf_s7commp_attrib_timestamp,
           { "Timestamp", "s7comm-plus.attrib.timestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
@@ -6590,7 +6516,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_attrib_blocklanguage,
           { "Blocklanguage", "s7comm-plus.attrib.blocklanguage", FT_UINT16, BASE_DEC, VALS(attrib_blocklanguage_names), 0x0,
             NULL, HFILL }},
-
         /* Getlink */
         { &hf_s7commp_getlink_requnknown1,
           { "Request unknown 1", "s7comm-plus.getlink.requnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -6604,7 +6529,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_getlink_linkid,
           { "Link-Id", "s7comm-plus.getlink.linkid", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* BeginSequence */
         { &hf_s7commp_beginseq_transactiontype,
           { "Transaction Type", "s7comm-plus.beginseq.transactiontype", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -6618,12 +6542,10 @@ proto_register_s7commp (void)
         { &hf_s7commp_beginseq_requestid,
           { "Request Id", "s7comm-plus.beginseq.requestid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
-
         /* EndSequence */
         { &hf_s7commp_endseq_requnknown1,
           { "Request unknown 1", "s7comm-plus.endseq.requnknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* Invoke */
         { &hf_s7commp_invoke_subsessionid,
           { "Sub Session Id", "s7comm-plus.invoke.subsessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -6637,7 +6559,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_invoke_resunknown1,
           { "Response unknown 1", "s7comm-plus.invoke.resunknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* Integrity part for 1500 */
         { &hf_s7commp_integrity,
           { "Integrity part", "s7comm-plus.integrity", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -6651,8 +6572,7 @@ proto_register_s7commp (void)
         { &hf_s7commp_integrity_digest,
           { "Packet Digest", "s7comm-plus.integrity.digest", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
-        /*** Trailer fields ***/
+        /* Trailer fields */
         { &hf_s7commp_trailer,
           { "Trailer", "s7comm-plus.trailer", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is the trailer part of S7 communication plus", HFILL }},
@@ -6665,7 +6585,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_trailer_datlg,
           { "Data length", "s7comm-plus.trailer.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Specifies the entire length of the data block in bytes", HFILL }},
-
         /* Fragment fields */
         { &hf_s7commp_fragment_overlap,
           { "Fragment overlap", "s7comm-plus.fragment.overlap", FT_BOOLEAN, BASE_NONE, NULL, 0x0,
@@ -6781,7 +6700,7 @@ proto_register_s7commp (void)
                                    "Reassemble segmented S7COMM-PLUS telegrams",
                                    "Whether segmented S7COMM-PLUS telegrams should be "
                                    "reassembled.",
-                                   &s7commp_reassemble);
+                                   &s7commp_opt_reassemble);
 
     prefs_register_bool_preference(s7commp_module, "decompress_blobs",
                                    "Uncompress S7COMM-PLUS blobs",
@@ -6856,15 +6775,10 @@ s7commp_pinfo_append_idname(packet_info *pinfo, guint32 id_number, gchar *str_pr
     }
 }
 /*******************************************************************************************************
+ * Variable length quantity decode funtcions
+ * (http://en.wikipedia.org/wiki/Variable-length_quantity)
  *
- * Spezial gepacktes Datenformat
- * siehe: http://en.wikipedia.org/wiki/Variable-length_quantity
- *
- * In der Datei packet-wap.c gibt es eine Funktion fuer unsigned:
- * guint tvb_get_guintvar (tvbuff_t *tvb, guint offset, guint *octetCount)
- * welche aber keine Begrenzung auf eine max-Anzahl hat (5 fuer int32).
- * Solange das Protokoll noch nicht sicher erkannt wird, ist diese Version hier sicherer.
- *
+ * TODO: Can this be replaced with tvb_get_varint() from proto.c?
  *******************************************************************************************************/
 static guint32
 tvb_get_varint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
@@ -6901,7 +6815,7 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     guint32 val = 0;
     guint8 octet;
     guint8 cont;
-    for (counter = 1; counter <= 4+1; counter++) {        /* grosse Werte benoetigen 5 Bytes: 4*7 bit + 4 bit */
+    for (counter = 1; counter <= 4+1; counter++) {
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 7;
@@ -6923,7 +6837,7 @@ tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     guint64 val = 0;
     guint8 octet;
     guint8 cont;
-    for (counter = 1; counter <= 8; counter++) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+    for (counter = 1; counter <= 8; counter++) {
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 7;
@@ -6951,7 +6865,7 @@ tvb_get_varint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     gint64 val = 0;
     guint8 octet;
     guint8 cont;
-    for (counter = 1; counter <= 8; counter++) {  /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+    for (counter = 1; counter <= 8; counter++) {
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         if ((counter == 1) && (octet & 0x40)) {   /* check sign */
@@ -6977,13 +6891,11 @@ tvb_get_varint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     return  val;
 }
 /*******************************************************************************************************
+ * Functions for adding a variable-length-quantifier (VLQ) value to the tree.
  *
- * Funktionen zum Hinzufuegen eines VLQ Wertes zu proto_tree.
- *
- * Die Funktionen sind in Anlehnung an die Wireshark internen Funktionen aus proto.c erstellt.
- * Die Anzahl Bytes welche der VLQ benoetigt, wird in octet_count geschrieben.
- * Die _ret_ Funktionen geben zusaetzlich in retval den eigentlichen Wert zurueck.
- *
+ * The functions are designed similar to the other proto_tree_add_xxx functions from proto.c.
+ * The actual length of the VLQ is written to octet_count.
+ * The _ret_ functions write the VLQ value in retval.
  *******************************************************************************************************/
 static proto_item *
 proto_tree_add_varuint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start, guint8 *octet_count)
@@ -7031,13 +6943,12 @@ proto_tree_add_ret_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint s
     return proto_tree_add_int(tree, hfindex, tvb, start, *octet_count, value);
 }
 /*******************************************************************************************************
+ * Convert a Timespan value (LT / LTIME in nanoseconds) to a string.
  *
- * Timespan (LT / LTIME) is interpreted as nanoseconds.
- * Use the display style from programming software:
+ * Using the same format as used in plc programming software. Examples:
  * LT#-106751d_23h_47m_16s_854ms_775us_808ns
  * LT#+106751d_23h_47m_16s_854ms_775us_807ns
  * Needs at least 42 chars.
- *
  *******************************************************************************************************/
 static void
 s7commp_get_timespan_from_int64(gint64 timespan, char *str, gint max)
@@ -7169,7 +7080,6 @@ s7commp_decode_integrity_wid(tvbuff_t *tvb,
 
     return offset;
 }
-
 /*******************************************************************************************************
  *
  * Decodes a return value, coded as 64 Bit VLQ. Includes an errorcode and some flags.
@@ -7209,7 +7119,6 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
 
     return offset;
 }
-
 /*******************************************************************************************************
  *
  * Decoding of an ULInt value as timestamp
@@ -7239,10 +7148,9 @@ s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
 
     return offset;
 }
-
 /*******************************************************************************************************
  *
- * Decoding if attribute Blocklanguage (ID 2523)
+ * Decoding of attribute Blocklanguage (ID 2523)
  *
  *******************************************************************************************************/
 static guint32
@@ -7265,7 +7173,7 @@ s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decoding if attribute ServerSessionRole (ID 299)
+ * Decoding of attribute ServerSessionRole (ID 299)
  *
  *******************************************************************************************************/
 static guint32
@@ -7323,7 +7231,7 @@ s7commp_decode_attrib_hmiinfo(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decoding Of attribute MultipleSTAI.STAIs (ID 7859)
+ * Decoding of attribute MultipleSTAI.STAIs (ID 7859)
  *
  *******************************************************************************************************/
 static guint32
@@ -7360,7 +7268,7 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
     hmiinfo_length = tvb_get_ntohs(tvb, offset);
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_hmiinfo_length, tvb, offset, 2, ENC_NA);
     offset += 2;
-    /* hmiinfo erkennt z.Zt. nur korrekt Alarm AP mit length = 9 */
+    /* Currently only the structure of Alarm AP with length = 9 is known */
     if (messagetype == S7COMMP_MULTIPLESTAI_MESSAGETYPE_ALARMAP && hmiinfo_length == 9) {
         offset = s7commp_decode_attrib_hmiinfo(tvb, subtree, offset, S7COMMP_ITEM_DATATYPE_BLOB, hmiinfo_length);
 
@@ -7728,10 +7636,9 @@ s7commp_decode_packed_struct(tvbuff_t *tvb,
     tmptime.nsecs = uint64val % 1000000000;
     proto_tree_add_time(value_item_tree, hf_s7commp_packedstruct_interfacetimestamp, tvb, offset, 8, &tmptime);
     offset += 8;
-
-    /* Bisher war an dieser Stelle immer eine 2, was theoretisch fuer USint stehen koennte.
-     * Wenn das eine Transportgroesse ist, muesste die Elementanzahl entsprechend umgerechnet werden.
-     * Solange kein solches Paket gesichtet wurde, ohne Umrechnung belassen.
+    /* NOTE: So far here was always a 2, which could possibly stand for USInt.
+     * If this is kind of transportsize, the elementcount would have to be recalculated.
+     * But as far as no such packet was seen, keep it without recalculation.
      */
     proto_tree_add_item(value_item_tree, hf_s7commp_packedstruct_transpsize, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
@@ -7759,14 +7666,11 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
                               guint8 datatype,
                               guint8 datatype_flags,
                               guint32 sparsearray_key,
-                              guint32 length_of_value,  /* length of the value in bytes */
+                              guint32 length_of_value,              /* length of the value in bytes */
                               guint32 id_number)
 {
     guint32 offset = 0;
     switch (id_number) {
-        //case 1048:  /* 1048 = SubscriptionReferenceList */
-        //    offset = s7commp_decode_attrib_subscriptionreflist(tvb, tree, value_start_offset, datatype, length_of_value);
-        //    break;
         case 6:     /*    6 = TypeInfoModificationTime */
         case 410:   /*  410 = VariableTypeTypeInfoReserveDataModified */
         case 529:   /*  529 = VariableTypeStructModificationTime */
@@ -7810,8 +7714,8 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 2585:  /* FunctionalObject.NetworkTitles */
         case 2589:  /* FunctionalObject.DebugInfo */
         case 4275:  /* ConstantsGlobal.Symbolics */
-            /* Spezial-Ausnahme: Sparsearray Elemente mit einem Sparsearray-Key >= 0x80000000 sind nicht,
-             * oder wenn dann anders komprimiert.
+            /* Exception: Sparsearray elements with a Sparsearray-Key >= 0x80000000 are not compressed,
+             * or at least compressed with a different method.
              */
             if ((datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY) && (sparsearray_key & 0x80000000)) {
                 break;
@@ -7898,19 +7802,18 @@ s7commp_decode_value(tvbuff_t *tvb,
     is_address_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY) && (datatype != S7COMMP_ITEM_DATATYPE_STRUCT);
     is_sparsearray = (datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY);
     is_struct_addressarray = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY) && (datatype == S7COMMP_ITEM_DATATYPE_STRUCT);
-    /* Besonderheit bei Adressarray und Datentyp Struct:
-     * Hier folgt nach dem Struct-Wert (ueblicherweise eine AID) die Anzahl der folgenden
-     * Array-Elemente. Die Elemente bestehen aber wieder aus einer ID mit Wert, darum
-     * kann es in diesem Fall nicht wie die anderen Arrays innerhalb dieser Funktion zerlegt werden,
-     * sondern es wird pro Array Element die Zerlegefunktion fuer eine ID/Value Liste aufgerufen.
+    /* Special handling of addressarray and datatype struct:
+     * After the Struct value (typical an AID) the number of array elements follows.
+     * Each array element consists of an ID/value pair. Therefore it cannot dissected the same way
+     * as the other arrays. For each array element the dissect function for an ID/value list is called.
      */
 
     datatype_of_value = datatype;
     if (is_array || is_address_array || is_sparsearray) {
         if (is_sparsearray) {
-            /* Bei diesem Array-Typ gibt es keine Angabe ueber die Anzahl. Das Array ist Null-terminiert.
-             * Damit die for-Schleife aber auch hierfuer verwendet werden kann, wird die Anzahl auf 999999 gesetzt,
-             * und die Schleife bei erreichen der terminierenden Null explizit verlassen.
+            /* With a sparsearray there is no field for the array size, instead the array is null-terminated.
+             * To use the standard for-loop here also for this type of array, we set the array-size to 999999
+             * and exit the loop for this arraytype at the terminating null.
              */
             array_size = 999999;
         } else {
@@ -7918,7 +7821,7 @@ s7commp_decode_value(tvbuff_t *tvb,
             offset += octet_count;
         }
         /* To display an array value, build a separate tree for the complete array.
-         * Under the array tree the array values are displayed.
+         * Under the array tree the values for each element are displayed.
          */
         array_item = proto_tree_add_item(data_item_tree, hf_s7commp_itemval_value, tvb, offset, -1, FALSE);
         array_item_tree = proto_item_add_subtree(array_item, ett_s7commp_itemval_array);
@@ -7953,19 +7856,17 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += octet_count;
             }
         } else {
-            /* Sonderbehandung Adressarray (ausschliesslich?) mit datatype VARIANT
-             * TODO: Dieses ist nur eine vorlaeufige Auswertung, da zur Bestimmung des Aufbaus
-             *       noch zu wenige Aufzeichnungen vorliegen. Wenn der Aufbau feststeht, sollte diese
-             *       gesamte Funktion ueberarbeitet werden (Datentyp-Auswertung und Array-Verarbeitung trennen).
-             * Erste Vermutung: 1. Byte datatype flags (unbestaetigt)
-             *                  2. Byte Type-ID, dann weiter mit Wert anhand der Typ-ID.
-             * Bei einem Sparsearray scheint der Aufbau anders zu sein.
+            /* Special for Adressarray (exclusively?) with datatype VARIANT:
+             * TODO: This is a preliminary evaluation, as there are not enough data/captures to determine the
+             *       exact construction.
+             * First guess: 1st byte datatype flags (unconfirmed), 2nd byte type-id, then standard dissection based on type-id.
+             * When this comes in a Sparsearray, it seems to be different again.
              */
             if (datatype == S7COMMP_ITEM_DATATYPE_VARIANT) {
                 proto_tree_add_bitmask(current_tree, tvb, offset, hf_s7commp_itemval_datatype_flags,
                     ett_s7commp_itemval_datatype_flags, s7commp_itemval_datatype_flags_fields, ENC_BIG_ENDIAN);
                 offset += 1;
-                datatype_of_value = tvb_get_guint8(tvb, offset);    /* Datentyp fuer switch-Auswertung aendern */
+                datatype_of_value = tvb_get_guint8(tvb, offset);    /* change datatype for switch/case evaluation */
                 proto_tree_add_uint(current_tree, hf_s7commp_itemval_varianttypeid, tvb, offset, 1, datatype_of_value);
                 offset += 1;
             }
@@ -8062,7 +7963,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_STRUCT:
-                if (struct_level) *struct_level += 1; /* entering a new structure level */
+                if (struct_level) *struct_level += 1;
                 length_of_value = 4;
                 value_start_offset = offset;
                 struct_value = tvb_get_ntohl(tvb, offset);
@@ -8155,15 +8056,16 @@ s7commp_decode_value(tvbuff_t *tvb,
             case S7COMMP_ITEM_DATATYPE_BLOB:
                 proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobrootid, tvb, offset, &octet_count, &uint32val);
                 offset += octet_count;
-                /* Wenn Wert > 1 dann Spezialformat, mit 8 zusaetzlichen Bytes + 1 Typkennung + entsprechende Auswertung.
-                 * Beim HMI-Projekttransfer mit erfolgt eine Uebertragung mit ID=1 (als SubStream) jedoch dann ohne extra Bytes.
+                /* If first value > 1 then special format with 8 additional bytes + 1 type-id + value.
+                 * On HMI project transfer this occurs with ID=1 (as SubStream) but without the extra bytes.
                  */
                 if (uint32val > 1) {
                     proto_tree_add_item(current_tree, hf_s7commp_itemval_blob_unknown1, tvb, offset, 8, ENC_NA);
                     offset += 8;
-                    /* - Wenn der folgende Wert 0x03, dann folgt eine Laengenangabe und die angegebene Anzahl an Bytes.
-                     *   Dies wird z.B. bei Alarm-Begleitwerten verwendet, dann innerhalb eines Blob-Arrays.
-                     * - Wenn der folgende Wert 0x00, dann folgt eine ID-Value Liste (z.B. bei Programm-Transfer).
+                    /* - If next value == 0x03, then follows a length specification and the number of bytes.
+                     *   This is used in alarms and the associated values inside the blob-array.
+                     * - If next value == 0x00, then follows a n ID/value list
+                     *   This is used in program transfer.
                      */
                     proto_tree_add_item_ret_uint(current_tree, hf_s7commp_itemval_blobtype, tvb, offset, 1, ENC_BIG_ENDIAN, &blobtype);
                     offset += 1;
@@ -8211,7 +8113,6 @@ s7commp_decode_value(tvbuff_t *tvb,
         }
 
         if (is_array || is_address_array || is_sparsearray) {
-            /* Leere Werte mit <Empty> kennzeichnen */
             if (strlen(str_val) == 0) {
                 g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
             }
@@ -8235,7 +8136,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 TODO: Add array index to value item, like "Value [1]: ..."
             */
         }
-        /* Erweitertes Decodieren der Daten ausgewaehlter IDs */
+        /* Extended decoding of some known and interesting IDs */
         s7commp_decode_value_extended(tvb, pinfo, current_tree, value_start_offset, datatype, datatype_flags, sparsearray_key, length_of_value, id_number);
     } /* for */
 
@@ -8254,7 +8155,6 @@ s7commp_decode_value(tvbuff_t *tvb,
         proto_tree_add_ret_varuint32(data_item_tree, hf_s7commp_itemval_arraysize, tvb, offset, &octet_count, &array_size);
         offset += octet_count;
         proto_item_append_text(data_item_tree, " (Addressarray %s) = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_val);
-        /* Das Handling der Array-Elemente erfolgt hier */
         for (array_index = 1; array_index <= array_size; array_index++) {
             start_offset = offset;
             array_item = proto_tree_add_item(data_item_tree, hf_s7commp_itemval_value, tvb, offset, -1, FALSE);
@@ -8266,21 +8166,21 @@ s7commp_decode_value(tvbuff_t *tvb,
             proto_item_set_len(array_item_tree, offset - start_offset);
         }
         if (struct_level) {
-            *struct_level = -1;       /* Zur Signalisierung benutzen, dass anschliessend keine Item-ID sondern eine Element-ID folgen muss. */
+            *struct_level = -1;       /* Use this as indication that as next value an Element-ID must follow instead of an Item-ID.*/
         }
     } else { /* not an array or address array */
         proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_val);
     }
-    /* Sonderbehandlung bei Datentyp struct bestimmten IDs:
-     * Es werden die struct-Elemente nicht einzeln sondern gepackt uebertragen (z.B. DTL-Struct).
-     * Der ID-Bereich in dem dieses moeglich ist, ist nur vermutet (Type Info).
-     * Die Auswertung an dieser Stelle funktioniert nur, solange hier nicht auch Arrays erlaubt sind.
+    /* Special handling of datatype struct and some specific ID ranges:
+     * Some struct elements aren't transmitted as single elements. Instead they are packed (e.g. DTL-Struct).
+     * The ID number range where this is used is only guessed (Type Info).
+     * This evaluation at this code-location only works as far as arrays aren't possible (never seen or been able to produce at this time).
      */
     if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT &&
         ((struct_value > 0x90000000 && struct_value < 0x9fffffff) ||
          (struct_value > 0x02000000 && struct_value < 0x02ffffff)) ) {
         offset = s7commp_decode_packed_struct(tvb, current_tree, offset);
-        if (struct_level) *struct_level -= 1; /* in diesem Fall keine neue Strukturebene, da auch keine terminierende Null */
+        if (struct_level) *struct_level -= 1; /* in this case no new struct-level, as there isn't a terminating null */
     }
     return offset;
 }
@@ -8321,7 +8221,7 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
             offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, id_number);
             /* Extended decoding */
             switch (id_number) {
-                case 1048:  /* 1048 = SubscriptionReferenceList. An dieser Position weil Array of int */
+                case 1048:  /* 1048 = SubscriptionReferenceList. Done at this location because it's an array of integers. */
                     s7commp_decode_attrib_subscriptionreflist(tvb, tree, start_offset + octet_count);
                     break;
             }
@@ -8525,11 +8425,11 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     proto_tree_add_varuint32(tree, hf_s7commp_tagdescr_lid, tvb, offset, &octet_count);
     offset += octet_count;
 
-    /* Dieser Wert hat je nach Datentyp eine unterschiedliche Funktion.
-     * Ist das Element eine Struktur, so kann mit einer folgenden Abfrage eines Sub-Elements im Datenbaustein anhand der ID
-     * die Beziehung zu dem uebergeordneten Element hergestellt werden.
-     */
     length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+    /* Depending on the datatype the value has different functions:
+     * If the element is a struct, then based on the ID you can get the relation from a sub-element in a datablock
+     * to the parent element.
+     */
     if (datatype == S7COMMP_ITEM_DATATYPE_S7STRING) {
         proto_tree_add_uint(tree, hf_s7commp_tagdescr_s7stringlength, tvb, offset, octet_count, length_of_value);
     } else if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT) {
@@ -8583,7 +8483,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
             number_of_array_dimensions = (gint32)tvb_get_varuint32(tvb, &octet_count, offset);
             proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_numarraydimensions, tvb, offset, octet_count, number_of_array_dimensions);
             offset += octet_count;
-            /* Multidimensional Array max. 6 dimensions */
+            /* Multidimensional array max. 6 dimensions (limit of 6 comes from plc programming software) */
             for (array_dimension = 0; array_dimension < number_of_array_dimensions; array_dimension++) {
                 svlq_value = tvb_get_varint32(tvb, &octet_count, offset);
                 proto_tree_add_int_format(offsetinfo_tree, hf_s7commp_tagdescr_arraylowerbounds, tvb, offset, octet_count, svlq_value,
@@ -8600,7 +8500,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
             }
             /* Displaystyle [a..b, c..d, e..f], using order which is used in variable declaration */
             if (number_of_array_dimensions > 6) {
-                number_of_array_dimensions = 6; /* limit to max 6 dims  */
+                number_of_array_dimensions = 6;
             }
             proto_item_append_text(tree, "-Array[");
             for (array_dimension = (number_of_array_dimensions - 1); array_dimension >= 0; array_dimension--) {
@@ -8610,7 +8510,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
             }
             break;
     }
-    /* Passt nicht ins Schema oben, unbekannt wozu die weiteren zwei Werte dienen */
+    /* This doesn't fit in the scheme above, unknown what the two values are for */
     if (offsetinfotype == 0x08) {
         /* Unknown SFB Instance Offsets 1 and 2 */
         proto_tree_add_varuint32(offsetinfo_tree, hf_s7commp_tagdescr_sfbinstoffset1, tvb, offset, &octet_count);
@@ -8647,19 +8547,16 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
     int d;
     guint8 offsetinfotype;
 
-    /* Hier koennen mehrere Datenbloecke vorhanden sein (gleiches bei varnamelist).
-     * Ist die Laenge == 0, dann folgt kein weiterer Datenblock mehr.
-     * Nur der erste Datenblock besitzt zusaetzlich noch eine 4-Byte ID (oder Flags?).
-     *
-     * Die Bytereihenfolge ist in diesem Block Little-Endian!!
-     * Auf so eine Idee muss man erstmal kommen, ob da noch die S7 classic Abteilung am Werk war...
+    /* The variable typelist is a list of information-blocks, where a length of 0 indicates the end of the list.
+     * Only the first block contains an additional 4-Byte ID (or flags?).
+     * Oddly enough the byte order is little-endian!
      */
     block_len = tvb_get_ntohs(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_object_blocklength, tvb, offset, 2, block_len);
     offset += 2;
     max_offset = offset + block_len;
 
-    /* Unknown in first Block (LittleEndian) */
+    /* Unknown in first block */
     proto_tree_add_item(tree, hf_s7commp_tagdescr_unknown1, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     offset += 4;
 
@@ -8672,17 +8569,16 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
             proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_lid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
             offset += 4;
 
-            /* Die CRC hier wird rein aus dem Symbol hier, plus softdatatype-id (1=Bool, 5=Int, ...) uebermittelt.
-             * Fuer den Zugriff auf eine Variable in einem DB reicht diese alleine nicht aus,
-             * sondern es muss die Pruefsumme ueber den gesamten Symbolpfad gebildet werden:
+            /* The CRC is calculated by the symbolname plus softdatatype-id (1=Bool, 5=Int, ...).
+             * If the variable is inside a datablock, the checksum is generated over the complete symbol path:
              * DBname.structname.variablenname
-             * Als Trennzeichen "." ist hierbei 0x09 einzusetzen und dann ein zweites Mal darueber die
-             * Pruefsumme zu bilden.
+             * For the delimiter "." the value 0x09 instead in the calculation.
+             * Then generate the checksum a second time.
              */
             proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_subsymbolcrc, tvb, offset, 4, ENC_LITTLE_ENDIAN);
             offset += 4;
 
-            softdatatype = tvb_get_guint8(tvb, offset); /* hier nur 1 Byte */
+            softdatatype = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_softdatatype, tvb, offset, 1, softdatatype);
             offset += 1;
 
@@ -8692,15 +8588,15 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                 proto_item_append_text(tag_tree, "[%d]: Unknown softdatatype 0x%04x", i, softdatatype);
             }
 
-            /* Werte dieser 2 Bytes:
-             * Bei M/I/C/T:                           0x8a40 = 1000 1010 0100 0000
-             * Bei M/I/C/T wenn "nicht sichtbar":     0x8240 = 1000 0010 0100 0000
-             * Bei M/I/C/T wenn "nicht erreichbar":   0x8040 = 1000 0000 0100 0000
-             * Bei Variablen in einem optimierten DB: 0x8ac0 = 1000 1010 1100 0000
-             * Bei Struct in einem optimierten DB:    0xcac0 = 1100 1010 1100 0000
-             * Bei Variablen in einem NICHT opt. DB:  0x8a40 = 1000 1010 0100 0000
-             * Bei String/WStr in einem NICHT opt. DB:0x9a40 = 1001 1010 0100 0000
-             * Structmember                           0x1a80 = 0001 1010 1000 0000
+            /* Some values of these 2 Bytes:
+             * M/I/C/T:                                 0x8a40 = 1000 1010 0100 0000
+             * M/I/C/T if "not visible":                0x8240 = 1000 0010 0100 0000
+             * M/I/C/T if "not reachable":              0x8040 = 1000 0000 0100 0000
+             * Variable inside a "optimized" DB:        0x8ac0 = 1000 1010 1100 0000
+             * Struct inside a "optimized" DB:          0xcac0 = 1100 1010 1100 0000
+             * Variablen inside a "not optimized" DB:   0x8a40 = 1000 1010 0100 0000
+             * String/WStr inside a "not optimized" DB: 0x9a40 = 1001 1010 0100 0000
+             * Structmember                             0x1a80 = 0001 1010 1000 0000
              */
             attributeflags2 = tvb_get_ntohs(tvb, offset);
             proto_tree_add_bitmask(tag_tree, tvb, offset, hf_s7commp_tagdescr_attributeflags2,
@@ -8708,15 +8604,15 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
             offsetinfotype = ((attributeflags2 & S7COMMP_TAGDESCR_ATTRIBUTE2_OFFSETINFOTYPE) >> 12);
             offset += 2;
 
-            /* Bei nicht-optimierten immer 0x08?
-             * Sinnvoll auswerten laesst sich der Wert nur bei im IQM-Bereich.
-             * Bitoffset pro Nibble:
+            /* In a "not optimized" DB always 0x08?
+             * Only useful at variables in the I/Q/M area.
+             * Bitoffset per Nibble:
              * Bit .0 = 0x08
              * Bit .1 = 0x19
              * Bit .2 = 0x2a
              * Bit .3 = 0x3b
              * Bit .4 = 0x4c
-             * Wenn kein Bool-Typ, dann 0x00
+             * If not a Bool-Type then 0x00
              */
             proto_tree_add_bitmask(tag_tree, tvb, offset, hf_s7commp_tagdescr_bitoffsetinfo,
                 ett_s7commp_tagdescr_bitoffsetinfo, s7commp_tagdescr_bitoffsetinfo_fields, ENC_BIG_ENDIAN);
@@ -8724,14 +8620,12 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
             /* "legacy" offset */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD:
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_nonoptimized_addr_16, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_optimized_addr_16, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     break;
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STD:
                     /* fields swapped in contrast to previous case! */
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_optimized_addr_16, tvb, offset, 2, ENC_LITTLE_ENDIAN);
@@ -8739,7 +8633,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_nonoptimized_addr_16, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     break;
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRING:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRING:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAY1DIM:
@@ -8757,7 +8650,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo2, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     break;
-                /*************************************************************************/
                 default:
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo1, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
@@ -8768,12 +8660,10 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
             /* "new" offset */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STD:
                     /* nothing special here */
                     break;
-                /*************************************************************************/
                 default:
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_optimized_addr, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
@@ -8784,7 +8674,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
             /* sub-FB/ProgramAlarm data */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM:
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_relid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
@@ -8806,7 +8695,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
             /* array dimensions */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAY1DIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAY1DIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM:
@@ -8819,7 +8707,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     offset += 4;
                     proto_item_append_text(tag_tree, "-Array[%d..%d]", array_lowerbounds, array_lowerbounds + (array_elementcount - 1));
                     break;
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAYMDIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM:
@@ -8831,7 +8718,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_arrayelementcount, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
                     break;
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY:
                     array_elementcount = (gint32)tvb_get_letohl(tvb, offset);
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_arrayelementcount, tvb, offset, 4, ENC_LITTLE_ENDIAN);
@@ -8845,7 +8731,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     break;
             }
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAYMDIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM:
@@ -8884,7 +8769,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
             /* struct info */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT1DIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM:
@@ -8945,7 +8829,7 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
 
     while (block_len > 0) {
         do {
-            /* Laenge eines Namens max. 128 Zeichen */
+            /* Max. length of a name is 128 chars */
             length_of_value = tvb_get_guint8(tvb, offset);
             item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, (1 + length_of_value + 1), FALSE);
             tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
@@ -8954,7 +8838,7 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
             proto_tree_add_item_ret_string(tag_tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA, wmem_packet_scope(), &str_name);
             proto_item_append_text(tag_tree, "[%d]: Name=%s", i, str_name);
             offset += length_of_value;
-            /* String-terminierende Null? Bei Laengenangabe eigentlich ueberfluessig */
+            /* Although the string length is given before, we have a possibly terminating null here */
             proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
             offset += 1;
             i++;
@@ -8993,7 +8877,7 @@ s7commp_decode_object(tvbuff_t *tvb,
         start_offset = offset;
         element_id = tvb_get_guint8(tvb, offset);
         switch (element_id) {
-            case S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT:              /* 0xa1 */
+            case S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_object, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_object);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -9023,12 +8907,12 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, append_class);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_TERMOBJECT:               /* 0xa2 */
+            case S7COMMP_ITEMVAL_ELEMENTID_TERMOBJECT:
                 proto_tree_add_uint(tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 terminate = TRUE;
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_RELATION:                 /* 0xa4 */
+            case S7COMMP_ITEMVAL_ELEMENTID_RELATION:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_relation, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_relation);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -9039,7 +8923,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset += 4;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_STARTTAGDESC:             /* 0xa7 */
+            case S7COMMP_ITEMVAL_ELEMENTID_STARTTAGDESC:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_tagdescription);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -9047,12 +8931,12 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset = s7commp_decode_tagdescription(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC:              /* 0xa8 */
+            case S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC:
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_VARNAMELIST:                /* 0xac */
+            case S7COMMP_ITEMVAL_ELEMENTID_VARNAMELIST:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_block, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_block);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -9061,7 +8945,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset = s7commp_decode_varnamelist(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_VARTYPELIST:                /* 0xab */
+            case S7COMMP_ITEMVAL_ELEMENTID_VARTYPELIST:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_block, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_block);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -9070,7 +8954,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset = s7commp_decode_vartypelist(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_ATTRIBUTE:                /* 0xa3 */
+            case S7COMMP_ITEMVAL_ELEMENTID_ATTRIBUTE:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_attribute, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_attribute);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -9115,14 +8999,14 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
     offset += 4;
     offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, id_number);
     proto_item_set_len(data_item_tree, offset - start_offset);
-    /* es folgen noch 4 Null-Bytes */
+    /* 4 bytes with zeros (as seen so far) */
     proto_tree_add_item(tree, hf_s7commp_object_createobjrequnknown1, tvb, offset, 4, ENC_BIG_ENDIAN);
     offset += 4;
 
-    /* Es gibt z.Zt. keine bekannte Moeglichkeit anhand der vorigen Werte festzustellen, ob hier noch ein eingeschobener Wert (VLQ) folgt.
-     * Dieser zusaetzliche Wert ist so wie es aussieht nur bei einer 1500 vorhanden.
-     * Darum wird geprueft, ob der naechste Wert nicht ein Objekt-Anfang darstellt.
-     * Das eingeschobene Byte ist aber definitiv nur bei Data-Telegrammen vorhanden.
+    /* This is kind of a heuristic check if there is an additional VLQ-value here.
+     * This value seems to be only there in communication with a 1500 (which on protocol level can't be detected),
+     * and occurs only in Data-Telegrams.
+     * As a working solution it's checked if the next value is not an Object-Start element.
      */
     next_byte = tvb_get_guint8(tvb, offset);
     if (((protocolversion == S7COMMP_PROTOCOLVERSION_2) || (protocolversion == S7COMMP_PROTOCOLVERSION_3)) && next_byte != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
@@ -9152,7 +9036,6 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     object_id_count = tvb_get_guint8(tvb, offset);
-    /* TODO: hier die gleiche ID wie beim Request, d.h. aus der Liste? */
     proto_tree_add_uint(tree, hf_s7commp_object_createobjidcount, tvb, offset, 1, object_id_count);
     offset += 1;
     for (i = 0; i < object_id_count; i++) {
@@ -9167,8 +9050,9 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
             s7commp_pinfo_append_idname(pinfo, object_id, ", ");
         }
     }
-    /* Ein Daten-Objekt gibt es nur beim Connect.
-     * Das Vorhandensein an errorextension feststellen scheitert.
+    /* A data object is only present in the connection setup response,
+     * which uses in the header protocol-version 1.
+     * Checking bei the presence of errorextension field was not successful.
      */
     if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
@@ -9191,7 +9075,7 @@ s7commp_decode_request_deleteobject(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_object_deleteobjid, tvb, offset, 4, object_id);
     s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
     offset += 4;
-    /* Fuellbyte oder andere Funktion? */
+    /* fillbyte / unknown */
     proto_tree_add_item(tree, hf_s7commp_object_deleteobj_fill, tvb, offset, 1, FALSE);
     offset += 1;
     return offset;
@@ -9221,13 +9105,11 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
     if (errorextension) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
-    /* Wann hier eine Id folgt kann an keinem der vorherigen Werte festgemacht werden.
-     * Die erste Vermutung es an einer hohen object_id festzumachen scheiterte, da bei einer 1200 mit FW4.1
-     * der Wert auch bei 0xd3 aufgetreten ist.
-     * Da sich der folgende Wert mit (Sequence-Number + integrity_id) des Requests berechnet, kann der Wert
-     * nicht Null sein. Da er VLQ-codiert ist und es sich immer meistens 4 Nullbytes vor dem Trailer befinden,
-     * pruefen wir hier der Einfachheit halber ob das naechste Byte != null ist solange keine bessere Loesung
-     * in Sicht ist.
+    /* If there is an integrity-id cannot be detected on previous values.
+     * As the value which is following after the integrity-id is calculated by
+     * (Sequence-Number + integrity_id) of the request, the value cannot be zero. As it's VLQ coded
+     * and there are at least 1 or more fill-bytes with null before the trailer, we just check
+     * the next byte on zero/non-zero if there is not better solution.
      */
     if (tvb_get_guint8(tvb, offset)) {
         *has_integrity_id = TRUE;
@@ -9237,7 +9119,6 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
 
     return offset;
 }
-
 /*******************************************************************************************************
  *
  * Decodes part 1 of an item address
@@ -9258,15 +9139,11 @@ s7commp_decode_item_address_part1(tvbuff_t *tvb,
     guint16 var_area1 = 0;
     guint16 db_number = 0;
 
-    /**************************************************************
-     * 2. Feld
-     * Das zweite Feld ist eine ID aus der ID-Namensliste, welche so etwas wie die "Base-Area" angibt auf den
-     * sich die weiteren IDs beziehen.
-     * Fuer dem Merkerbereich ist dort auch eine mit der Funktion uebereinstimmende ID vorhanden (82).
-     * Fuer Datenbausteine gibt es keine explizite ID, weil sich diese aus einem fixen und einem variablen Teil
-     * zusammensetzt.
-     *   0x8a0e nnnn, mit nnnn = Nummer des Datenbausteins.
-     * Demnach entspricht eine id > 0x8a0e0000=2316173312 (DB0) und id < 0x8a0effff=2316238847 (DB65535) einem DB-Zugriff.
+    /* The first value is an ID from the ID list which can be seen as kind of base-area for the following IDs.
+     * E.g. for Marker (M) area this is ID 82. For datablocks there is no fixed ID as it consists of a fixed and a
+     * variable part:
+     * 0x8a0e nnnn, with 8a0e is the fixed part for datablock and nnnn is the datablock number.
+     * As result id > 0x8a0e0000=2316173312 (DB0) and id < 0x8a0effff=2316238847 (DB65535) address datablocks.
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
 
@@ -9321,18 +9198,13 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
     guint32 start_offset;
     proto_item *pi = NULL;
     int str_len = 0;
-    /* Z.Zt. max. Schachtelungstiefe von 8 erlaubt. = (10+1)*8 + 8+1
-     * plus ggf. Arrayindizes, 256 sollten fuer alle Eventualitaeten reichen.
-     */
     gchar addr_filter_seq_str[256];
 
-    /**************************************************************
-     * 4. Feld
-     * Eine ID aus der ID-Namensliste. Hiermit wird angezeigt, welcher Typ von Wert gelesen werden soll.
-     * Bei Merkern: 3736 = ControllerArea.ValueActual
-     * Bei DBs: 2550 = DB.ValueActual
-     * Vermutlich lassen sich damit auch Startwerte im DB lesen (ueber 2548).
-     * Es lassen sich auch diverse andere Objekte der SPS lesen.
+    /* 4th field is a ID from the id-list which gives the type of value which has to be accessed.
+     * For example to read Marker (M) 3736 = ControllerArea.ValueActual is used.
+     * To read the actual value from a datablock (DB) 2550 = DB.ValueActual is used, maybe
+     * initial values could be read with 2548.
+     * It's possible to access other objects with a plain ID.
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
     proto_tree_add_uint(tree, hf_s7commp_itemaddr_area_sub, tvb, offset, octet_count, value);
@@ -9345,11 +9217,9 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
 
     *number_of_fields += 1;
 
-    /**************************************************************
-     * 5. bis n. Feld
-     * LID pro Nest-Level
+    /* 5th to nth field contain a LID per nest-level
      */
-    is_datablock_access = ((id_value >= 0x8a0e0000) && (id_value <= 0x8a0effff));     /* Datenbaustein mit Nummer */
+    is_datablock_access = ((id_value >= 0x8a0e0000) && (id_value <= 0x8a0effff));     /* Datablock with number */
     is_iqmct_access = ((id_value >= 80) && (id_value <= 84));                         /* 80=I, 81=Q, 82=M, 83=C, 84=T */
     is_classicblob_access = (crc == 0) && (is_datablock_access || is_iqmct_access);
 
@@ -9360,31 +9230,32 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
         if (is_classicblob_access) {
             lid_cnt = 2;
             first_lid = tvb_get_varuint32(tvb, &octet_count, offset);
-            /* Wenn Zugriffsart == 3 (ClassicBlob), dann wird mit Absolutadressen gearbeitet.
-             * Das Prinzip funktioniert nur, wenn als erste LID keiner dieser Werte erlaubt ist.
-             * Andernfalls waere der Zugriff nicht eindeutig zu unterscheiden.
-             * Es ist zur Zeit auch nur die Funktion von 3 bekannt.
+            /* ClassicBlob / Absolute-addressmode:
+             * With accesstype==3 (ClassicBlob) the absolute-addressmode is used with addressoffsets like in the 300/400.
+             * This check works only when as first LID the ID is not allowed, otherwise the accesstype could
+             * not be clearly differentiated to other accesstypes.
+             * Only accesstype==3 is currently known.
              */
             if (first_lid == 3) {
-                /* 1. LID: Zugriffsart / LID-access Aid */
+                /* 1. LID: accesstype / LID-access Aid */
                 proto_tree_add_uint(tree, hf_s7commp_itemaddr_lid_accessaid, tvb, offset, octet_count, first_lid);
                 proto_item_append_text(tree, ", %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
                 offset += octet_count;
                 lid_cnt += 1;
                 *number_of_fields += 1;
-                /* 2. Startadresse */
+                /* 2. Startaddress */
                 a_offs = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(tree, hf_s7commp_itemaddr_blob_startoffset, tvb, offset, octet_count, a_offs);
                 offset += octet_count;
                 lid_cnt += 1;
                 *number_of_fields += 1;
-                /* 3. Anzahl an Bytes */
+                /* 3. Number of bytes */
                 a_cnt = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(tree, hf_s7commp_itemaddr_blob_bytecount, tvb, offset, octet_count, a_cnt);
                 offset += octet_count;
                 lid_cnt += 1;
                 *number_of_fields += 1;
-                /* Wenn jetzt noch ein Feld folgt, dann ist es ein Bitoffset */
+                /* If another value following then it's a bitoffset */
                 if (lid_nest_depth >= lid_cnt) {
                     a_bitoffs = tvb_get_varuint32(tvb, &octet_count, offset);
                     proto_tree_add_uint(tree, hf_s7commp_itemaddr_blob_bitoffset, tvb, offset, octet_count, a_bitoffs);
@@ -9398,7 +9269,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                     str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".O%u.C%u", a_offs, a_cnt);
                 }
             }
-            /* TODO: Wenn jetzt noch LIDs folgen, erstmal als weitere IDs anzeigen */
+            /* TODO: If more LIDs are following, show these as plain IDs as long as it's not clear what they are for. */
             if (lid_nest_depth >= lid_cnt) {
                 proto_item_append_text(tree, ", LID=");
             }
@@ -9416,7 +9287,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                 *number_of_fields += 1;
             }
         } else {
-            /* Standard fuer symbolischen Zugriff mit crc und LIDs */
+            /* Standard for access via symbolic name with CRC and LIDs */
             proto_item_append_text(tree, ", LID=");
             for (lid_cnt = 2; lid_cnt <= lid_nest_depth; lid_cnt++) {
                 value = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -9432,7 +9303,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
             }
         }
     }
-    /* Gesamte Sequenz als filterbaren Eintrag generieren */
+    /* Use the complete address sequence for something the user can set a filter on */
     pi = proto_tree_add_string_format(tree, hf_s7commp_itemaddr_filter_sequence, tvb, start_offset,
         offset - start_offset, addr_filter_seq_str, "Item address sequence: %s", addr_filter_seq_str);
     PROTO_ITEM_SET_GENERATED(pi);
@@ -9464,58 +9335,44 @@ s7commp_decode_item_address(tvbuff_t *tvb,
     adr_item_tree = proto_item_add_subtree(adr_item, ett_s7commp_data_item);
     proto_item_append_text(adr_item_tree, " [%u]:", item_nr);
 
-    /**************************************************************
-     * 1. Feld
-     * CRC als varuint
+    /* Adressing variables:
+     * There are at least these types of addressing:
+     * 1) Symbolic access with symbol CRC and LID
+     * 2) Absolute address for "not-optimized" DBs and I/Q/M/C/T area
+     * 3) Accessing objects with ID
      *
-     * Es gibt mindestens zwei Interpretationsarten:
-     * 1) Symbolischer Zugriff vom HMI ueber CRC und LID
-     * 2) Zugriff auf Objekte ueber AID/RID
+     * The general structure is the same for all variants, but the interpretation is different.
+     * If the first field with the CRC is zero, then it's an object-id or absolute-address mode access.
+     * Symbolic access can be done with or without the CRC check (without check it's zero).
      *
-     * Vom Aufbau her sind beide Adressen identisch nur die Interpretation ist eine andere. Die Unterscheidung
-     * erfolgt anhand des ersten Feldes (crc). Ist dieses Null, dann ist es eine Object ID Interpretation.
-     * Ohne crc scheint es sich bei den LIDs um Adressen zu handeln, wenn der DB ein nicht-optimierter DB ist, oder
-     * der Speicherbereich IQMCT ist.
-     * Zumindest bei I/Q/M und nicht opt. DBs passt das mit den Adressen ueberein, bei T/C wird die Nummer mal zwei genommen.
-     * Optimierte DBs werden nach aktueller Erkenntnis immer mit crc gelesen.
-     * Beispiel: M122.7: 3.122.1.7
-     *                   3 = ClassicBlob, 122 = offset, 1 = Typ BOOL??? nur dann folgt eine Bitadresse, 7=bitoffset
-     *                   Antwort ist dann mit Datentyp BOOL
-     * Beispiel: DB1.intVar2 (nicht opt. an DB1.DBW2): 3.2.2
-     *                   3 = ClassicBlob, 2 = offset, 2 = Typ Blob?, bzw. Laenge 2 Bytes?
-     *                   Antwort ist mit Datentyp Blob von Groesse 2
-     * Beispiel: DB1.dateAndTimeVar_48_0 = 3.48.8
-     *                   3 = ClassicBlob, 48 = offset, 8 = length
+     * Example: M122.7: 3.122.1.7
+     *                  3 = ClassicBlob, 122 = offset, 1 = Typ BOOL, 7=bitoffset
+     * Example: DB1.intVar2 (not-opt. at DB1.DBW2): 3.2.2
+     *                  3 = ClassicBlob, 2 = offset, 2 = Typ USInt
+     * Example: DB1.dateAndTimeVar_48_0 = 3.48.8
+     *                  3 = ClassicBlob, 48 = offset, 8 = length
      */
     proto_tree_add_ret_varuint32(adr_item_tree, hf_s7commp_itemaddr_crc, tvb, offset, &octet_count, &crc);
     offset += octet_count;
 
     *number_of_fields += 1;
 
-    /**************************************************************
-     * ID aus der Namensliste
-     */
     offset = s7commp_decode_item_address_part1(tvb, adr_item_tree, number_of_fields, &id_value, offset);
 
     proto_item_append_text(adr_item_tree, ", SYM-CRC=%x", crc);
-    /**************************************************************
-     * 3. Feld
-     * LID Nesting Depth
-     *
-     * 0x01: Merker                 Folgende LIDs: 1
-     * 0x02: DB.VAR                 Folgende LIDs: 1
-     * 0x03: DB.STRUCT.VAR          Folgende LIDs: 2
-     * 0x03: DB.ARRAY[INDEX]        Folgende LIDs: 2
-     * 0x04: DB.STRUCT.STRUCT.VAR   Folgende LIDs: 3
-     * -> Die Werte gelten nur wenn mit crc != 0 gelesen wird!
+    /* LID Nesting Depth:
+     * Sample nesting depths for addressing:
+     * 0x01: Marker                 following LIDs: 1
+     * 0x02: DB.VAR                 following LIDs: 1
+     * 0x03: DB.STRUCT.VAR          following LIDs: 2
+     * 0x03: DB.ARRAY[INDEX]        following LIDs: 2
+     * 0x04: DB.STRUCT.STRUCT.VAR   following LIDs: 3
+     * These values are only valid with accessing with a CRC != 0
      */
     proto_tree_add_ret_varuint32(adr_item_tree, hf_s7commp_itemaddr_idcount, tvb, offset, &octet_count, &lid_nest_depth);
     offset += octet_count;
     *number_of_fields += 1;
 
-    /**************************************************************
-     * Felder 4 und 5 und weitere LIDs
-     */
     offset = s7commp_decode_item_address_part2(tvb, adr_item_tree, number_of_fields, id_value, crc, lid_nest_depth, offset);
 
     proto_item_set_len(adr_item_tree, offset - start_offset);
@@ -9526,10 +9383,9 @@ s7commp_decode_item_address(tvbuff_t *tvb,
  *
  * Decodes a plc address in subscription array.
  *
- * Abgeleitet von s7commp_decode_item_address().
- * Unterschiede:
- * - "Symbol-CRC" und "Access base-area" tauschen die Reihenfolge
- * - Kein "Number of following IDs" als Einzelwert, sondern in den 16 Bits eines 32 Bit Werts codiert.
+ * Derived from s7commp_decode_item_address() with the differences:
+ * - "Symbol-CRC" and "Access base-area" swap the order
+ * - "Number of following IDs" is not a single value, but coded in 16 bits of a 32 bit VLQ
  *
  *******************************************************************************************************/
 static guint32
@@ -9554,9 +9410,9 @@ s7commp_decode_item_address_sub(tvbuff_t *tvb,
     adr_item_tree = proto_item_add_subtree(adr_item, ett_s7commp_data_item);
     proto_item_append_text(adr_item_tree, " [%u]:", item_nr);
 
-    /* z.B. 0x80040003
-     * Wofuer die linken 2 Bytes stehen ist nicht bekannt.
-     * In den rechten 2 Bytes steht die Anzahl der LIDs.
+    /* Example: 0x80040003
+     * What the left 2 bytes (0x8004) stand for is not known,
+     * the right 2 bytes give the number of following LIDs.
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
     lid_nest_depth = value & 0xffff;
@@ -9574,30 +9430,19 @@ s7commp_decode_item_address_sub(tvbuff_t *tvb,
     offset += octet_count;
     *number_of_fields += 1;
 
-    /**************************************************************
-     * ID aus der Namensliste
-     */
     offset = s7commp_decode_item_address_part1(tvb, adr_item_tree, number_of_fields, &id_value, offset);
 
-    /**************************************************************
-     * CRC als varuint
-     */
     proto_tree_add_ret_varuint32(adr_item_tree, hf_s7commp_itemaddr_crc, tvb, offset, &octet_count, &crc);
     proto_item_append_text(adr_item_tree, ", SYM-CRC=%x", crc);
     offset += octet_count;
     *number_of_fields += 1;
 
-    /**************************************************************
-     * Felder 4 und 5 und weitere LIDs
-     */
     offset = s7commp_decode_item_address_part2(tvb, adr_item_tree, number_of_fields, id_value, crc, lid_nest_depth, offset);
 
     proto_item_set_len(adr_item_tree, offset - start_offset);
 
     return offset;
 }
-
-
 /*******************************************************************************************************
  *
  * Request SetMultiVariables
@@ -9623,8 +9468,8 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset;
 
-    /* Wenn die ersten 4 Bytes 0x00, dann ist es ein 'normaler' Schreib-Befehl.
-     * Es kann sein, dass hier die Session-ID steht, dann ist der Aufbau anders.
+    /* When the first 4 bytes are all zero, then this is a "standard" write command.
+     * When this value is the session-id (!= 0), then the structure is different.
      */
     value = tvb_get_ntohl(tvb, offset);
     offset += 4;
@@ -9636,8 +9481,8 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
 
         proto_tree_add_varuint32(tree, hf_s7commp_item_no_of_fields, tvb, offset, &octet_count);
         offset += octet_count;
-        /* Es lassen sich mehrere Variablen mit einem write schreiben.
-         * Danach folgen erst die Adressen und dann die Werte.
+        /* It's possible to write many variables with a single request.
+         * First all addresses, then the values which have to be written.
          */
         list_start_offset = offset;
         list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
@@ -9665,7 +9510,7 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         list_start_offset = offset;
         list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
-        id_number_offset = offset;  /* Startaddresse der 1. ID */
+        id_number_offset = offset;  /* Startaddress of 1st ID */
         for (i = 1; i <= item_address_count; i++) {
             proto_tree_add_varuint32(list_item_tree, hf_s7commp_data_id_number, tvb, offset, &octet_count);
             offset += octet_count;
@@ -9676,22 +9521,20 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
         for (i = 1; i <= item_count; i++) {
-            /* Nochmal zugehoerige ID auslesen um die ID zum Datensatz zu bekommen. */
+            /* Readout the related ID again, to get the ID for the complete dataset for further dissection */
             id_number = tvb_get_varuint32(tvb, &octet_count, id_number_offset);
             id_number_offset += octet_count;
             offset_save = offset;
-
             offset = s7commp_decode_itemnumber_value_list(tvb, pinfo, list_item_tree, offset, FALSE);
-
-            /* ID 1048 = SubscriptionReferenceList gesondert decodieren */
+            /* Decode ID 1048 = SubscriptionReferenceList with more details, useful for standard HMI diagnosis */
             if (id_number == 1048) {
-                tvb_get_varuint32(tvb, &octet_count, offset); /* Laenge des Item-number elements */
+                tvb_get_varuint32(tvb, &octet_count, offset); /* get length of the item-number element */
                 s7commp_decode_attrib_subscriptionreflist(tvb, list_item_tree, offset_save + octet_count);
             }
         }
         proto_item_set_len(list_item_tree, offset - list_start_offset);
     }
-    /* Fuellbyte oder andere Funktion? */
+    /* fillbyte / unknown */
     proto_tree_add_item(tree, hf_s7commp_setvar_fill, tvb, offset, 1, FALSE);
     offset += 1;
     return offset;
@@ -9716,8 +9559,7 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset;
 
-    /* Zum Variablen-Lesen muessen die ersten 4 Bytes 0 sein. Andernfalls ist es eine Link-Id.
-     */
+    /* For variable-read the first 4 bytes must be zero, otherwise it's a link-id */
     value = tvb_get_ntohl(tvb, offset);
     if (value == 0) {
         proto_tree_add_uint(tree, hf_s7commp_getmultivar_unknown1, tvb, offset, 4, value);
@@ -9727,7 +9569,7 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
     offset += 4;
     proto_tree_add_ret_varuint32(tree, hf_s7commp_item_count, tvb, offset, &octet_count, &item_count);
     offset += octet_count;
-    if (value == 0x0) {
+    if (value == 0) {
         proto_tree_add_varuint32(tree, hf_s7commp_item_no_of_fields, tvb, offset, &octet_count);
         offset += octet_count;
         list_start_offset = offset;
@@ -9785,8 +9627,8 @@ s7commp_decode_response_setmultivar(tvbuff_t *tvb,
 {
     guint16 errorcode = 0;
     gboolean errorextension = FALSE;
-    /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
-     * Ein erfolgreiches Schreiben einzelner Werte scheint nicht extra bestaetigt zu werden.
+    /* In difference to a read-response we go immediately into the error-area when the first byte != 0.
+     * A successful write-request seems not generate a explicit return-value.
      */
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
@@ -9813,20 +9655,18 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
     guint8 item_return_value;
     int struct_level;
     int n_access_errors = 0;
-    /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
-     * Aufbau aus den anderen Telegrammen.
-     * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte uebertragen. Dann ist Datatype=NULL
-     * Folgende Rueckgabewerte wurden gesichtet:
-     *  hex       bin       ref-id  value
-     *  0x03 = 0000 0011 -> ntohl   -       Fehler bei einer Adresse (S7-1500 - Plcsim), wie 0x13
-     *  0x13 = 0001 0011 -> ntohl   -       Fehler bei einer Adresse (S7-1200) und 1500-Plcsim
-     *  0x81 = 1000 0001 ->         object  Standard Objekt beginnend mit 0xa1 (nur bei Protokoll-Version v1?)
-     *  0x83 = 1000 0011 ->         value   Standard value Aufbau, dann notification value-list (nur bei Protokoll-Version v1?)
-     *  0x92 = 1001 0010 -> ntohl   value   Erfolg (S7-1200)
-     *  0x9b = 1001 1011 -> vlq32   value   Bei 1500 und 1200 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
-     *  0x9c = 1001 1100 -> ntohl   ?       Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
-     *         +-> Bit 8 = true bei Erfolg?
-     * Danach koennen noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
+    /* Return value: If the value != 0 then follows a dataset with the common known structure.
+     * If an access error occurs, we have here an error-value, in this case datatype==NULL.
+     * TODO: The returncodes follow not any known structure. I've tried to reproduce some errors
+     * on different controllers and generations with the following results:
+     *  hex       bin       ref-id  value   description
+     *  0x03 = 0000 0011 -> ntohl   -       Addressing error (S7-1500 - Plcsim), like 0x13
+     *  0x13 = 0001 0011 -> ntohl   -       Addressing error (S7-1200) and 1500-Plcsim
+     *  0x81 = 1000 0001 ->         object  Standard object starts with 0xa1 (only in protocol version v1?)
+     *  0x83 = 1000 0011 ->         value   Standard value structure, then notification value-list (only in protocol version v1?)
+     *  0x92 = 1001 0010 -> ntohl   value   Success (S7-1200)
+     *  0x9b = 1001 1011 -> vlq32   value   Seen on 1500 and 1200. Following ID or number, then flag, type, value
+     *  0x9c = 1001 1100 -> ntohl   ?       Online with variable status table (S7-1200), structure seems to be completely different
      */
     do {
         struct_level = 0;
@@ -9845,7 +9685,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
             proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_retval, tvb, offset, 1, item_return_value);
             offset += 1;
             if (item_return_value == 0x92) {
-                /* Item reference number. Is sent to plc on the subscription-telegram for the addresses. */
+                /* Item reference number: Is sent to plc in the subscription-telegram for the addresses. */
                 item_number = tvb_get_ntohl(tvb, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_refnumber, tvb, offset, 4, item_number);
                 offset += 4;
@@ -9867,9 +9707,9 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
                 offset += 4;
                 n_access_errors++;
-            } else if (item_return_value == 0x81) {     /* Bei Protokoll Version v1, sowie auch bei 1500 im 2. Teil zur Uebertragung von ProgramAlarm */
+            } else if (item_return_value == 0x81) {     /* Only in protocol version v1, but also used in S7-1500 in part 2 for ProgramAlarm */
                 offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, TRUE);
-            } else if (item_return_value == 0x83) {     /* Vermutlich nur in Protokoll Version v1*/
+            } else if (item_return_value == 0x83) {     /* Probably only in protocol version v1 */
                 offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, 0);
             } else {
                 expert_add_info_format(pinfo, data_item_tree, &ei_s7commp_notification_returnvalue_unknown, "Notification unknown return value: 0x%02x", item_return_value);
@@ -9909,13 +9749,12 @@ s7commp_decode_notification(tvbuff_t *tvb,
     gboolean add_data_info_column = FALSE;
     guint32 list_start_offset;
 
-    /* 4 Bytes Subscription Object Id */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_subscrobjectid, tvb, offset, 4, subscr_object_id);
     s7commp_pinfo_append_idname(pinfo, subscr_object_id, " ObjId=");
     offset += 4;
 
-    /* 6/7: Unbekannt */
+    /* Unknown, but relevant! */
     unknown2 = tvb_get_ntohs(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_unknown2, tvb, offset, 2, unknown2);
     offset += 2;
@@ -9926,21 +9765,20 @@ s7commp_decode_notification(tvbuff_t *tvb,
     if (unknown2 == 0x0400) {
         proto_tree_add_item(tree, hf_s7commp_notification_unknown4, tvb, offset, 2, ENC_BIG_ENDIAN);
         offset += 2;
-
-        /* Es gibt drei Nummern:
-         * 1) Nummerierung fuer Creditlimit: Wird bei Aufbau der notification-session ein Wert angegeben, so erfolgt die UEbertragung
-         *                                  bis zur in modifiy-session angegebenen Limit.
-         * 2) Sequenznummer: Wurde beim Session-Aufbau -1 angegeben, so ist die Zahl bei 1) Null, und es folgt hier eine aufsteigende Nummer.
-         * 3) Subscription Change Counter: Erhoeht sich um 1 wenn eine Subscription geaendert wurde
-         *                                 (z.B. loeschen oder hinzufuegen von weiteren Variablen).
-         *                                 Es gibt seit neuestem eine zweite Variante wie dieser Wert uebertragen wird.
-         *                                 Wenn ein Werteintrag mit Returnvalue 0x05 folgt, dann steht dort der Aenderungszaehler.
-         *                                 Das Feld hier ist aber trotzdem vorhanden, nur der Wert ist dann 0.
-         * Bei der Sequenznummer gibt es Unterschied zwischen der 1200 (vor FW3?) und der 1500 zu geben.
-         * Bei der 1200 ist diese immer nur 1 Byte, bei der 1500 ist es ein VLQ.
-         * Es scheint abhaengig von der ersten ID zu sein. Ist diese groesser 0x7000000 dann ist es ein VLQ.
-         * Es scheint generell so, dass eine 1200 IDs beginnend mit 0x1.. und eine 1500 mit 0x7.. verwendet.
-         * Eine 1200 mit FW4 verwendet ebenfall > 0x700000. An der Protokollversion kann es nicht festgemacht werden.
+        /* There are three values:
+         * 1) Numbering for creditlimit: On setup of the notification-session there is a limit for this value.
+         *    The notifications are sent until this limit is reached.
+         * 2) Sequence number: If -1 is set on notification-session setup, the value at 1) is zero and this
+         *    value is incremented by 1 on each notification.
+         * 3) Subscription Change Counter: Is incremented by 1 on each change of the subscription itself (delete or add an element).
+         *    On newer CPUs there is a new variant of this: If the returnvalue is 0x05, then there
+         *    is a change-counter. This field is still present, but then with value == 0.
+         * In the sequencenumber coding is a difference between the 1200 (before Firmware 3?) and 1500.
+         * In the 1200 the number is only 1 byte fixed (which overflows and then starts at 0), in the 1500 it's a VLQ.
+         * It seems to be depending on the first ID: if > 0x7000000 then it's a VLQ.
+         * In general it seems that old 1200 (< FW3) use IDs begin with 0x1.. and 1500 use IDs begin with 0x7...
+         * A newer 1200 with firmware 4 also uses IDs begin with 0x7...
+         * Detecting this on the protocol version is not possible.
          */
         if (subscr_object_id < 0x70000000) {
             seqnum = tvb_get_guint8(tvb, offset);
@@ -9964,13 +9802,12 @@ s7commp_decode_notification(tvbuff_t *tvb,
             proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
             offset += 1;
             if (subscrccnt == 0) {
-                /* Mit neueren S7-1500 wenn subscrccnt vorher 0 war:
-                 * Nach einem Byte mit bisher gesehenen 0x04 oder 0x05 folgt ein 6 Byte langer Time-Tick
-                 * auf Microsekunden-Basis und dann der eigentliche Wert von subscrccnt.
-                 * Der Zaehler setzt auch nach SPS Run-Stop oder Spannungsausfall beim alten Wert fort.
-                 * Bei einer Test-CPU ergab ein rueckrechnen auf 0 einen Zeitpunkt im Jahr 2014, es
-                 * scheint keine bekannten Zeitformat zu entsprechen.
-                 * TODO: Es sind mehr Daten von anderen CPUs notwendig um ein paar Vergleichswerte zu bekommen.
+                /* Newer versions of 1500 if subscrccnt ==0:
+                 * After a byte where only 0x04 or 0x05 was seen yet, a 6 byte long time-tick on microsecond basis follows.
+                 * Testresults: The counter value keeps the value on PLC Run-Stop and also on power loss.
+                 * Recalculating the startpoint results in a starting point in 2014, thus it seems not
+                 * to be a common absolute time format (timetick from production / first power-up date?).
+                 * TODO: This needs more data from different CPUs to get some values to compare.
                  */
                 proto_tree_add_item(tree, hf_s7commp_notification_unknown5, tvb, offset, 1, ENC_BIG_ENDIAN);
                 offset += 1;
@@ -9994,9 +9831,8 @@ s7commp_decode_notification(tvbuff_t *tvb,
         if (offset - list_start_offset > 1) {
             add_data_info_column = TRUE;
         }
-
-        /* Noch ein spezial Datensatz, mit ein paar unbekannten Werten davor und einer Standard Objekt-Datenstruktur.
-         * Dieses wird z.B. zur Uebertragung von ProgramAlarm Ereignissen verwendet.
+        /* More data with some unknown values and a standard value list.
+         * This is used for example in ProgramAlarm events.
          */
         if (tvb_get_guint8(tvb, offset) != 0) {
             subscr_object_id2 = tvb_get_ntohl(tvb, offset);
@@ -10010,9 +9846,13 @@ s7commp_decode_notification(tvbuff_t *tvb,
                 list_start_offset = offset;
                 offset = s7commp_decode_notification_value_list(tvb, pinfo, list_item_tree, offset, TRUE);
                 proto_item_set_len(list_item_tree, offset - list_start_offset);
+                add_data_info_column = TRUE;
             }
         }
         if (add_data_info_column) {
+            /* On change driven events most Notifications are empty if nothing has changed.
+             * Indicate when there are values, so the user can see where to look at.
+             */
             col_append_str(pinfo->cinfo, COL_INFO, " <Contains values>");
         }
     }
@@ -10033,7 +9873,7 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
     guint32 subscr_object_id;
     guint32 list_start_offset;
 
-    /* 4 Bytes Subscription Object Id -> scheint hier nicht der Fall zu sein? */
+    /* 4 Bytes Subscription Object Id -> is this correct in v1? */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_subscrobjectid, tvb, offset, 4, subscr_object_id);
     s7commp_pinfo_append_idname(pinfo, subscr_object_id, " ObjId=");
@@ -10041,8 +9881,8 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
 
     proto_tree_add_item(tree, hf_s7commp_notification_v1_unknown2, tvb, offset, 4, ENC_BIG_ENDIAN);
     offset += 4;
-    /* Alle folgenden Werte sind nur vorhanden, wenn hier keine 4 Null-Bytes folgen.
-     * Der Wert an dieser Stelle ist meistens um 2 oder 3 hoeher als die obige Object Id.
+    /* The next values are only present if the 4 bytes aren't zero (end of telegram before trailer?)
+     * The value here is often 2 or 3 above the object-id above.
      */
     if (tvb_get_ntohl(tvb, offset) != 0) {
         proto_tree_add_item(tree, hf_s7commp_notification_v1_unknown3, tvb, offset, 4, ENC_BIG_ENDIAN);
@@ -10062,11 +9902,9 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
  *
  * Extended decoding of attribute with id SubscriptionReferenceList
  *
- * Der komplette "Item-Value" Zweig wurde vorher schon mit der Standard-Funktion zerlegt
- * und auch im Baum angezeigt.
- * Diese Funktion dekodiert die Werte weiter in die Adressen, weil diese fuer eine Analyse
- * welche Werte abbonniert werden interessanter sind.
- * Wenn Datentyp und flags nicht zum Standard passen, wird abgebrochen.
+ * The reference list is transmitted as an addressarray of UDInt.
+ * This function decodes this array further to get the addresses of the variables
+ * which are subscribed, as they are of interest for analysis.
  *
  *******************************************************************************************************/
 static guint32
@@ -10087,15 +9925,15 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     guint32 list_start_offset;
     guint32 sub_list_start_offset;
 
-    /* Datatype flags: 0x20 fuer Adressarray sein
-     * Datatype: sollte 0x04 fuer UDInt sein
+    /* Datatype flags: should be 0x20 for Addressarray
+     * Datatype      : should be 0x04 for UDInt
      */
     if ((tvb_get_guint8(tvb, offset) != 0x20) || (tvb_get_guint8(tvb, offset+1) != S7COMMP_ITEM_DATATYPE_UDINT)) {
         return offset;
     }
     offset += 2;
 
-    /* Array size: wird nicht weiter benoetigt, muss fuer die Berechnung des offsets aber nochmal ausgelesen werden */
+    /* Array size: is only neccessary to recalculate the offset */
     tvb_get_varuint32(tvb, &octet_count, offset);
     offset += octet_count;
 
@@ -10103,11 +9941,11 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     list_item = proto_tree_add_item(tree, hf_s7commp_subscrreflist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_subscrreflist);
 
-    /* Header mit insgesamt 3 Werten
-     * 1. Wert:
-     * Bei Request Create Object: 0x80010000
-     * Bei Request SetMultiVariables: 0x00020000, 0x00030000, 0x00040000, 0x00050000, 0x00060000
-     *   Bearbeitet die Liste?
+    /* Header with three values:
+     * 1st value:
+     * On Request Create Object:     0x80010000
+     * On Request SetMultiVariables: 0x00020000, 0x00030000, 0x00040000, 0x00050000, 0x00060000
+     *                               Modifies the list?
      */
     proto_tree_add_varuint32(list_item_tree, hf_s7commp_subscrreflist_unknown1, tvb, offset, &octet_count);
     offset += octet_count;
@@ -10145,7 +9983,7 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     }
 
     proto_item_set_len(list_item_tree, offset - list_start_offset);
-    /* Kennzeichnen dass diese Liste vorher schon verarbeitet wurde */
+    /* The list values were processed before. Indicate that this is done again. */
     PROTO_ITEM_SET_GENERATED(list_item_tree);
     return offset;
 }
@@ -10180,11 +10018,11 @@ s7commp_decode_request_setvariable(tvbuff_t *tvb,
     list_start_offset = offset;
     list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
-    /* Wenn count == 1 dann folgt nur eine ID. Wenn z.B. count == 4, dann folgen 2 IDs, eine Null
-     * und dann eine Laengenangabe die mit der Roh-Laenge im folgenden Value-Teil identisch ist.
-     * Warum diese Redundanz ist nicht klar. Vermutetes Schema was zumindest bei den bisherigen
-     * Aufzeichnungen funktioniert:
-     * Wenn innerhalb Schleife ein Nullwert auftritt, dann folgt danach noch eine Laenge.
+    /* If count == 1 then next comes only one id: If e.g. count == 4 then 2 IDs, one zero and
+     * a length corresponding to the raw-length in the next value part.
+     * Why this redundancy is not known.
+     * The guessed at least working scheme on all present captures:
+     * If inside the loop a null-value occurs, then follows the length.
      */
     for (i = 1; i <= item_address_count; i++) {
         proto_tree_add_ret_varuint32(list_item_tree, hf_s7commp_data_id_number, tvb, offset, &octet_count, &object_id);
@@ -10248,8 +10086,8 @@ s7commp_decode_request_getvariable(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_object_relid, tvb, offset, 4, relid);
     s7commp_pinfo_append_idname(pinfo, relid, NULL);
     offset += 4;
-    /* Ob es wirklich moeglich ist hier auch mehrere Variablen zu lesen ist
-     * nicht bekannt, denn dazu gibt es eigentlich eine eigene Funktion.
+    /* Don't know if it's really possible to read many variables with this function,
+     * as there is a separate function for reading multiple.
      */
     proto_tree_add_ret_varuint32(tree, hf_s7commp_getvar_itemcount, tvb, offset, &octet_count, &item_count);
     offset += octet_count;
@@ -10313,9 +10151,7 @@ s7commp_decode_request_getvarsubstr(tvbuff_t *tvb,
     do {
         id_number = tvb_get_ntohl(tvb, offset);
         if (id_number == 0) {
-            /* TODO: Ist das noch notwendig? Konnte keine Aufzeichnung mehr lokalisieren bei der
-             * diese Sonderbehandlung notwendig ist.
-             */
+            /* TODO: Is this neccessary any more? */
             struct_level--;
             pi = proto_tree_add_item(tree, hf_s7commp_structitem_terminator, tvb, offset, 4, FALSE);
             proto_item_append_text(pi, " (Lvl:%d <- Lvl:%d)", struct_level, struct_level+1);
@@ -10380,7 +10216,7 @@ s7commp_decode_request_setvarsubstr(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset)
 {
-    /* Gleicher Aufbau wie Request GetVarSubstreamed */
+    /* Identical to Request GetVarSubstreamed */
     offset = s7commp_decode_request_getvarsubstr(tvb, pinfo, tree, offset);
 
     return offset;
@@ -10492,7 +10328,7 @@ s7commp_decode_request_getlink(tvbuff_t *tvb,
     guint8 octet_count = 0;
     guint32 item_number = 0;
 
-    /* Ein Datensatz wurde bisher nur mit 12 Bytes Laenge gesichtet. Minus 4 Null-Bytes am Ende bleiben 8 Bytes
+    /* Only a a dataset of 12 byte length (minus 4 bytes zero at the end) was seen yet.
      * - 4 Bytes fix
      * - 1 VLQ
      * - 2 Nullbytes?
@@ -10533,7 +10369,7 @@ s7commp_decode_response_getlink(tvbuff_t *tvb,
     offset += 1;
 
     for (i = 1; i <= number_of_items; i++) {
-        /* Es scheint eine Link-Id zu sein, die im folgenden verwendet werden kann (z.B. Vartab als Start-Id fuer getmultivar */
+        /* Seems to be a Link-Id which can be used later in e.g. in a Vartab as Start-Id for getmultivar */
         linkid = tvb_get_ntohl(tvb, offset);
         proto_tree_add_uint_format(tree, hf_s7commp_getlink_linkid, tvb, offset, 4, linkid,
             "Link-Id [%d]: 0x%08x", i, linkid);
@@ -10566,12 +10402,12 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
         proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
         offset += 2;
 
-        /* Ob ein Objekt oder anderer weiterer Wert folgt, scheint abhaengig vom 2./3. Byte zu sein.
-         * Wenn 1 dann Objekt, wenn 18 dann ID. Andere Werte als 1 und 18 bisher noch nicht gesichtet.
+        /* Whether an object or other additional value follows, seems to be depend on 2nd / 3rd byte.
+         * If 1 then object, if 18 then ID. I've only seen values of 1 and 18 here.
          */
         if (valtype == 1) {
-            /* Die 1200 mit V2 laesst hier gelegentlich 1 Byte aus. Die Antwort zeigt aber keine
-             * Fehlermeldung, d.h. dies scheint toleriert zu werden.
+            /* A 1200 with firmware 2 occasionally omits 1 byte here.
+             * The response doesn't show any error message, this seems to be tolerated.
              */
             if (tvb_get_guint8(tvb, offset + 1) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
                 proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 1, ENC_BIG_ENDIAN);
@@ -10686,9 +10522,9 @@ s7commp_decode_response_invoke(tvbuff_t *tvb,
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
-    /* Die Itemnummer in der folgenden ValueList beginnt was bisher gesehen wurde immer mit 1.
-     * Ist hier ein anderer Wert vorhanden, dann folgt ein weiterer 64 Bit VLQ der soweit keine
-     * weiteren Informationen vorliegen als weiterer Errorcode angezeigt wird.
+    /* The itemnumber in the following ValueList starts (as far as known) always with a 1.
+     * If there is a value of not 1, then another 64 Bit VLQ is following.
+     * It's only a guess that this is another errorcode.
      */
     if (tvb_get_guint8(tvb, offset) != 1) {
         offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
@@ -10726,9 +10562,6 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
     s7commp_pinfo_append_idname(pinfo, id_number, " Area=");
     offset += 4;
 
-    /* 4 oder 5 weitere Bytes unbekannter Funktion
-     * wenn die ersten beiden Bytes zu Begin Null sind, dann werden Objekte gelesen.
-     */
     proto_tree_add_ret_varuint32(tree, hf_s7commp_explore_req_id, tvb, offset, &octet_count, &uint32value);
     if (uint32value > 0) {
         s7commp_proto_item_append_idname(tree, uint32value, " / ");
@@ -10804,14 +10637,15 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
     s7commp_pinfo_append_idname(pinfo, id_number, NULL);
     offset += 4;
 
-    /* Der folgende Wert berechnet sich so wie es aussieht aus (SequenceNumber + IntegrityId) des
-     * zugehoerigen Requests. Darum ist das Feld bei der alten 1200 ohne Integritaetsteil auch nicht
-     * vorhanden. Ist in der Response keine Integritaets-ID, dann war es das auch nicht beim Request.
-     * Was dadurch geprueft werden kann/soll ist unklar.
-     * Leider gibt es bei der alten 1200 bei einem einzelnen Paket keine Moeglichkeit, BEVOR das ganze Paket
-     * verarbeitet wurde, festzustellen, ob es diese Integritaets-Id gibt oder nicht. Protokollversion
-     * V3 besitzt so wie es aussieht IMMER eine, V1 NIE, bei V2 nur bei der 1500.
-     * Die hier realisierte Pruefung funktioniert nur, falls nicht zufaellig der Wert von resseqinteg mit 0xa1 beginnt!
+    /* The next value is calculated by (SequenceNumber + IntegrityId) of the request.
+     * Therefore old 1200 which were without integrity this field is missing. If the response
+     * has no integrity-part, then the request also has none.
+     * Unfortunately on this protocol / plc variants it's not possible to detect if it has this
+     * field on a single packet, before the complete packet is processed to the end.
+     * Depending on the protocol version: V3 has as far as known always this field, V1 never, and
+     * V2 only at the 1500 series.
+     * The current provisionally check does only work if resseqinteg never
+     * starts with value 0xa1 (ELEMENTID_STARTOBJECT)
      */
     nextb = tvb_get_guint8(tvb, offset);
     if ( (protocolversion == S7COMMP_PROTOCOLVERSION_3) ||
@@ -10820,8 +10654,8 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
         proto_tree_add_varuint32(tree, hf_s7commp_explore_resseqinteg, tvb, offset, &octet_count);
         offset += octet_count;
     }
-    /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst wuerde ein Null-Byte
-     * zur Terminierung der Liste eingefuegt werden.
+    /* Only loop through the list when there is an object. Otherwise we would add only a Null-byte
+     * as list-terminator to the tree.
      */
     if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
@@ -10844,7 +10678,7 @@ s7commp_decode_response_error(tvbuff_t *tvb,
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
 
-    // this opcode has no data after the error code
+    /* this opcode has no data after the error code */
 
     return offset;
 }
@@ -10890,25 +10724,23 @@ s7commp_decode_extkeepalive(tvbuff_t *tvb,
     const guint8 *str_name;
     guint32 confirmed_bytes;
 
-    /* Evtl. ist das hier eine Art erweiteres Keep Alive. Das habe ich erst mit V14 das erste mal gesehen.
-     * Die Telegramme werden dabei von der SPS oder einem Siemens Panel verschickt.
-     * Es gibt eine Version mit 16 Bytes und eine mit 22 Bytes.
-     * Bei der 22 Byte Version folgt noch ein String wie "LOGOUT", dieses aber nur
-     * nach einem DeleteObject.
+    /* These extended keep-alive telegrams came up with TIA V14, and are sent from the PLC or HMI.
+     * There is a version of 16 bytes length and another with 22 bytes length.
+     * The 22 byte version may contain a string like "LOGOUT", but this only after a DeleteObject.
      */
     data_item = proto_tree_add_item(tree, hf_s7commp_data, tvb, offset, dlength, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data);
 
-    /* 4 Bytes immer Null (bisher zumindest) */
+    /* 4 Bytes (all zero so far) */
     proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved1, tvb, offset, 4, FALSE);
     offset += 4;
-    /* Es folgt die Anzahl der Bytes die seit dem letzten Keep Alive oder seit Start empfangen wurden.
-     * Es werden dazu die Laengenangaben aus dem Header verwendet und aufsummiert.
+    /* It follows the number of bytes received since the last keep alive or since start.
+     * Seems to be that the length informations from the header are used and added up.
      */
     confirmed_bytes = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(data_item_tree, hf_s7commp_extkeepalive_confirmedbytes, tvb, offset, 4, confirmed_bytes);
     offset += 4;
-    /* Insgesamt 2*4 Bytes die bisher immer Null waren */
+    /* 2*4 Bytes (all zero so far) */
     proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved2, tvb, offset, 4, FALSE);
     offset += 4;
     proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved3, tvb, offset, 4, FALSE);
@@ -10959,7 +10791,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         offset += 1;
         dlength -= 1;
 
-        /* Bei Protokollversion 1 gibt es nur bei der 1500 und Deleteobject eine ID, und auch da nicht immer! */
+        /* On protocol version 1 only with a 1500 and DeleteObject there is an ID, and not always! */
         if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
             has_integrity_id = FALSE;
         }
@@ -10981,7 +10813,6 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset += 2;
             dlength -= 2;
 
-            /* 4/5: Functioncode */
             functioncode = tvb_get_ntohs(tvb, offset);
             proto_tree_add_uint(tree, hf_s7commp_data_function, tvb, offset, 2, functioncode);
             offset += 2;
@@ -10991,7 +10822,6 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset += 2;
             dlength -= 2;
 
-            /* 8/9: Sequence number */
             seqnum = tvb_get_ntohs(tvb, offset);
             proto_tree_add_uint(tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
             offset += 2;
@@ -11126,10 +10956,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                 dlength = dlength - (offset - offset_save);
             }
         }
-        /* Nach Object Qualifier trailer suchen.
-         * Der Objectqualifier hat die ID 1256 = 0x04e8. Dieses Objekt hat 3 Member mit jeweils einer ID.
-         * Solange wir noch nicht immer direkt auf dieser ID landen, danach suchen.
-         */
+
         if (has_objectqualifier && dlength > 10) {
             offset_save = offset;
             offset = s7commp_decode_objectqualifier(tvb, pinfo, tree, offset);
@@ -11227,9 +11054,8 @@ dissect_s7commp(tvbuff_t *tvb,
     col_clear(pinfo->cinfo, COL_INFO);
     col_append_sep_str(pinfo->cinfo, COL_INFO, " | ", "");
 
-    protocolversion = tvb_get_guint8(tvb, 1);                       /* Get the type byte */
+    protocolversion = tvb_get_guint8(tvb, 1);
 
-    /* display some infos in info-column of wireshark */
     if (pinfo->srcport == 102) {
         col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Ver:[%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
     } else {
@@ -11249,15 +11075,12 @@ dissect_s7commp(tvbuff_t *tvb,
     proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_protocolversion, tvb, offset, 1, protocolversion);
     offset += 1;
 
-    /* Typ FF Pakete scheinen eine Art Keep-Alive Telegramme zu sein, welche nur 4 Bytes lang sind.
-     * 1. Protocol-id, 2.PDU Typ und dann 3. eine Art Sequenz-Nummer, und das 4. Byte bisher immer 0.
-     */
     if (protocolversion == S7COMMP_PROTOCOLVERSION_255) {
         keepaliveseqnum = tvb_get_guint8(tvb, offset);
         proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_keepaliveseqnum, tvb, offset, 1, keepaliveseqnum);
         col_append_fstr(pinfo->cinfo, COL_INFO, " KeepAliveSeq=%d", keepaliveseqnum);
         offset += 1;
-        /* dann noch ein Byte, noch nicht klar wozu */
+        /* 1 byte unknown / reserved */
         proto_tree_add_item(s7commp_header_tree, hf_s7commp_header_keepalive_res1, tvb, offset, 1, ENC_BIG_ENDIAN);
         offset += 1;
     } else if (protocolversion == S7COMMP_PROTOCOLVERSION_254) {
@@ -11266,21 +11089,21 @@ dissect_s7commp(tvbuff_t *tvb,
         offset += 2;
         offset = s7commp_decode_extkeepalive(tvb, pinfo, s7commp_tree, dlength, offset);
     } else {
-        /* 3/4: Data length */
         dlength = tvb_get_ntohs(tvb, offset);
         proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_datlg, tvb, offset, 2, dlength);
         offset += 2;
 
-        /* Paket hat einen Trailer, wenn nach der angegebenen Datenlaenge noch 4 Bytes uebrig bleiben */
+        /* The packet has a trailer if after the given length are more than 4 bytes left over */
         has_trailer = ((signed) packetlength) > (dlength + 4);
 
-        /* Bei einer 1500 mit Firmware Version >= V1.5 wurde der Integritaetsteil vom Ende des Datenteils an den Anfang verschoben.
-         * Bei fragmentierten Paketen hatte bisher nur das letzte Fragment einen Integritaetsteil.
-         * Bei FW >= V1.5 hat nun auch bei fragmentierten Paketen jedes Fragment einen Integritaetsteil. Der Integritaetsteil
-         * zaehlt aber von der Laengenangabe im Kopf zum Datenteil. Bei fragmentierten Paketen muss daher bei dieser Version
-         * der Integritaetsteil ausserhalb der eigentlichen Funktion zum Zerlegen des Datenteils platziert werden, da ansonsten
-         * dieser beim Reassemblieren innerhalb der Datenteile liegen wuerde.
-         * Leider wird damit der Zweig nicht unter dem Datenteil, sondern als eigener separater Zweig eingefuegt.
+        /* In a 1500 with firmware >= V1.5 they moved the integrity-part from the end of the data-part to the beginning.
+         * On fragmented packets had so far only the last fragments an integrity-part.
+         * With FW >= V1.5 every fragment comes with an integrity-part. From the length given in the header, the
+         * integrity-part counts into the data-part. In fragmented packets of these versions therefore the
+         * dissection of the integrity-part must be done outside the dissection of the complete data-part,
+         * otherwise on reassemble it would be inside the (fragmented/reassembled) data-parts.
+         * Unfortunately the tree is then not inserted in the data-tree where it would belong, instead it's
+         * added as a separate tree.
          */
         if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
             offset_save = offset;
@@ -11289,53 +11112,48 @@ dissect_s7commp(tvbuff_t *tvb,
         }
 
         /************************************************** START REASSEMBLING *************************************************************************/
-        if (s7commp_reassemble) {
-            /*
-             * Fragmentation check:
-             * Da es keine Kennzeichnungen ueber die Fragmentierung gibt, muss es in einer Zustandsmaschine abgefragt werden
+        if (s7commp_opt_reassemble) {
+            /* Fragmentation check:
+             * The protocol has no direct flag for the fragmentation. Thus it's checked in a state machine
              *
-             * Istzustand   Transition                                      Aktion                                Neuer Zustand
-             * state == 0:  Paket hat einen Trailer, keine Fragmentierung   dissect_data                          state = 0
-             * state == 0:  Paket hat keinen Trailer, Start Fragmentierung  push data                             state = 1
-             * state == 1:  Paket hat keinen Trailer, weiterhin Fragment    push data                             state = 1
-             * state == 1:  Paket hat einen trailer, Ende Fragmente         push data, pop, dissect_data          state = 0
+             * State        Transition                                      Action                                New State
+             * state == 0:  Packet has a Trailer, no fragmentation          dissect_data                          state = 0
+             * state == 0:  Packet has no Trailer, start fragmentation      push data                             state = 1
+             * state == 1:  Packet has no Trailer, inner fragment           push data                             state = 1
+             * state == 1:  Packet has a trailer, end fragmentation         push data, pop, dissect_data          state = 0
              *
-             * Die einzige Zugehoerigkeit die es gibt, ist die TCP Portnummer. Es muessen dabei BEIDE uebereinstimmen.
+             * For a conversation both port numbers must be equal, as there may be more than one conversation.
              *
-             * Dabei muss zusaetzlich beachtet werden, dass womoeglich ein capture inmitten einer solchen Serie gestartet wurde.
-             * Das kann aber nicht zuverlaessig abgefangen werden, wenn zufaellig in den ersten Bytes des Datenteils gueltige Daten stehen.
-             *
+             * If a capture was started in the middle of a fragmentation series, then it's possible that this
+             * is not correct reassembled when in the first bytes of a datapart valid data occurs.
              */
 
-            /* Zustandsdiagramm:
-                             NEIN                Konversation    JA
-             has_trailer ---------------------mit vorigem Frame-------- Inneres Fragment
-                  ?                              vorhanden?
+            /* State machine:
+                                 NO             Conversation        YES
+             has_trailer -------------------- with previous frame -------- Inner fragment
+                  |                               available?
                   |                                  |
-                  | JA                               | NEIN
+                  | YES                              | NO
                   |                                  |
-               Konversation     NEIN        Neue Konversation anlegen
-            mit vorigem Frame--------+               |
-                vorhanden?           |          Erstes Fragment
+             Conversation     NO             New conversation
+          with previous frame -------+               |
+              available?             |          First fragment
                   |                  |
-                  | JA        Nicht fragmentiert
+                  | YES        Not fragmented
                   |
-              Letztes Fragment
+             Last fragment
             */
 
             if (!pinfo->fd->visited) {        /* first pass */
-                /* Vorabcheck: opcode und function herausfinden
-                 * Da z.B. SetVarSubstreamed einen anderen Mechanismus verwendet!
+                /* Pre-Check opcode and function, because SetVarSubstreamed
+                 * uses a different fragmentation method.
                  */
                 reasm_opcode = tvb_get_guint8(tvb, offset);
                 reasm_function = tvb_get_ntohs(tvb, offset + 3);
 
                 /* Conversation:
-                 * find_conversation() ist dazu gedacht eine Konversation in beiden Richtungen zu finden.
-                 * D.h. es wurde z.B. Port 2000->102 wie auch 102->2000 gefunden. Das ist an dieser Stelle jedoch
-                 * nicht gewuenscht, und kann auch durch den Parameter option nicht verhindert werden.
-                 * Aus dem Grund wird aus Quell- und Zielport eine eindeutige Portnummer generiert.
-                 * Destport/srcport sind vom Typ guint32, erlaubte Portnummern sind jedoch nur 0..65535.
+                 * Use a combination of destination- and sourceport, otherwise a conversation in both directions
+                 * (e.g 2000->102 as well as 102->2000) would be found, which we don't want here.
                  */
                 conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
                                                  (const endpoint_type) pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
@@ -11408,13 +11226,12 @@ dissect_s7commp(tvbuff_t *tvb,
                 gboolean more_frags;
 
                 frag_id       = packet_state->start_frame;
-                frag_data_len = tvb_reported_length_remaining(tvb, offset);     /* Dieses ist der reine Data-Teil, da offset hinter dem Header steht */
+                frag_data_len = tvb_reported_length_remaining(tvb, offset);     /* this is the raw data-part, as offset position is behind header */
                 more_frags    = !last_fragment;
 
                 pinfo->fragmented = TRUE;
-                /*
-                 * fragment_add_seq_next() geht davon aus, dass die Pakete in der richtigen Reihenfolge reinkommen.
-                 * Bei fragment_add_seq_check() muss eine Sequenznummer angegeben werden, die gibt es aber nicht im Protokoll.
+                /* fragment_add_seq_next() expects the packets to be received in the correct order.
+                 * fragment_add_seq_check() needs a sequence number, but we don't have such in our protocol.
                  */
                 fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
                                                  tvb, offset, pinfo,
@@ -11434,7 +11251,7 @@ dissect_s7commp(tvbuff_t *tvb,
                     next_tvb = tvb_new_subset_length_caplen(tvb, offset, -1, -1);
                     offset = 0;
                 }
-            } else {    /* nicht fragmentiert, oder nicht im Standardverfahren */
+            } else {    /* not fragmented, or at least not using standard fragmentation */
                 next_tvb = tvb;
             }
             pinfo->fragmented = save_fragmented;
@@ -11447,9 +11264,10 @@ dissect_s7commp(tvbuff_t *tvb,
         /******************************************************
          * Data
          ******************************************************/
-        /* Besondere Behandlung von SetVarSubstreamed, da hier ein voellig anderer!!! Fragmentierungsmechanismus
-         * verwendet wird. Im Ersten Paket gibt es als Datenteil einen Blob der auch abgeschlossen wird.
-         * Danach besitzt jedes Paket nochmal einen eigenen Laengenheader im Datenteil.
+        /* Special handling of SetVarSubstreamed:
+         * SetVarSubstreamed uses a completely different fragmentation method!
+         * The first packet comes with a data-part which contains a blob which is completely terminated.
+         * The next packets come with an additional length-header in the data-part,
          */
         if (packet_state &&
             packet_state->start_opcode == S7COMMP_OPCODE_REQ &&
@@ -11459,7 +11277,7 @@ dissect_s7commp(tvbuff_t *tvb,
             s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
 
             if (first_fragment) {
-                /* Das erste Paket kann im Standardverfahren behandelt werden */
+                /* The first fragment needs no special handling */
                 offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, protocolversion);
             } else {
                 offset = s7commp_decode_request_setvarsubstr_stream_frag(next_tvb, pinfo, s7commp_data_tree, protocolversion, &dlength, offset, has_trailer);
@@ -11469,7 +11287,7 @@ dissect_s7commp(tvbuff_t *tvb,
         } else {
             if (last_fragment) {
                 /* when reassembled, instead of using the dlength from header, use the length of the
-                 * complete reassembled packet, minus the header length.
+                 * complete reassembled packet minus the header length.
                  */
                 dlength = tvb_reported_length_remaining(next_tvb, offset) - S7COMMP_HEADER_LEN;
             }

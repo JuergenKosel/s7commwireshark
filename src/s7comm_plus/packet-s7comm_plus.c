@@ -5612,7 +5612,7 @@ proto_register_s7commp (void)
             "Number of items following", HFILL }},
         { &hf_s7commp_item_no_of_fields,
           { "Number of fields in complete Item-Dataset", "s7comm-plus.item.no_of_fields", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "Number of fields in complete Item-Dataset", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemaddr_crc,
           { "Symbol CRC", "s7comm-plus.item.addr.symbol_crc", FT_UINT32, BASE_HEX, NULL, 0x0,
             "CRC generated out of symbolic name with (x^32+x^31+x^30+x^29+x^28+x^26+x^23+x^21+x^19+x^18+x^15+x^14+x^13+x^12+x^9+x^8+x^4+x+1)", HFILL }},

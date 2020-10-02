@@ -2607,8 +2607,6 @@ static const value_string no_yes_names[] = {
     { 0,                                        NULL }
 };
 
-static const char mon_names[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-
 /* Class Id flags. 32 Bits, just as a starting point for analysis */
 static gint s7commp_object_classflags_bit00 = -1;
 static gint s7commp_object_classflags_bit01 = -1;

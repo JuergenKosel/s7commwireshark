@@ -54,17 +54,10 @@ void proto_register_s7commp(void);
 static guint32 s7commp_decode_id_value_list(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint32 offset, gboolean recursive);
 static guint32 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, guint32 offset);
 
-//#define USE_INTERNALS
-/* #define DEBUG_REASSEMBLING */
-
- /*******************************************************
- * It's only possible to use this plugin for dissection of hexdumps (user-link-layer),
- * but only when the dissector isn't registered as heuristic dissector.
- * See how to use this:
- * http://wiki.wireshark.org/HowToDissectAnything
- * https://www.wireshark.org/docs/man-pages/text2pcap.html
+/* Setting ENABLE_PROTO_TREE_ADD_TEXT to 1 enables the proto_tree_add_text
+ * function which is convenient for quick development.
  */
-//#define DONT_ADD_AS_HEURISTIC_DISSECTOR
+#define ENABLE_PROTO_TREE_ADD_TEXT              0
 
 #define PROTO_TAG_S7COMM_PLUS                   "S7COMM-PLUS"
 
@@ -114,7 +107,7 @@ static const value_string protocolversion_names[] = {
 #define S7COMMP_OPCODE_REQ                      0x31
 #define S7COMMP_OPCODE_RES                      0x32
 #define S7COMMP_OPCODE_NOTIFICATION             0x33
-#define S7COMMP_OPCODE_RES2                     0x02    /* V13 HMI bei zyklischen Daten, dann ist in dem Request Typ2=0x74 anstatt 0x34 */
+#define S7COMMP_OPCODE_RES2                     0x02                    /* Seen with V13 HMI on cyclic data, but then in request Typ2=0x74 instead of 0x34 */
 
 static const value_string opcode_names[] = {
     { S7COMMP_OPCODE_REQ,                       "Request" },
@@ -264,100 +257,2202 @@ static const value_string itemval_elementid_names[] = {
 
 /**************************************************************************
  * There are IDs which values can be read or be written to.
- * This is some kind of operating system data/function for the plc.
- * The IDs seem to be unique for all telegrams in which they occur.
- * Add the datatype for this value in parentheses.
  */
-#ifdef USE_INTERNALS
-    #include "internals/packet-s7comm_plus-aid-names.h"
-#else
 static const value_string id_number_names[] = {
-    { 0,                                        "None" },
-    { 233,                                      "Subscription name (String)" },
-    { 537,                                      "Object OMS Type-Info-Container" },
-    { 1048,                                     "Cyclic variables update set of addresses (UDInt, Addressarray)" },
-    { 1049,                                     "Cyclic variables update rate (UDInt, in milliseconds)" },
-    { 1051,                                     "Unsubscribe" },
-    { 1053,                                     "Cyclic variables number of automatic sent telegrams, -1 means unlimited (Int)" },
-
-    { 1256,                                     "Object Qualifier" },
-    { 1257,                                     "Parent RID" },
-    { 1258,                                     "Composition AID" },
-    { 1259,                                     "Key Qualifier" },
-
-    { 2421,                                     "Set CPU clock" },
-    { 2449,                                     "Ident ES" },
-    { 2450,                                     "Designators" },
-    { 2451,                                     "Working Memory Size" },
-    { 2453,                                     "Last modified" },
-    { 2454,                                     "Load Memory Size" },
-
-    { 2521,                                     "Block Number" },
-    { 2522,                                     "Auto Numbering" },
-    { 2523,                                     "Block Language" },
-    { 2524,                                     "Knowhow Protected" },
-    { 2527,                                     "Unlinked" },
-    { 2529,                                     "Runtime Modified" },
-    { 2532,                                     "CRC" },
-    { 2533,                                     "Body Description" },
-    { 2537,                                     "Optimize Info" },
-
-    { 2543,                                     "Interface Modified" },
-    { 2544,                                     "Interface Description" },
-    { 2545,                                     "Compiler Swiches" },
-    { 2546,                                     "Line Comments" },
-    { 2580,                                     "Code block" },
-    { 2581,                                     "Parameter modified" },
-    { 2582,                                     "External Ref Data" },
-    { 2583,                                     "Internal Ref Data" },
-    { 2584,                                     "Network Comment" },
-    { 2585,                                     "Network Title" },
-    { 2586,                                     "Callee List" },
-    { 2587,                                     "Interface Signature" },
-    { 2588,                                     "Display Info" },
-    { 2589,                                     "Debug Info" },
-    { 2590,                                     "Local Error Handling" },
-    { 2591,                                     "Long Constants" },
-    { 2607,                                     "Start Info Type" },
-
-    { 3151,                                     "Binding" },
-    { 3448,                                     "Knowhow Protection Mode" },
-    { 3449,                                     "Knowhow Protection Password" },
-    { 3619,                                     "TO Block Set Number" },
-    { 3634,                                     "Change Counter Copy" },
-
-    { 4287,                                     "Title" },
-    { 4288,                                     "Comment" },
-    { 4294,                                     "Instance DB" },
-    { 4560,                                     "PIP" },
-    { 4578,                                     "Type Info" },
-    { 4615,                                     "Latest Runtime" },
-    { 4616,                                     "Min Runtime" },
-    { 4617,                                     "Max Runtime" },
-    { 4618,                                     "Call Frequency" },
-    { 4619,                                     "Runtime Ratio" },
-
-    { 0,                                        NULL }
+    { 0,        "None" },
+    { 1,        "NativeObjects.theASRoot_Rid" },
+    { 2,        "NativeObjects.theHWConfiguration_Rid" },
+    { 3,        "NativeObjects.thePLCProgram_Rid" },
+    { 4,        "NativeObjects.theFolders_Rid" },
+    { 5,        "NativeObjects.theLogs_Rid" },
+    { 6,        "TypeInfoModificationTime" },
+    { 7,        "NativeObjects.theTisJobCont_Rid" },
+    { 8,        "NativeObjects.theAlarmSubsystem_Rid" },
+    { 9,        "NativeObjects.theASLog_Rid" },
+    { 10,       "NativeObjects.theSWEvents_Rid" },
+    { 11,       "NativeObjects.theTisSubsystem_Rid" },
+    { 12,       "NativeObjects.theCommCont_Rid" },
+    { 13,       "NativeObjects.theNonPersistentConnections_Rid" },
+    { 14,       "NativeObjects.theProgramCyclePI_Rid" },
+    { 15,       "NativeObjects.theSWObjectsAppCreated_Rid" },
+    { 16,       "NativeObjects.theFWpackage_Rid" },
+    { 17,       "NativeObjects.theTPbuiltinContainer_Rid" },
+    { 18,       "NativeObjects.theTPloadableContainer_Rid" },
+    { 19,       "NativeObjects.theASInternalConnections_Rid" },
+    { 20,       "NativeObjects.theAdaptationRoot_Rid" },            /* V14 */
+    { 30,       "NativeObjects.theStationConfiguration_Rid" },
+    { 31,       "NativeObjects.theStationCentralDevice_Rid" },
+    { 32,       "NativeObjects.theCentralDevice_Rid" },
+    { 33,       "NativeObjects.theCentralIOcontroller_Rid" },
+    { 34,       "NativeObjects.theCentralIOsystem_Rid" },
+    { 34,       "NativeObjects.thecentralIOsystem_Rid" },
+    { 35,       "NativeObjects.theStationManager_Rid" },
+    { 35,       "NativeObjects.theRoutingTables_Rid" },
+    { 36,       "NativeObjects.theStationManager_Rid_V14" },        /* V14 */
+    { 37,       "NativeObjects.theSMcommon_Rid" },                  /* V14 */
+    { 43,       "NativeObjects.theHCPUsyncIF1_Rid" },               /* V14 */
+    { 44,       "NativeObjects.theHCPUsyncIF2_Rid" },               /* V14 */
+    { 46,       "NativeObjects.theHCPUredIOCtrl_Rid" },             /* V14 */
+    { 47,       "NativeObjects.theHCPUredCtrl_Rid" },               /* V14 */
+    { 48,       "NativeObjects.theCPU_Rid" },
+    { 49,       "NativeObjects.theCPUproxy_Rid" },
+    { 50,       "NativeObjects.theCPUcommon_Rid" },
+    { 51,       "NativeObjects.theCardReaderWriter_Rid" },
+    { 52,       "NativeObjects.theCPUexecUnit_Rid" },
+    { 53,       "NativeObjects.theWebServer_Rid" },
+    { 54,       "NativeObjects.theCPUDisplay_Rid" },
+    { 55,       "NativeObjects.theCPUFexecUnit_Rid" },
+    { 56,       "NativeObjects.thePLCProgramChange_Rid" },          /* V14 */
+    { 57,       "NativeObjects.theCCcontainer_Rid" },               /* V14 */
+    { 58,       "NativeObjects.theC2C_Rid" },                       /* V14 */
+    { 59,       "NativeObjects.theSoftbus_Rid" },                   /* V14 */
+    { 60,       "NativeObjects.thePB1_Rid" },
+    { 61,       "NativeObjects.thePB2_Rid" },                       /* V14 */
+    { 64,       "NativeObjects.theIE1_Rid" },
+    { 65,       "NativeObjects.theIE1_Port1_Rid" },
+    { 66,       "NativeObjects.theIE1_Port2_Rid" },
+    { 67,       "NativeObjects.theIE1_Port3_Rid" },
+    { 68,       "NativeObjects.theIE1_Port4_Rid" },
+    { 72,       "NativeObjects.theIE2_Rid" },
+    { 73,       "NativeObjects.theIE2_Port1_Rid" },
+    { 74,       "NativeObjects.theIE2_Port2_Rid" },
+    { 75,       "NativeObjects.theIE2_Port3_Rid" },
+    { 76,       "NativeObjects.theIE2_Port4_Rid" },
+    { 77,       "NativeObjects.theIE1_NetworkParameters_Rid" },
+    { 78,       "NativeObjects.theIE2_NetworkParameters_Rid" },
+    { 79,       "NativeObjects.theSoftbus_NetworkParameters_Rid" }, /* V14 */
+    { 80,       "NativeObjects.theIArea_Rid" },
+    { 81,       "NativeObjects.theQArea_Rid" },
+    { 82,       "NativeObjects.theMArea_Rid" },
+    { 83,       "NativeObjects.theS7Counters_Rid" },
+    { 84,       "NativeObjects.theS7Timers_Rid" },
+    { 85,       "NativeObjects.theRuntimeMeters_Rid" },
+    { 86,       "NativeObjects.theRuntimeMeters2_Rid" },
+    { 91,       "NativeObjects.theServo_Rid" },
+    { 92,       "NativeObjects.theIpo_Rid" },
+    { 96,       "EventRid.ProgramCycleEventData" },
+    { 100,      "NativeObjects.theIOredundancyError_Rid" },
+    { 101,      "NativeObjects.theCPUredundancyError_Rid" },
+    { 102,      "EventRid.TimeErrorEventData" },
+    { 103,      "EventRid.DiagnosticErrorEventData" },
+    { 104,      "EventRid.PullPlugEventData" },
+    { 105,      "EventRid.PeripheralAccessErrorEventData" },
+    { 106,      "EventRid.RackStationFailureEventData" },
+    { 107,      "EventRid.StartupEventData" },
+    { 108,      "EventRid.ProgrammingErrorEventData" },
+    { 109,      "EventRid.IOAccessErrorEventData" },
+    { 110,      "EventRid.theMaxCycleTimeError_Rid" },              /* V14 */
+    { 111,      "EventRid.ProfileEventData" },
+    { 112,      "EventRid.StatusEventData" },
+    { 113,      "EventRid.UpdateEventData" },
+    { 114,      "NativeObjects.theTextContainer_Rid" },
+    { 115,      "NativeObjects.thePkiContainer_Rid" },              /* V14 */
+    { 118,      "NativeObjects.theNCKadapter_Rid" },                /* V14 */
+    { 119,      "NativeObjects.theIE3_NetworkParameters_Rid" },     /* V14 */
+    { 120,      "NativeObjects.theIE3_Rid" },                       /* V14 */
+    { 125,      "NativeObjects.theIE4_NetworkParameters_Rid" },     /* V14 */
+    { 130,      "NativeObjects.theIE4_Rid" },                       /* V14 */
+    { 200,      "CoreBase" },
+    { 201,      "ObjectRoot" },
+    { 202,      "ClassClass" },
+    { 203,      "ClassVariableType" },
+    { 204,      "ClassAssociationEnd" },
+    { 205,      "ClassComposition" },
+    { 207,      "CompClassAssociationEnd" },
+    { 208,      "CompClassComposition" },
+    { 209,      "CompStructVariableType" },
+    { 210,      "GetNewRIDLocal" },
+    { 211,      "GetNewRIDOnServer" },
+    { 212,      "CompMetaTypesClass" },
+    { 213,      "ClassRoot" },
+    { 214,      "ClassTypes" },
+    { 215,      "ClassTypePackage" },
+    { 216,      "ClassModelPackage" },
+    { 218,      "CompRootTypes" },
+    { 219,      "CompTypesMetaTypes" },
+    { 220,      "ClassObject" },
+    { 221,      "PutNotInHashIndex" },
+    { 222,      "CompTypepackageTypepackage" },
+    { 223,      "CompTypesModelTypes" },
+    { 224,      "CompRootRootChildContainer" },
+    { 225,      "CompTypepackageStruct" },
+    { 226,      "ObjectTypes" },
+    { 227,      "ObjectMetatypes" },
+    { 228,      "ObjectBasetypes" },
+    { 229,      "ObjectVariableTypeParentObject" },
+    { 230,      "ObjectVariableTypeSiblingObject" },
+    { 231,      "ObjectVariableTypeFirstChildObject" },
+    { 232,      "ObjectVariableTypeRID" },
+    { 233,      "ObjectVariableTypeName" },
+    { 234,      "ObjectVariableTypeFlags" },
+    { 238,      "ClassVariableTypeBaseClass" },
+    { 239,      "VariableTypeVariableTypeAID" },                /* duplicate -> 393 */
+    { 240,      "VariableTypeVariableTypeDesignTimeCountMax" },
+    { 241,      "VariableTypeVariableTypeMultiDimensionArrayDesignTimeCountMax" },
+    { 242,      "VariableTypeVariableTypeOneDimensionArrayLowerBound" },
+    { 243,      "VariableTypeVariableTypeMultiDimensionArrayLowerBound" },
+    { 244,      "AssociationVariableTypeOppositeEndRID" },
+    { 245,      "AssociationVariableTypeCardinalityMin" },
+    { 246,      "AssociationVariableTypeCardinalityMax" },
+    { 247,      "AssociationVariableTypeQualifierAID" },
+    { 248,      "CompVariableTypeComposedClassRID" },
+    { 249,      "CompVariableTypeCardinalityMin" },
+    { 250,      "CompVariableTypeCardinalityMax" },
+    { 251,      "CompVariableTypeQualifierAID" },
+    { 252,      "VariableTypeVariableTypeINT32EnumValuesAID" },
+    { 253,      "SubscriptionBase" },
+    { 254,      "ClassOMSSubscriptions" },
+    { 255,      "ClassSubscriptions" },
+    { 258,      "VariableTypeSubscriptionActive" },
+    { 259,      "VariableTypeSubscriptionSelectionOnlyCnhanged" },
+    { 260,      "CompSubscriptionTrigger" },
+    { 261,      "CompSubscriptionReference" },
+    { 262,      "ClassTrigger" },
+    { 263,      "ClassCyclicTrigger" },
+    { 264,      "VariableTypeCyclicTriggerCycleTime" },
+    { 265,      "ClassAlarmTrigger" },
+    { 266,      "VariableTypeAlarmTriggerSourceRID" },
+    { 267,      "VariableTypeAlarmTriggerSourceAID" },
+    { 268,      "ClassReference" },
+    { 269,      "VariableTypeReferenceTargetRID" },
+    { 270,      "VariableTypeReferenceTargetAID" },
+    { 271,      "VariableTypeReferenceState" },
+    { 272,      "SubscriptionReference" },
+    { 273,      "VariableTypeTriggerAndTransmitMode" },
+    { 274,      "ServicesBase" },
+    { 275,      "CompRootClientSessions" },
+    { 276,      "CompRootServerSessions" },
+    { 277,      "CompClientSessionsClientSession" },
+    { 278,      "CompServerSessionsServerSession" },
+    { 279,      "CompClientSessionProxyRoot" },
+    { 280,      "CompServerSessionSubscriptions" },
+    { 281,      "FolderServices" },
+    { 282,      "ClassClientSessionContainer" },
+    { 283,      "ObjectClientSessionContainer" },
+    { 284,      "ClassServerSessionContainer" },
+    { 285,      "ObjectServerSessionContainer" },
+    { 286,      "ClassClientSession" },
+    { 287,      "ClassServerSession" },
+    { 288,      "ObjectNullServerSession" },
+    { 289,      "ServerSessionClientID" },
+    { 290,      "ClientSessionTargetAddress" },
+    { 291,      "ClientSessionL4Status" },
+    { 292,      "ClientSessionState" },
+    { 295,      "ServerSessionsCount" },
+    { 296,      "ServerSessionUser" },
+    { 297,      "ServerSessionApplication" },
+    { 298,      "ServerSessionHost" },
+    { 299,      "ServerSessionRole" },
+    { 300,      "ServerSessionClientRID" },
+    { 301,      "ServerSessionClientComment" },
+    { 302,      "ServerSessionTimeout" },
+    { 303,      "ServerSessionChallenge" },
+    { 304,      "ServerSessionResponse" },
+    { 305,      "ServerSessionRoles" },
+    { 306,      "ServerSessionVersion" },
+    { 309,      "ClientSessionPassword" },
+    { 310,      "ClientSessionLegitimated" },
+    { 311,      "ClientSessionCommunicationFormat" },
+    { 312,      "ClientSessionClientVersion" },
+    { 313,      "ClientSessionServerVersion" },
+    { 314,      "LID_SessionVersionStruct" },                       /* guessed as structure */
+    { 315,      "LID_SessionVersionSystemOMS" },
+    { 316,      "LID_SessionVersionProjectOMS" },
+    { 317,      "LID_SessionVersionSystemPAOM" },
+    { 318,      "LID_SessionVersionProjectPAOM" },
+    { 319,      "LID_SessionVersionSystemPAOMString" },
+    { 320,      "LID_SessionVersionProjectPAOMString" },
+    { 321,      "LID_SessionVersionProjectFormat" },
+    { 325,      "TypeFolderNetwork" },
+    { 326,      "ObjectFolderNetwork" },
+    { 327,      "ObjectServerAAEndDefault" },
+    { 328,      "ClassNetworkFolder" },
+    { 329,      "CompositionNetworkFolderServerAAEnd" },
+    { 334,      "ClassAAEnd" },
+    { 335,      "AAEndActive" },
+    { 336,      "AAEndSelect" },
+    { 337,      "AAEndLocalAddress" },
+    { 338,      "AAEndRemoteAddress" },
+    { 339,      "AAEndLocalAddressType" },
+    { 340,      "AAEndLocalAddressData" },
+    { 341,      "AAEndRemoteAddressType" },
+    { 342,      "AAEndRemoteAddressData" },
+    { 344,      "ClassServerAAEnd" },
+    { 345,      "ServerAAEndApplicationType" },
+    { 349,      "ClassClientAAEnd" },
+    { 350,      "DistributionTargetClassRid" },
+    { 351,      "AssociationDistributionTargetModel" },
+    { 352,      "AssociationModelDistributionTarget" },
+    { 387,      "RootMemoryReset" },
+    { 388,      "RootReset" },
+    { 389,      "ClassType" },
+    { 390,      "ClassStruct" },
+    { 391,      "ClassAttributeType" },
+    { 392,      "VariableTypeVariableTypeInstanceFlags" },
+    { 392,      "VariableTypeTypeInstanceFlags" },
+    { 393,      "VariableTypeVariableTypeAID" },                    /* duplicate -> 239 */
+    { 394,      "ObjectOMSObjectModel" },
+    { 395,      "ObjectOMSCore" },
+    { 396,      "ObjectOMSService" },
+    { 397,      "VariableTypeStructInstanceStructRID" },
+    { 398,      "ObjectVariableTypeIsConsistent" },
+    { 401,      "ObjectVartypeInProgress" },
+    { 406,      "ClassVariableTypeInstanceStoreMode" },
+    { 407,      "VariableTypeSourceEndianess" },
+    { 408,      "VariableTypeDestinationEndianess" },
+    { 410,      "VariableTypeTypeInfoReserveDataModified" },
+    { 504,      "VariableTypeAttributeTypeNumberOfConfiguredBit" },
+    { 505,      "CompVariableTypeBaseCompisitionAID" },
+    { 506,      "AssocVariableTypeBaseAssociationAID" },
+    { 511,      "ClassTypeInfo" },
+    { 514,      "CompArrayMemberType" },
+    { 515,      "ValueTypeArrayMemberType" },
+    { 516,      "VariableTypeModelOMVersion" },
+    { 517,      "VariableTyoeModelOMDevelopmentVersion" },
+    { 518,      "VariableTypeModelPOMID" },
+    { 519,      "VariableTypeModelPOMDevelopmentVersion" },
+    { 520,      "ClassResponseExtensionContainer" },
+    { 521,      "CompositionResponseExtension" },
+    { 522,      "ClassResponseExtension" },
+    { 523,      "VariableTypeResponseExtensionError" },
+    { 524,      "VariableTypeResponseExtensionIsLoadError" },
+    { 525,      "VariableTypeResponseExtensionIsFileSystemError" },
+    { 526,      "VariableTypeResponseExtensionObjectRID" },
+    { 527,      "VariableTypeResponseExtensionClassRID" },
+    { 528,      "VariableTypeResponseExtensionAttributeAID" },
+    { 529,      "VariableTypeStructModificationTime" },
+    { 530,      "VariableTypeResponseExtensionObjectRID2" },
+    { 531,      "VariableTypeResponseExtensionClassRID2" },
+    { 532,      "VariableTypeResponseExtensionFileName" },
+    { 533,      "VariableTypeResponseExtensionLineNumber" },
+    { 534,      "ClassOMSTypeInfoContainer" },
+    { 535,      "CompOMSTypeInfo" },
+    { 536,      "CompOMSTypeInfoContainer" },
+    { 537,      "ObjectOMSTypeInfoContainer" },
+    { 544,      "VT_OMS_Scarlar" },
+    { 545,      "VT_OMS_BOOL" },
+    { 546,      "VT_OMS_UINT8" },
+    { 547,      "VT_OMS_UINT16" },
+    { 548,      "VT_OMS_UINT32" },
+    { 549,      "VT_OMS_UINT64" },
+    { 550,      "VT_OMS_INT8" },
+    { 551,      "VT_OMS_INT16" },
+    { 552,      "VT_OMS_INT32" },
+    { 553,      "VT_OMS_INT64" },
+    { 554,      "VT_OMS_BITSET8" },
+    { 555,      "VT_OMS_BITSET16" },
+    { 556,      "VT_OMS_BITSET32" },
+    { 557,      "VT_OMS_BITSET64" },
+    { 558,      "VT_OMS_REAL32" },
+    { 559,      "VT_OMS_REAL64" },
+    { 560,      "VT_OMS_TIMESTAMP" },
+    { 561,      "VT_OMS_TIMESPAN" },
+    { 562,      "VT_OMS_RID" },
+    { 563,      "VT_OMS_AID" },
+    { 564,      "VT_OMS_BLOB" },
+    { 565,      "VT_OMS_STRING" },
+    { 566,      "VT_OMS_VARIANT" },
+    { 567,      "VT_OMS_StructInstance" },
+    { 568,      "VT_OMS_WSTRING" },
+    { 569,      "VT_OMS_INT32_Enum" },
+    { 570,      "VT_OMS_Array" },
+    { 571,      "VT_OMS_ArrayOneDimension" },
+    { 572,      "VT_OMS_DynamicArrayOneDimension" },
+    { 573,      "VT_OMS_SparseArrayOneDimension" },
+    { 574,      "VT_OMS_ArrayMultiDimension" },
+    { 575,      "VT_OMS_ArrayS7String" },
+    { 576,      "VT_OMS_ArrayS7WString" },
+    { 594,      "VariableTypeResponseExtensionObjectName" },
+    { 595,      "VariableTypeResponseExtensionClassName" },
+    { 596,      "VariableTypeResponseExtensionAttributeName" },
+    { 597,      "VariableTypeResponseExtensionObjectName2" },
+    { 598,      "VariableTypeResponseExtensionClassName2" },
+    { 599,      "VariableTypeResponseExtensionErrorText" },
+    { 600,      "VariableTypeResponseExtensionAdditionalValue" },
+    { 601,      "VariableTypeModelPOMVersion" },
+    { 602,      "VariableTypeObjectNamespaceID" },
+    { 603,      "VariableTypeObjectClassNamespaceID" },
+    { 604,      "VariableTypeObjectClassRID" },
+    { 605,      "VariableTypeModelNamespaceID" },
+    { 606,      "TextLibraryClassRID" },
+    { 607,      "TextLibraryStrings" },
+    { 608,      "TextLibraryOffsetArea" },
+    { 609,      "TextLibraryStringArea" },
+    { 611,      "VariableTypeTypeInfoSizeWithReserve" },
+    { 612,      "TextLibraryLoadState" },
+    { 700,      "TraceClassTrace" },
+    { 701,      "TraceObjectTrace" },
+    { 702,      "TraceVariableTypeCPUId" },
+    { 703,      "TraceVariableTypeSessionId" },
+    { 704,      "TraceVariableTypeIsLittleEndian" },
+    { 705,      "TraceVariableTypeTraceConverterType" },
+    { 706,      "TraceCompositionTraceDebug" },
+    { 707,      "TraceCompositionTraceSubsystemsAAEnd" },
+    { 708,      "TraceCompositionTraceBuffersAAEnd" },
+    { 709,      "TraceClassLTRCSubsystem" },
+    { 710,      "TraceObjectLTRCSubsystem" },
+    { 711,      "TraceVariableTypeLTRCLevelType" },
+    { 712,      "TraceVariableTypeLTRCSubsystemType" },
+    { 713,      "TraceCompositionSubsystemsLTRCSubsystem" },
+    { 714,      "TraceAssociationLTRCSubsystemsLTRCBuffer" },
+    { 715,      "TraceClassLTRCBuffer" },
+    { 716,      "TraceObjectLTRCBuffer" },
+    { 717,      "TraceVariableTypeBufferData" },
+    { 718,      "TraceVariableTypeBufferId" },
+    { 719,      "TraceVariableTypeBufferIdStr" },
+    { 720,      "TraceCompositionBuffersLTRCBuffer" },
+    { 721,      "TraceAssociationLTRCBufferLTRCSubsystem" },
+    { 722,      "TraceClassDebug" },
+    { 723,      "TraceObjectDebug" },
+    { 724,      "TraceVariableTypePostmortemData" },
+    { 725,      "TraceVariableTypeTextCommandIn" },
+    { 726,      "TraceVariableTypeTextCommandOut" },
+    { 727,      "TraceCompositionTraceDebugAAEnd" },
+    { 728,      "TraceCompositionDebugRoot" },
+    { 729,      "TraceClassSubsystems" },
+    { 730,      "TraceObjectSubsystems" },
+    { 731,      "TraceCompositionTraceSubsystems" },
+    { 732,      "TraceCompositionSubsystemsLTRCSubsystemsAAEnd" },
+    { 733,      "TraceClassBuffers" },
+    { 734,      "TraceObjectBuffers" },
+    { 735,      "TraceCompositionTraceBuffers" },
+    { 736,      "TraceCompositionBufferLTRCBufferAAEnd" },
+    { 737,      "TraceVariableTypeOathCommand" },
+    { 738,      "TraceVariableTypePathProject" },
+    { 739,      "TraceVariableTypePathTraceViewer" },
+    { 740,      "TraceClassTypesDebug" },
+    { 1000,     "ObjectSubscriptionTypes" },
+    { 1001,     "ClassSubscription" },
+    { 1002,     "SubscriptionMissedSendings" },
+    { 1003,     "SubscriptionSubsystemError" },
+    { 1005,     "SubscriptionReferenceTriggerAndTransmitMode" },
+    { 1006,     "ClassObjectReference" },
+    { 1007,     "ObjectReferenceTargetRID" },
+    { 1008,     "ObjectReferenceContainerRID" },
+    { 1009,     "ObjectReferenceObjectsState" },
+    { 1010,     "ClassAttributeReference" },
+    { 1011,     "AttributeReferenceTargetAID" },
+    { 1012,     "AttributeReferenceValue" },
+    { 1013,     "AttributeReferenceAccessResult" },
+    { 1014,     "ClassMultiAttributeReference" },
+    { 1015,     "MultiAttributeReferenceTargetAID" },
+    { 1016,     "MultiAttributeReferenceTargetOffset" },
+    { 1017,     "MultiAttributeReferenceTargetLength" },
+    { 1018,     "MultiAttributeReferenceTargetValue" },
+    { 1019,     "MultiAttributeReferenceAccessResult" },
+    { 1020,     "MultiAttributeReferenceNumberReference" },
+    { 1021,     "ClassTimerReference" },
+    { 1022,     "TimerReferenceTimerInterval" },
+    { 1023,     "ClassReceivedObject" },
+    { 1024,     "ReceivedObjectMaximalStoredObjects" },
+    { 1025,     "CompositionSubscriptionReceivedObject" },
+    { 1026,     "CompositionSubscriptionSubscriptionReference" },
+    { 1027,     "CompositionReceivedObjectsObject" },
+    { 1028,     "CompositionSubscriptionsSubscription" },
+    { 1028,     "CompSubscriptionsSubscription" },
+    { 1037,     "SystemLimits" },
+    { 1040,     "SubscriptionRouteMode" },
+    { 1041,     "SubscriptionActive" },
+    { 1042,     "ReceivedObjectsStoredObjects" },
+    { 1043,     "ClassStoredExploreReference" },
+    { 1048,     "SubscriptionReferenceList" },
+    { 1049,     "SubscriptionCycleTime" },
+    { 1050,     "SubscriptionDelayTime" },
+    { 1051,     "SubscriptionDisabled" },
+    { 1052,     "SubscriptionCount" },
+    { 1053,     "SubscriptionCreditLimit" },
+    { 1054,     "SubscriptionTicks" },
+    { 1072,     "AssocicationObjectDistribution" },
+    { 1072,     "ObjectAssociationDistribution" },
+    { 1073,     "AssocicationObjectDistributionOpposite" },
+    { 1073,     "ObjectAssociationDistributionOpposite" },
+    { 1081,     "FreeItems" },
+    { 1082,     "SubscriptionFunctionClassId" },
+    { 1246,     "Filter" },                                         /* MAN->WCC */
+    { 1247,     "FilterOperation" },                                /* MAN->WCC */
+    { 1249,     "AddressCount" },                                   /* MAN->WCC */
+    { 1250,     "Address" },                                        /* MAN->WCC */
+    { 1251,     "FilterValue" },                                    /* MAN->WCC */
+    { 1256,     "ObjectQualifier" },                                /* MAN */
+    { 1257,     "ParentRID" },                                      /* MAN */
+    { 1258,     "CompositionAID" },                                 /* MAN */
+    { 1259,     "KeyQualifier" },                                   /* MAN */
+    { 1501,     "CompTypeInfo" },
+    { 1502,     "TI_TComSize" },
+    { 1503,     "TI_StructureType" },
+    { 1504,     "StructOffsetInfoStructMember" },
+    { 1505,     "StructMemberOffsetClassic" },
+    { 1506,     "StructMemberOffsetNena" },
+    { 1507,     "StructOffsetInfoStructMemberBool" },
+    { 1508,     "StructMemberBoolOffsetClassic" },
+    { 1509,     "StructMemberBoolOffsetNena" },
+    { 1510,     "StructMemberBoolBitOffsetClassic" },
+    { 1511,     "StructMemberBoolBitOffsetNena" },
+    { 1512,     "StructOffsetInfoPlainMember" },
+    { 1513,     "PlainMemberAccessability" },
+    { 1514,     "PlainMemberSection" },
+    { 1515,     "PlainMemberTComOffset" },
+    { 1516,     "PlainMemberOffset" },
+    { 1517,     "StructOffsetInfoPlainMemberBool" },
+    { 1518,     "PlainMemberBoolAccessability" },
+    { 1519,     "PlainMemberBoolSection" },
+    { 1520,     "PlainMemberBoolTComOffset" },
+    { 1521,     "PlainMemberBoolOffset" },
+    { 1522,     "PlainMemberBoolBitOffset" },
+    { 1523,     "StructOffsetInfoMultiInstanceMember" },
+    { 1524,     "MultiInstanceMemberAccessability" },
+    { 1525,     "MultiInstanceMemberSection" },
+    { 1526,     "MultiInstanceMemberTComOffset" },
+    { 1527,     "MultiInstanceMemberOffsetClassic" },
+    { 1528,     "MultiInstanceMemberOffsetRetain" },
+    { 1529,     "MultiInstanceMemberOffsetVolatile" },
+    { 1530,     "StructPaddingSimplePadding" },
+    { 1531,     "SimplePaddingSizeClassic" },
+    { 1532,     "SimplePaddingSizeNena" },
+    { 1533,     "StructOMS_TypeSafeBLOB" },
+    { 1533,     "StructOMS_STB" },
+    { 1534,     "OMS_STB_DescriptionRID" },
+    { 1535,     "OMS_STB_Structured" },
+    { 1536,     "OMS_STB_ClassicBlob" },
+    { 1537,     "OMS_STB_RetainBlob" },
+    { 1538,     "OMS_STB_VolatileBlob" },
+    { 1540,     "PlainMemberBoolTComBitOffset" },
+    { 1542,     "StructFunctionBlockSimplePadding" },
+    { 1543,     "FunctionBlockPaddingSizeClassic" },
+    { 1544,     "FunctionBlockPaddingSizeRetain" },
+    { 1545,     "FunctionBlockPaddingSizeVolatile" },
+    { 1651,     "DistributionPackageTypes" },
+    { 1652,     "DistributionClassManager" },
+    { 1653,     "DistributionSingletonManager" },
+    { 1654,     "DistributionParserDownloadResult" },
+    { 1655,     "DistributionPortCount" },
+    { 1656,     "DistributionStartMode" },
+    { 1657,     "DistributionError" },
+    { 1658,     "DistributionState" },
+    { 1659,     "DistributionCompositionPort" },
+    { 1662,     "DistributionPort" },
+    { 1663,     "DistributionAddressID" },
+    { 1664,     "DistributionRIDSpace" },
+    { 1665,     "DistributionAddress" },
+    { 1666,     "DistributionPortError" },
+    { 1667,     "DistributionPortState" },
+    { 1668,     "DistributionPortMode" },
+    { 1669,     "DistributionCompositionManager" },
+    { 1670,     "DistributionPort1" },
+    { 1671,     "DistributionPort2" },
+    { 1672,     "DistributionSession" },
+    { 1673,     "DistributionSessionPort" },
+    { 1700,     "ClassTransaction" },
+    { 1700,     "ClassTransactionObject" },
+    { 1702,     "TransactionParameters" },
+    { 1800,     "StructSecurityKey" },
+    { 1801,     "SecurityKeyVersion" },
+    { 1802,     "SecurityKeySecurityLevel" },
+    { 1803,     "SecurityKeyPublicKeyID" },
+    { 1804,     "SecurityKeySymmetricKeyID" },
+    { 1805,     "SecurityKeyEncryptedKey" },
+    { 1810,     "StructEncryption" },
+    { 1811,     "EncryptionData" },
+    { 1820,     "StructMAC" },
+    { 1821,     "MACAlgorithm" },
+    { 1822,     "MACEncryptedKey" },
+    { 1823,     "MACData" },
+    { 1825,     "SecurityKeyID" },                                  /* MAN */
+    { 1826,     "ID" },                                             /* MAN */
+    { 1827,     "flags" },                                          /* MAN */
+    { 1828,     "flags_internal" },                                 /* MAN */
+    { 1830,     "SessionKey" },                                     /* MAN */
+    { 1842,     "EffectiveProtectionLevel" },                       /* MAN */
+    { 1843,     "ActiveProtectionLevel" },                          /* MAN */
+    { 1844,     "ExpectedLegitimLevel" },                           /* MAN */
+    { 1845,     "CollaborationToken" },                             /* MAN */
+    { 1846,     "Legitimate" },                                     /* MAN */
+    { 2002,     "UMACfile.UMACcontent" },
+    { 2003,     "UMACfile.itsASRoot" },
+    { 2004,     "ASRoot.itsUMACfile" },
+    { 2005,     "UMACfile.Class_Rid" },
+    { 2006,     "ACCcommunicationEvent.ACCSource" },
+    { 2007,     "ACCcommunicationEvent.itsACCcommunicationOBConfig" },
+    { 2008,     "ACCcommunicationOB.itsACCcommunicationEventConfig" },
+    { 2009,     "ACCcommunicationEvent.Class_Rid" },
+    { 2010,     "ApplicationEvent.itsApplicationEventOBConfig" },
+    { 2011,     "ApplicationEventOB.itsApplicationEventConfig" },
+    { 2012,     "ApplicationEvent.Class_Rid" },
+    { 2013,     "CPUredundancyError.itsCPUredundancyErrorOB" },
+    { 2014,     "CPUredundancyErrorOB.itsCPUredundancyError" },
+    { 2015,     "CPUredundancyError.Class_Rid" },
+    { 2016,     "CyclicEvent.CycleTimeConfig" },
+    { 2017,     "CyclicEvent.PhaseShiftConfig" },
+    { 2018,     "CyclicEvent.CycleTimeActual" },
+    { 2019,     "CyclicEvent.PhaseShiftActual" },
+    { 2020,     "CyclicEvent.Threshold" },
+    { 2021,     "CyclicEvent.ReductionFactor" },
+    { 2022,     "CyclicEvent.itsCyclicOB" },
+    { 2023,     "CyclicOB.itsCyclicEvent" },
+    { 2024,     "CyclicEvent.Class_Rid" },
+    { 2025,     "DiagnosticError.itsDiagnosticErrorOB" },
+    { 2026,     "DiagnosticErrorOB.itsDiagnosticError" },
+    { 2027,     "DiagnosticError.Class_Rid" },
+    { 2028,     "EventDefinition.EventNumber" },
+    { 2029,     "EventDefinition.EventClassNumber" },
+    { 2030,     "EventDefinition.ReactionWithoutOB" },
+    { 2031,     "EventDefinition.EnableActual" },
+    { 2032,     "EventDefinition.EnableInitial" },
+    { 2033,     "EventDefinition.Priority" },
+    { 2034,     "EventDefinition.maxBufferedEvents" },
+    { 2035,     "SWEventDefinition.itsSWEvents" },
+    { 2036,     "SWEvents.itsSWEventDefinition" },
+    { 2037,     "EventDefinition.Class_Rid" },
+    { 2040,     "IOredundancyError.itsIOredundancyErrorOB" },
+    { 2041,     "IOredundancyErrorOB.itsIOredundancyError" },
+    { 2042,     "IOredundancyError.Class_Rid" },
+    { 2043,     "PeripheralAccessError.AccessErrorMode" },
+    { 2044,     "PeripheralAccessError.itsPeripheralAccessErrorOB" },
+    { 2045,     "PeripheralAccessErrorOB.itsPeripheralAccessError" },
+    { 2046,     "PeripheralAccessError.Class_Rid" },
+    { 2049,     "ProcessEvent.itsProcessEventOBConfig" },
+    { 2050,     "ProcessEventOB.itsProcessEventConfig" },
+    { 2051,     "ProcessEvent.Class_Rid" },
+    { 2054,     "ProfileEvent.itsProfileEventOB" },
+    { 2055,     "ProfileEventOB.itsProfileEvent" },
+    { 2056,     "ProfileEvent.Class_Rid" },
+    { 2057,     "ProgramCycle.itsProgramCycleOB" },
+    { 2058,     "ProgramCycleOB.itsProgramCycle" },
+    { 2059,     "ProgramCycle.Class_Rid" },
+    { 2060,     "PullPlugEvent.itsPullPlugEventOB" },
+    { 2061,     "PullPlugEventOB.itsPullPlugEvent" },
+    { 2062,     "PullPlugEvent.Class_Rid" },
+    { 2063,     "RackStationFailure.itsRackStationFailureOB" },
+    { 2064,     "RackStationFailureOB.itsRackStationFailure" },
+    { 2065,     "RackStationFailure.Class_Rid" },
+    { 2066,     "StartupEvent.StopEvent" },
+    { 2067,     "StartupEvent.AddStartupInfo" },
+    { 2068,     "StartupEvent.itsStartupOB" },
+    { 2069,     "StartupOB.itsStartupEvent" },
+    { 2070,     "StartupEvent.Class_Rid" },
+    { 2073,     "StatusEvent.itsStatusEventOB" },
+    { 2074,     "StatusEventOB.itsStatusEvent" },
+    { 2075,     "StatusEvent.Class_Rid" },
+    { 2076,     "SynchronousCycleEvent.Threshold" },
+    { 2079,     "SynchronousCycleEvent.itsSynchronousCycleOB" },
+    { 2080,     "SynchronousCycleOB.itsSynchronousCycleEvent" },
+    { 2081,     "SynchronousCycleEvent.Class_Rid" },
+    { 2082,     "TechnologyEvent.Threshold" },
+    { 2083,     "TechnologyEvent.itsTechnologyEventOB" },
+    { 2084,     "TechnologyEventOB.itsTechnologyEvent" },
+    { 2085,     "TechnologyEvent.Class_Rid" },
+    { 2086,     "TimeDelayEvent.itsTimeDelayOB" },
+    { 2087,     "TimeDelayOB.itsTimeDelayEvent" },
+    { 2088,     "TimeDelayEvent.Class_Rid" },
+    { 2089,     "TimeError.itsTimeErrorOB" },
+    { 2090,     "TimeErrorOB.itsTimeError" },
+    { 2091,     "TimeError.Class_Rid" },
+    { 2092,     "TimeOfDayEvent.Execution" },
+    { 2093,     "TimeOfDayEvent.Start" },
+    { 2094,     "TimeOfDayEvent.Weekday" },
+    { 2095,     "TimeOfDayEvent.State" },
+    { 2096,     "TimeOfDayEvent.Threshold" },
+    { 2097,     "TimeOfDayEvent.itsTimeOfDayOB" },
+    { 2098,     "TimeOfDayOB.itsTimeOfDayEvent" },
+    { 2099,     "TimeOfDayEvent.Class_Rid" },
+    { 2101,     "SMcommon.Class_Rid" },                             /* V14 */
+    { 2102,     "UpdateEvent.itsUpdateEventOB" },
+    { 2103,     "UpdateEventOB.itsUpdateEvent" },
+    { 2104,     "UpdateEvent.Class_Rid" },
+    { 2105,     "ProgrammingError.itsProgrammingErrorOB" },
+    { 2106,     "ProgrammingErrorOB.itsProgrammingError" },
+    { 2107,     "ProgrammingError.Class_Rid" },
+    { 2108,     "IOaccessError.itsIOaccessErrorOB" },
+    { 2109,     "IOaccessErrorOB.itsIOaccessError" },
+    { 2110,     "IOaccessError.Class_Rid" },
+    { 2111,     "MaxCycleTimeError.Class_Rid" },
+    { 2115,     "CardReaderWriter.MMCtype" },
+    { 2116,     "CardReaderWriter.MMCsize" },
+    { 2117,     "CardReaderWriter.MMCusedSize" },
+    { 2118,     "CardReaderWriter.MCcommandREQ" },
+    { 2119,     "CardReaderWriter.itsCPU" },
+    { 2120,     "CPU.itsCardReaderWriter" },
+    { 2121,     "CardReaderWriter.Class_Rid" },
+    { 2122,     "WebServer.itsCPU" },
+    { 2123,     "CPU.itsWebServer" },
+    { 2124,     "C2C.Class_Rid" },                                  /* V14 */
+    { 2125,     "AdaptationRoot.Class_Rid" },                       /* V14 */
+    { 2126,     "WebServer.Class_Rid" },
+    { 2127,     "CentralDevice.itsCPU" },
+    { 2128,     "CPU.itsCentralDevice" },
+    { 2131,     "CentralDevice.Class_Rid" },
+    { 2134,     "centralIOcontroller.itsCPU" },
+    { 2135,     "CPU.itsCentralIOcontroller" },
+    { 2136,     "centralIOcontroller.Class_Rid" },
+    { 2137,     "centralIOsystem.Class_Rid" },
+    { 2144,     "CPU.itsPort" },
+    { 2145,     "Port.itsCPU" },
+    { 2148,     "CPU.itsIOinterface" },
+    { 2149,     "IOinterface.itsCPU" },
+    { 2150,     "ASObjectAdapted.Class_Rid" },                      /* V14 */
+    { 2151,     "iIODeviceC2C.Class_Rid" },                         /* V14 */
+    { 2152,     "IODeviceAbstrC2C.Class_Rid" },                     /* V14 */
+    { 2153,     "IODeviceC2C.Class_Rid" },                          /* V14 */
+    { 2154,     "IOinterfaceC2C.Class_Rid" },                       /* V14 */
+    { 2155,     "HCPUredIOCtrl.Class_Rid" },                        /* V14 */
+    { 2156,     "HCPUsyncIF.Class_Rid" },                           /* V14 */
+    { 2160,     "CPU.itsOnboardIO" },
+    { 2161,     "onboardIO.itsCPU" },
+    { 2162,     "CPU.itsCPUexecUnit" },
+    { 2163,     "CPUexecUnit.itsCPU" },
+    { 2164,     "CPU.itsCPUcommon" },
+    { 2165,     "CPUcommon.itsCPU" },
+    { 2166,     "CPU.Class_Rid" },
+    { 2167,     "CPUexecUnit.OperatingStateREQ" },
+    { 2168,     "CPUexecUnit.PowerOnAction" },
+    { 2169,     "SubmoduleRef.Class_Rid" },                         /* V14 */
+    { 2171,     "CPUexecUnit.MaxCycleConfig" },
+    { 2172,     "CPUexecUnit.MinCycleConfig" },
+    { 2173,     "CPUexecUnit.MaxCycleActual" },
+    { 2174,     "CPUexecUnit.MinCycleActual" },
+    { 2175,     "CPUexecUnit.LastCycleActual" },
+    { 2176,     "CPUexecUnit.Interruptible" },
+    { 2177,     "CPUexecUnit.itsPLCProgram" },
+    { 2178,     "PLCProgram.itsCPUexecUnit" },
+    { 2179,     "CPUexecUnit.Class_Rid" },
+    { 2180,     "Device.ProjectID" },
+    { 2183,     "Device.itsRack" },
+    { 2184,     "Rack.itsDevice" },
+    { 2189,     "Device.itsModuleLean" },
+    { 2190,     "ModuleLean.itsDevice" },
+    { 2191,     "Device.itsRackLean" },
+    { 2192,     "RackLean.itsDevice" },
+    { 2193,     "Device.Class_Rid" },
+    { 2194,     "DeviceItem.HwCompatMode" },
+    { 2195,     "SubmoduleAbstr.itsSDB1xxx" },
+    { 2196,     "SDB1xxx.itsSubmoduleAbstr" },
+    { 2197,     "DeviceItem.Class_Rid" },
+    { 2231,     "CP.itsPort" },
+    { 2232,     "Port.itsCP" },
+    { 2233,     "CP.itsCPcommon" },
+    { 2234,     "CPcommon.itsCP" },
+    { 2235,     "CP.Class_Rid" },
+    { 2236,     "CPcommon.Class_Rid" },
+    { 2237,     "HWObject.DIS" },
+    { 2252,     "HWObject.DNNMode" },
+    { 2256,     "HWObject.HWTypeName" },
+    { 2257,     "HWObject.ASLogEntries" },
+    { 2258,     "HWObject.DeactivatedConfig" },
+    { 2259,     "HWObject.DTI_Type" },
+    { 2260,     "HWObject.DTI_Version" },
+    { 2261,     "HWObject.IuM0_supported" },
+    { 2262,     "HWObject.Max_Channel_Diag" },
+    { 2263,     "HWObject.Max_Component_Diag" },
+    { 2264,     "HWObject.Option_Number" },
+    { 2265,     "HWObject.PossibleKeywords" },
+    { 2266,     "HWObject.LADDR" },
+    { 2267,     "HWObject.SpecificTextListID" },
+    { 2268,     "HWObject.GenDiagAllowed" },
+    { 2269,     "HWObject.superDNN" },
+    { 2270,     "HWObject.subDNN" },
+    { 2273,     "HWObject.Class_Rid" },
+    { 2277,     "IOinterface.reserved_1" },
+    { 2278,     "IOinterface.reserved_2" },
+    { 2281,     "Interface.itsPort" },
+    { 2282,     "Port.itsInterface" },
+    { 2285,     "IOinterface.Class_Rid" },
+    { 2286,     "iIODevice.Class_Rid" },
+    { 2289,     "Interface.Class_Rid" },
+    { 2293,     "IODeviceAbstr.StationNumber" },
+    { 2294,     "IODeviceAbstr.Dirty" },
+    { 2295,     "IODeviceAbstr.Class_Rid" },
+    { 2316,     "IOSubmoduleAbstr.IOmapping" },
+    { 2334,     "IOSubmoduleAbstr.Class_Rid" },
+    { 2335,     "IOsystem.configuredStations" },
+    { 2336,     "IOsystem.faultyStations" },
+    { 2337,     "IOsystem.deactivatedStations" },
+    { 2338,     "IOsystem.highStationNumber" },
+    { 2339,     "IOsystem.Dirty" },
+    { 2340,     "IOsystem.existingStations" },
+    { 2341,     "IOsystem.Class_Rid" },
+    { 2343,     "CPUcommon.LMSize" },
+    { 2344,     "CPUcommon.LMUsedSize" },
+    { 2345,     "CPUcommon.LMtype" },
+    { 2357,     "ModuleLean.SlotNumber" },
+    { 2359,     "ModuleLean.DataRecordsActual" },
+    { 2360,     "ModuleLean.DataRecordsConf" },
+    { 2363,     "ModuleLean.itsRack" },
+    { 2364,     "Rack.itsModuleLean" },
+    { 2367,     "ModuleLean.itsRackLean" },
+    { 2368,     "RackLean.itsModuleLean" },
+    { 2369,     "ModuleLean.Class_Rid" },
+    { 2370,     "SubmoduleAbstr.DataRecordsConf" },
+    { 2371,     "SubmoduleAbstr.DataRecordsActual" },
+    { 2372,     "SubmoduleAbstr.WriteDataRecordsREQ" },
+    { 2373,     "SubmoduleAbstr.DataRecordsAdapted" },
+    { 2374,     "SubmoduleAbstr.itsSC" },
+    { 2375,     "SC.itsSubmoduleAbstr" },
+    { 2376,     "IOSubmoduleAbstr.itsProcessImageInputs" },
+    { 2377,     "subPI.itsIOModuleSubmoduleInputs" },
+    { 2378,     "ReleaseMngmtRoot.Class_Rid" },                     /* V14 */
+    { 2379,     "ReleaseMngmt.Class_Rid" },                         /* V14 */
+    { 2380,     "onboardIO.Class_Rid" },
+    { 2381,     "IOinterface.itsDecentralIOsystem" },
+    { 2382,     "decentralIOsystem.itsIOinterface" },
+    { 2383,     "IOSubmoduleDB.Class_Rid" },                        /* V14 */
+    { 2384,     "DBmapping.Class_Rid" },                            /* V14 */
+    { 2385,     "VL_DB.Class_Rid" },                                /* V14 */
+    { 2386,     "Port.Class_Rid" },
+    { 2387,     "Rack.RackNumber" },
+    { 2388,     "Rack.Class_Rid" },
+    { 2389,     "SC.itsHWConfiguration" },
+    { 2390,     "HWConfiguration.itsSC" },
+    { 2391,     "SC.Class_Rid" },
+    { 2392,     "SDB1xxx.Class_Rid" },
+    { 2393,     "SubmoduleAbstr.SubslotNumber" },
+    { 2394,     "Submodule.Class_Rid" },
+    { 2395,     "IODevice.Class_Rid" },
+    { 2396,     "VL_ConfiguredTypes.Class_Rid" },                   /* V14 */
+    { 2397,     "RackLean.LADDR" },
+    { 2398,     "RackLean.RackNumber" },
+    { 2399,     "RackLean.Class_Rid" },
+    { 2400,     "decentralIOsystem.Class_Rid" },
+    { 2401,     "TO_HW.TOtype" },
+    { 2402,     "TO_HW.Class_Rid" },
+    { 2406,     "CPUcommon.ClockStatus" },
+    { 2407,     "CPUcommon.CommunicationLoad" },
+    { 2408,     "CPUcommon.CommunicationPriority" },
+    { 2409,     "CPUcommon.reserved" },
+    { 2414,     "CPUcommon.ConnectionsUsed" },
+    { 2415,     "CPUcommon.LocalTime" },
+    { 2416,     "CPUcommon.MemRetainSize" },
+    { 2417,     "CPUcommon.MemRetainUsedSize" },
+    { 2418,     "CPUcommon.MemSize" },
+    { 2419,     "CPUcommon.MemUsedSize" },
+    { 2421,     "CPUcommon.SystemTime" },
+    { 2422,     "CPUcommon.TimeTransformationRuleConfig" },
+    { 2434,     "CPUcommon.ClockFlags" },
+    { 2435,     "CPUcommon.SystemFlags" },
+    { 2436,     "CPUcommon.Class_Rid" },
+    { 2437,     "AdditionalDocument.DocumentType" },
+    { 2438,     "AdditionalDocument.Content" },
+    { 2439,     "AdditionalDocument.itsFolder" },
+    { 2440,     "Folder.itsAdditionalDocument" },
+    { 2441,     "AdditionalDocument.itsHWConfiguration" },
+    { 2442,     "HWConfiguration.itsAdditionalDocument" },
+    { 2443,     "AdditionalDocument.itsPLCProgram" },
+    { 2444,     "PLCProgram.itsAdditionalDocument" },
+    { 2445,     "AdditionalDocument.Class_Rid" },
+    { 2446,     "ASLog.Remanence" },
+    { 2447,     "ASLog.LogEntry" },
+    { 2448,     "ASLog.Class_Rid" },
+    { 2449,     "ASObjectES.IdentES" },
+    { 2450,     "ASObjectES.Designators" },
+    { 2451,     "ASObjectES.WorkingMemorySize" },
+    { 2452,     "ASObjectES.Class_Rid" },
+    { 2453,     "ASObjectSimple.LastModified" },
+    { 2454,     "ASObjectSimple.LoadMemorySize" },
+    { 2455,     "ASObjectSimple.itsFolder" },
+    { 2456,     "Folder.itsASObjectSimple" },
+    { 2457,     "ASObjectSimple.Class_Rid" },
+    { 2458,     "HWConfiguration.ESconsistent" },
+    { 2459,     "ASRoot.ESversion" },
+    { 2460,     "ASRoot.AOMDevelopmentVersion" },
+    { 2461,     "ASRoot.AOMVersion" },
+    { 2462,     "ASRoot.PAOMVersion" },
+    { 2463,     "ASRoot.PAOMDevelopmentVersion" },
+    { 2464,     "ASRoot.itsPLCProgram" },
+    { 2465,     "PLCProgram.itsASRoot" },
+    { 2466,     "ASRoot.itsLogs" },
+    { 2467,     "Logs.itsASRoot" },
+    { 2468,     "ASRoot.itsFolders" },
+    { 2469,     "Folders.itsASRoot" },
+    { 2470,     "ASRoot.itsHWConfiguration" },
+    { 2471,     "HWConfiguration.itsASRoot" },
+    { 2472,     "ASRoot.itsTisJobCont" },
+    { 2473,     "TisJobCont.itsASRoot" },
+    { 2474,     "ASRoot.itsTisSubsystem" },
+    { 2475,     "TisSubsystem.itsASRoot" },
+    { 2476,     "ASRoot.itsAlarmSubsystem" },
+    { 2477,     "AlarmSubsystem.itsASRoot" },
+    { 2478,     "ASRoot.Class_Rid" },
+    { 2479,     "Container.ChangeCounter" },
+    { 2480,     "Container.Class_Rid" },
+    { 2481,     "SWEvents.itsPLCProgram" },
+    { 2482,     "PLCProgram.itsSWEvents" },
+    { 2483,     "SWEvents.Class_Rid" },
+    { 2484,     "Folder.ContentSize" },
+    { 2485,     "Folder.ContentCount" },
+    { 2486,     "Folder.FolderType" },
+    { 2487,     "Folder.itsFolders" },
+    { 2488,     "Folders.itsFolder" },
+    { 2489,     "Folder.itsSubFolder" },
+    { 2490,     "Folder.itsSuperFolder" },
+    { 2491,     "Folder.Class_Rid" },
+    { 2492,     "Folders.Class_Rid" },
+    { 2494,     "HWConfiguration.itsSDiagCont" },
+    { 2495,     "SDiagCont.itsHWConfiguration" },
+    { 2496,     "HWConfiguration.Class_Rid" },
+    { 2497,     "Log.EntryCount" },
+    { 2498,     "Log.MaxEntries" },
+    { 2499,     "Log.LogType" },
+    { 2500,     "Log.itsLogs" },
+    { 2501,     "Logs.itsLog" },
+    { 2502,     "Log.Class_Rid" },
+    { 2503,     "Logs.Class_Rid" },
+    { 2504,     "PLCProgram.itsProgramCyclePI" },
+    { 2505,     "ProgramCyclePI.itsPLCProgram_PIP" },
+    { 2512,     "PLCProgram.itsRuntimeMeters" },
+    { 2513,     "RuntimeMeters.itsPLCProgram" },
+    { 2514,     "PLCProgram.itsSWObject" },
+    { 2515,     "SWObject.itsPLCProgram" },
+    { 2520,     "PLCProgram.Class_Rid" },
+    { 2521,     "Block.BlockNumber" },
+    { 2522,     "Block.AutoNumbering" },
+    { 2523,     "Block.BlockLanguage" },
+    { 2524,     "Block.KnowhowProtected" },
+    { 2527,     "Block.Unlinked" },
+    { 2528,     "Block.reserved" },
+    { 2529,     "Block.RuntimeModified" },
+    { 2531,     "Block.Dirty" },
+    { 2532,     "Block.CRC" },
+    { 2533,     "Block.BodyDescription" },
+    { 2537,     "Block.OptimizeInfo" },
+    { 2538,     "Block.Class_Rid" },
+    { 2541,     "ControllerArea.Class_Rid" },
+    { 2543,     "DataInterface.InterfaceModified" },
+    { 2544,     "DataInterface.InterfaceDescription" },
+    { 2545,     "DataInterface.CompilerSwiches" },
+    { 2546,     "DataInterface.LineComments" },
+    { 2547,     "DataInterface.Class_Rid" },
+    { 2548,     "DB.ValueInitial" },
+    { 2550,     "DB.ValueActual" },
+    { 2551,     "DB.InitialChanged" },
+    { 2554,     "DataType.Class_Rid" },
+    { 2555,     "DB.ApplicationCreated" },
+    { 2563,     "DB.ReadOnly" },
+    { 2574,     "DB.Class_Rid" },
+    { 2578,     "FB.Class_Rid" },
+    { 2579,     "FC.Class_Rid" },
+    { 2580,     "FunctionalObject.Code" },
+    { 2581,     "FunctionalObject.ParameterModified" },
+    { 2582,     "FunctionalObject.extRefData" },
+    { 2583,     "FunctionalObject.intRefData" },
+    { 2584,     "FunctionalObject.NetworkComments" },
+    { 2585,     "FunctionalObject.NetworkTitles" },
+    { 2586,     "FunctionalObject.CalleeList" },
+    { 2587,     "FunctionalObject.InterfaceSignature" },
+    { 2588,     "FunctionalObject.DisplayInfo" },
+    { 2589,     "FunctionalObject.DebugInfo" },
+    { 2590,     "FunctionalObject.LocalErrorHandling" },
+    { 2591,     "FunctionalObject.LongConstants" },
+    { 2592,     "FunctionalObject.Class_Rid" },
+    { 2595,     "IArea.Class_Rid" },
+    { 2599,     "MArea.Remanence" },
+    { 2602,     "MArea.Class_Rid" },
+    { 2607,     "OB.StartInfoType" },
+    { 2610,     "OB.Class_Rid" },
+    { 2616,     "ProcessImage.PInumber" },
+    { 2618,     "ProcessImage.Class_Rid" },
+    { 2620,     "ProgramCyclePI.Class_Rid" },
+    { 2621,     "QArea.Class_Rid" },
+    { 2623,     "RuntimeMeters.Class_Rid" },
+    { 2624,     "S7Counters.Remanence" },
+    { 2625,     "S7Counters.Class_Rid" },
+    { 2626,     "S7Timers.Remanence" },
+    { 2627,     "S7Timers.Class_Rid" },
+    { 2630,     "SWObject.Class_Rid" },
+    { 2637,     "ACCcommunicationOB.Class_Rid" },
+    { 2638,     "ApplicationEventOB.Class_Rid" },
+    { 2639,     "CPUredundancyErrorOB.Class_Rid" },
+    { 2640,     "CyclicOB.Class_Rid" },
+    { 2641,     "DiagnosticErrorOB.Class_Rid" },
+    { 2642,     "IOaccessErrorOB.Class_Rid" },
+    { 2643,     "IOredundancyErrorOB.Class_Rid" },
+    { 2644,     "PeripheralAccessErrorOB.Class_Rid" },
+    { 2645,     "ProcessEventOB.Class_Rid" },
+    { 2646,     "ProfileEventOB.Class_Rid" },
+    { 2647,     "ProgramCycleOB.Class_Rid" },
+    { 2648,     "ProgrammingErrorOB.Class_Rid" },
+    { 2649,     "PullPlugEventOB.Class_Rid" },
+    { 2650,     "RackStationFailureOB.Class_Rid" },
+    { 2651,     "StartupOB.Class_Rid" },
+    { 2652,     "StatusEventOB.Class_Rid" },
+    { 2653,     "SynchronousCycleOB.Class_Rid" },
+    { 2654,     "TechnologyEventOB.Class_Rid" },
+    { 2655,     "TimeDelayOB.Class_Rid" },
+    { 2656,     "TimeErrorOB.Class_Rid" },
+    { 2657,     "TimeOfDayOB.Class_Rid" },
+    { 2658,     "UpdateEventOB.Class_Rid" },
+    { 2659,     "AlarmSubscriptionRef.AlarmDomain" },
+    { 2660,     "AlarmSubscriptionRef.itsAlarmSubsystem" },
+    { 2661,     "AlarmSubsystem.itsAlarmSubscriptionRef" },
+    { 2662,     "AlarmSubscriptionRef.Class_Rid" },
+    { 2663,     "AlarmSubsystem.SmallDAICount" },
+    { 2664,     "AlarmSubsystem.BigDAISize" },
+    { 2665,     "AlarmSubsystem.itsDAI" },
+    { 2666,     "DAI.itsAlarmSubsystem" },
+    { 2667,     "AlarmSubsystem.itsUpdateRelevantDAI" },
+    { 2668,     "DAI.itsUpdateRelevantView" },
+    { 2669,     "AlarmSubsystem.Class_Rid" },
+    { 2670,     "DAI.CPUAlarmID" },
+    { 2671,     "DAI.AllStatesInfo" },
+    { 2672,     "DAI.AlarmDomain" },
+    { 2673,     "DAI.Coming" },
+    { 2677,     "DAI.Going" },
+    { 2681,     "DAI.Class_Rid" },
+    { 2686,     "SDiagCont.Class_Rid" },
+    { 2687,     "AbstractTisJob.TisJobEnabledConf" },
+    { 2688,     "AbstractTisJob.TisJobEnabledActual" },
+    { 2689,     "AbstractTisJob.ContinuingJob" },
+    { 2690,     "AbstractTisJob.CreationTimestamp" },
+    { 2691,     "AbstractTisJob.ModifyingJob" },
+    { 2692,     "AbstractTisJob.NotificationCredit" },
+    { 2693,     "AbstractTisJob.Request" },
+    { 2694,     "AbstractTisJob.Trigger" },
+    { 2695,     "AbstractTisJob.Result" },
+    { 2696,     "AbstractTisJob.itsAssumingSubscriptionRef" },
+    { 2697,     "TisSubscriptionRef.itsAssumingJob" },
+    { 2698,     "AbstractTisJob.itsTisSubsystem" },
+    { 2699,     "TisSubsystem.itsTisJob" },
+    { 2700,     "AbstractTisJob.Class_Rid" },
+    { 2701,     "ContinuingTisJob.Application" },
+    { 2702,     "ContinuingTisJob.ClientComment" },
+    { 2703,     "ContinuingTisJob.ClientSessionRID" },
+    { 2704,     "ContinuingTisJob.Host" },
+    { 2705,     "ContinuingTisJob.User" },
+    { 2706,     "ContinuingTisJob.itsTisJobCont" },
+    { 2707,     "TisJobCont.itsContinuingTisJob" },
+    { 2708,     "ContinuingTisJob.Class_Rid" },
+    { 2709,     "SessionTisJob.Class_Rid" },
+    { 2710,     "TisJobCont.Class_Rid" },
+    { 2711,     "TisSubscriptionRef.IncrementNotificationCredit" },
+    { 2712,     "TisSubscriptionRef.Class_Rid" },
+    { 2713,     "TisSubsystem.Class_Rid" },
+    { 2714,     "SessionTisJob.itsServerSession" },
+    { 2715,     "DAI.AlarmTexts_Rid" },                             /* V14 */
+    { 2716,     "TextContainer.LibraryAccess_Rid" },                /* V14 */
+    { 2717,     "TextContainer.LCIDs_Aid" },                        /* V14 */
+    { 2922,     "ASRoot.itsCommCont" },
+    { 2996,     "ProcessEvent.itsProcessEventOBActual" },
+    { 2997,     "ProcessEventOB.itsProcessEventActual" },
+    { 2998,     "IOSubmodule.Class_Rid" },
+    { 3002,     "FunctionalObjectWithDB.Class_Rid" },
+    { 3094,     "SDiagCont.itsSTAI" },
+    { 3095,     "STAI.itsSDiagCont" },
+    { 3096,     "STAI.Class_Rid" },
+    { 3109,     "DB.itsSTAI" },
+    { 3110,     "STAI.itsDB" },
+    { 3115,     "centralIOsystem.itsCentralDevice" },
+    { 3116,     "CentralDevice.itsCentralIOsystem" },
+    { 3147,     "IOSubmoduleAbstr.genQImapping" },
+    { 3150,     "subPI.Class_Rid" },
+    { 3151,     "Block.Binding" },
+    { 3196,     "subPI.itsIOModuleSubmoduleOutputs" },
+    { 3197,     "subPI.itsProcessImage" },
+    { 3198,     "IOSubmoduleAbstr.itsProcessImageOutputs" },
+    { 3199,     "IOsystem.itsSubPI" },
+    { 3200,     "HWConfiguration.itsIOsystem" },
+    { 3201,     "ProcessImage.itsSubPI" },
+    { 3228,     "MaxCycleTimeError.itsTimeErrorOB" },
+    { 3231,     "SubmoduleAbstr.Class_Rid" },
+    { 3232,     "TimeErrorOB.itsMaxCycleTimeError" },
+    { 3328,     "ModuleProxy.Class_Rid" },
+    { 3401,     "ModuleLean.itsSubmoduleAbstr" },
+    { 3402,     "STAI.AlarmDomain" },
+    { 3403,     "STAI.AlarmEnabled" },
+    { 3404,     "STAI.ALID" },
+    { 3405,     "ACCcommunicationEvent.itsACCcommunicationOBActual" },
+    { 3406,     "ApplicationEvent.itsApplicationEventOBActual" },
+    { 3407,     "ACCcommunicationOB.itsACCcommunicationEventActual" },
+    { 3408,     "ApplicationEventOB.itsApplicationEventActual" },
+    { 3410,     "IOsystem.IOsystemNumber" },
+    { 3411,     "TimeOfDayEvent.LocalTime" },
+    { 3417,     "CPUproxy.Class_Rid" },
+    { 3418,     "AS_Objectmodel" },                                 /* obp */
+    { 3420,     "Event" },                                          /* obp */
+    { 3421,     "HW" },                                             /* obp */
+    { 3422,     "Main" },                                           /* obp */
+    { 3423,     "SW" },                                             /* opb */
+    { 3424,     "Alarm" },                                          /* opb */
+    { 3438,     "TIS" },                                            /* opb */
+    { 3439,     "AS_Types" },                                       /* opb */
+    { 3447,     "AS_KnowhowProtection.Class_Rid" },
+    { 3448,     "AS_KnowhowProtection.Mode" },
+    { 3449,     "AS_KnowhowProtection.Password" },
+    { 3450,     "AS_Protection.Class_Rid" },
+    { 3451,     "CPUcommon.CPUProtectionLevel" },
+    { 3452,     "AS_Protection.Password" },
+    { 3453,     "AS_Protection.FailsafePassword" },
+    { 3454,     "AS_TimeTransformation.Class_Rid" },
+    { 3455,     "AS_TimeTransformation.ActiveTimeBias" },
+    { 3456,     "AS_TimeTransformation.Bias" },
+    { 3457,     "AS_TimeTransformation.DaylightBias" },
+    { 3458,     "AS_TimeTransformation.DaylightStartMonth" },
+    { 3459,     "AS_TimeTransformation.DaylightStartWeek" },
+    { 3460,     "AS_TimeTransformation.DaylightStartWeekday" },
+    { 3461,     "AS_TimeTransformation.DaylightStartHour" },
+    { 3462,     "AS_TimeTransformation.StandardStartMonth" },
+    { 3463,     "AS_TimeTransformation.StandardStartWeek" },
+    { 3464,     "AS_TimeTransformation.StandardStartWeekday" },
+    { 3465,     "AS_TimeTransformation.StandardStartHour" },
+    { 3473,     "AS_CGS.Class_Rid" },
+    { 3474,     "AS_CGS.AllStatesInfo" },
+    { 3475,     "AS_CGS.Timestamp" },
+    { 3476,     "AS_CGS.AssociatedValues" },
+    { 3481,     "AS_DIS.Class_Rid" },
+    { 3482,     "AS_DIS.OwnState" },
+    { 3483,     "AS_DIS.MaintenanceState" },
+    { 3484,     "AS_DIS.IOState" },
+    { 3485,     "AS_DIS.ComponentStateDetail" },
+    { 3486,     "AS_DIS.OperatingState" },
+    { 3487,     "AS_DIS.ComponentDiagnostics" },
+    { 3488,     "AS_Binding.Class_Rid" },
+    { 3489,     "AS_Binding.Mode" },
+    { 3490,     "AS_Binding.BindingID" },
+    { 3491,     "AS_Binding.copyCount" },
+    { 3495,     "AS_IOmapping.Class_Rid" },
+    { 3496,     "AS_IOmapping.Ibase" },
+    { 3497,     "AS_IOmapping.Ilength" },
+    { 3498,     "AS_IOmapping.Qbase" },
+    { 3499,     "AS_IOmapping.Qlength" },
+    { 3585,     "CPU.itsCPUproxy" },
+    { 3586,     "NetworkParameters.NetworkParamActual" },
+    { 3587,     "NetworkParameters.NetworkParamConfig" },
+    { 3588,     "NetworkParameters.NetworkParamAdapted" },
+    { 3589,     "NetworkParameters.Class_Rid" },
+    { 3591,     "Interface.itsNetworkParameters" },
+    { 3606,     "DB.ClassicRetain" },
+    { 3612,     "SDiagCont.AlarmCategories" },
+    { 3613,     "SDiagCont.TextListIDs" },
+    { 3619,     "Block.TOblockSetNumber" },
+    { 3626,     "AbstractTisJob.ModifyingJobChangeCounterCopy" },
+    { 3627,     "TisSubsystem.ModifyingJobChangeCounter" },
+    { 3634,     "DataInterface.ChangeCounterCopy" },
+    { 3635,     "PLCProgram.ESconsistent" },
+    { 3636,     "AckJob.Class_Rid" },
+    { 3637,     "AlarmingJob.Application" },
+    { 3638,     "AlarmingJob.Host" },
+    { 3639,     "AlarmingJob.User" },
+    { 3640,     "AlarmingJob.Class_Rid" },
+    { 3641,     "AlarmingJob.AlarmJobState" },
+    { 3642,     "AlarmingJob.JobTimestamp" },
+    { 3643,     "EnDisJob.Class_Rid" },
+    { 3644,     "AlarmSubsystem.itsEnDisJob" },
+    { 3645,     "AlarmSubsystem.itsAckJob" },
+    { 3646,     "AS_CGS.AckTimestamp" },
+    { 3647,     "AckJob.AcknowledgementList" },
+    { 3687,     "HWObject.SubordinateIOState" },
+    { 3688,     "HWObject.SubordinateState" },
+    { 3693,     "ASLog.ChangeCounter" },
+    { 3696,     "AS_CPULeds.ErrorLed" },
+    { 3697,     "AS_CPULeds.MaintLed" },
+    { 3698,     "AS_CPULeds.RedundLed" },
+    { 3700,     "AS_CPULeds.RunStopLed" },
+    { 3701,     "CPUcommon.CPULeds" },
+    { 3702,     "Interface.InterfaceLeds" },
+    { 3703,     "AS_InterfaceLeds.ActivityLed" },
+    { 3704,     "AS_InterfaceLeds.LinkLed" },
+    { 3705,     "AS_CPULeds.Class_Rid" },
+    { 3706,     "AS_InterfaceLeds.Class_Rid" },
+    { 3707,     "SDiagCont.ManufSpecInfo" },
+    { 3735,     "ControllerArea.ValueInitial" },
+    { 3736,     "ControllerArea.ValueActual" },
+    { 3737,     "ControllerArea.RuntimeModified" },
+    { 3738,     "ControllerArea.Dirty" },
+    { 3740,     "MArea.reserved" },
+    { 3741,     "MArea.InitialChanged" },
+    { 3743,     "HWEventdefinition.Class_Rid" },
+    { 3744,     "SWEventDefinition.Class_Rid" },
+    { 3745,     "HWConfiguration.OfflineChange" },
+    { 3746,     "PLCProgram.OfflineChange" },
+    { 3748,     "CPUcommon.ASStateREQ" },
+    { 3749,     "ErrorReport.Class_Rid" },
+    { 3750,     "ErrorReportBLOB.Class_Rid" },                      /* V14 */
+    { 3751,     "ErrorReportBLOB.BLOBentry" },
+    { 3753,     "SubmoduleAbstr.IuM0DataActual" },
+    { 3900,     "ASRoot.PAOM_ID" },
+    { 3905,     "SubmoduleAbstr.itsProcessEvent" },
+    { 3932,     "UDT.Class_Rid" },
+    { 3933,     "FBT.Class_Rid" },
+    { 3934,     "SDT.Class_Rid" },
+    { 3935,     "FCT.Class_Rid" },
+    { 3941,     "Comm" },                                           /* opb */
+    { 3942,     "CommCont.Class_Rid" },
+    { 3944,     "CommDiagCont.itsAbstractConnEnd" },
+    { 3945,     "CommCont.EsAssGuaranteedConf" },
+    { 3946,     "CommCont.EsAssUsedActual" },
+    { 3947,     "CommCont.HmiAssGuaranteedConf" },
+    { 3948,     "CommCont.HmiAssUsedActual" },
+    { 3953,     "CommDiagCont.DNNMode" },
+    { 3954,     "CommDiagCont.SubordinateState" },
+    { 3955,     "CommDiagCont.CommunicationState" },
+    { 3956,     "CommDiagCont.OwnState" },
+    { 3959,     "ApplAssociationEnd.Class_Rid" },
+    { 3961,     "ApplAssociationEnd.itsAbstractAssociationParams" },
+    { 3962,     "ConnEndH.Class_Rid" },
+    { 3963,     "ConnEndH.itsConnEnd" },
+    { 3964,     "ConnEnd.Class_Rid" },
+    { 3965,     "ConnEnd.itsAbstractAddressParams" },
+    { 3966,     "AbstractAddressParams.Class_Rid" },
+    { 3967,     "AbstractAddressParams.LocalInterfaceId" },
+    { 3968,     "AbstractAddressParams.TransportLayerProtocol" },
+    { 3969,     "AbstractAddressParams.AddressParamsIndex" },
+    { 3970,     "IPv46AddressParams.Class_Rid" },
+    { 3971,     "IPv46AddressParams.LocalPort" },
+    { 3972,     "IPv46AddressParams.RemoteIPAddress" },
+    { 3973,     "IPv46AddressParams.RemotePort" },
+    { 3974,     "S7AddressParams.Class_Rid" },
+    { 3975,     "S7AddressParams.LocalTsapSelector" },
+    { 3976,     "S7AddressParams.RemoteSubnetId" },
+    { 3977,     "S7AddressParams.RemoteStationAddress" },
+    { 3978,     "S7AddressParams.RemoteTsapSelector" },
+    { 3979,     "AbstractASExternalAddressParams.NextStationAddress" },
+    { 3980,     "AbstractConnEnd.Class_Rid" },
+    { 3982,     "AbstractAssociationParams.Class_Rid" },
+    { 3983,     "AbstractAssociationParams.ProtocolType" },
+    { 3984,     "AbstractAssociationParams.AssociationParamsIndex" },
+    { 3985,     "S7PTAssociationParams.Class_Rid" },
+    { 3986,     "S7PTAssociationParams.AsapResourceClass_Rid" },
+    { 3987,     "S7PTAssociationParams.OptionsRequested" },
+    { 3988,     "S7PTAssociationParams.TimeOut" },
+    { 3989,     "S7PTAssociationParams.LocalAsapID" },
+    { 3990,     "S7PTAssociationParams.RemoteAsapID" },
+    { 3991,     "S7PTAssociationParams.Priority" },
+    { 3992,     "SPS7AssociationParams.Class_Rid" },
+    { 3993,     "SPS7AssociationParams.MaxAmQCalled" },
+    { 3994,     "SPS7AssociationParams.MaxAmQCalling" },
+    { 3995,     "SPS7AssociationParams.MaxPDUDataSize" },
+    { 3996,     "AbstractCommEndDNN.Class_Rid" },
+    { 3997,     "AbstractCommEndDNN.ComponentDiagnostic" },
+    { 3998,     "AbstractCommEndDNN.DNNMode" },
+    { 3999,     "AbstractCommEndDNN.OwnState" },
+    { 4000,     "AbstractCommEndDNN.SubordinateState" },
+    { 4001,     "AbstractCommEndDNN.ActiveEnd" },
+    { 4003,     "AbstractCommEndDNN.Ident" },
+    { 4004,     "AbstractCommEndDNN.IdentChangeCount" },
+    { 4005,     "AbstractCommEndDNN.ReceivedBytes" },
+    { 4006,     "AbstractCommEndDNN.SentBytes" },
+    { 4007,     "AbstractCommEndDNN.StateChangeCount" },
+    { 4008,     "AbstractCommEndDNN.CommunicationState" },
+    { 4009,     "AbstractCommEndDNN.CommunicationType" },
+    { 4011,     "IOsystem.IOReconfiguration" },
+    { 4012,     "IOSubmoduleAbstr.PInumberInputs" },
+    { 4013,     "decentralIOsystem.IOCstationNumber" },
+    { 4014,     "HWObject.GeoAddress" },
+    { 4055,     "AS_GeoAddress.Class_Rid" },
+    { 4056,     "AS_GeoAddress.IOsystem" },
+    { 4057,     "AS_GeoAddress.IODevice" },
+    { 4058,     "AS_GeoAddress.Rack" },
+    { 4059,     "AS_GeoAddress.Slot" },
+    { 4060,     "AS_GeoAddress.API" },
+    { 4061,     "AS_GeoAddress.Subslot" },
+    { 4062,     "AS_TimeTransformation.TimeZoneName" },
+    { 4063,     "SubmoduleAbstr.IuM1DesignatorsActual" },
+    { 4064,     "SubmoduleAbstr.IuM2InstallationDateActual" },
+    { 4065,     "SubmoduleAbstr.IuM3DescriptorActual" },
+    { 4066,     "SubmoduleAbstr.IuM4SignatureActual" },
+    { 4067,     "IOSubmoduleAbstr.ChannelCount" },
+    { 4068,     "IOSubmoduleAbstr.maxEventCount" },
+    { 4069,     "IOSubmoduleAbstr.StartChannel" },
+    { 4070,     "ProcessEvent.EventType" },
+    { 4071,     "ProcessEvent.Channel" },
+    { 4074,     "IODeviceAbstr.itsSDB1xxx" },
+    { 4075,     "IOSubmoduleAbstr.PInumberOutputs" },
+    { 4076,     "ContinuingTisJob.Roles" },
+    { 4077,     "CPproxy.Class_Rid" },
+    { 4079,     "DAI.MessageType" },
+    { 4081,     "decentralIOsystem.IOsysParamConfig" },
+    { 4086,     "IODeviceAbstr.IODevParamConfig" },
+    { 4092,     "SubmoduleAbstr.API" },
+    { 4098,     "CP.itsCPproxy" },
+    { 4100,     "CommCont.FreeAssUsedActual" },
+    { 4101,     "CommCont.StaticConfiguredAssUsedActual" },
+    { 4105,     "IODevice.itsNetworkParameters" },
+    { 4106,     "SubmoduleAbstr.OBfilter" },
+    { 4108,     "EnDisJob.EnDisList" },
+    { 4113,     "SDB1xxx.Content" },
+    { 4114,     "SubmoduleAbstr.IuM0DataConfig" },
+    { 4115,     "Interface.SubnetID" },
+    { 4120,     "WebServer.DeactivatedConfig" },
+    { 4122,     "STAI.itsAlarmSubsystem" },
+    { 4123,     "AlarmSubsystem.itsDisabledSTAI" },
+    { 4129,     "CP.itsIOinterface" },
+    { 4131,     "decentralIOsystem.itsIODeviceAbstr" },
+    { 4132,     "IOinterface.IOsystemType" },
+    { 4133,     "WebServer.DefaultUpdateMode" },
+    { 4134,     "WebServer.OnlySSL" },
+    { 4135,     "WebServer.UpdateRate" },
+    { 4136,     "IODeviceAbstr.IODevParamActual" },
+    { 4139,     "RuntimeMeters.Values" },
+    { 4140,     "CommCont.StaticConfiguredAssConf" },
+    { 4141,     "CommCont.StaticConfiguredAssGuaranteedConf" },
+    { 4142,     "CommCont.IblockClassicAssGuaranteedConf" },
+    { 4143,     "CommCont.IblockClassicAssUsedActual" },
+    { 4144,     "AbstractASExternalAddressParams.LocalSubnetID" },
+    { 4146,     "Device.configuredModules" },
+    { 4147,     "Device.deactivatedModules" },
+    { 4148,     "Device.existingModules" },
+    { 4149,     "Device.faultyModules" },
+    { 4153,     "Device.ChangeCounterCopy" },
+    { 4154,     "IOsystem.ChangeCounterCopy" },
+    { 4155,     "SubmoduleAbstr.DataRecordsChanged" },
+    { 4156,     "CommDiagCont.DTI_Type" },
+    { 4157,     "AbstractCommEndDNN.DTI_Type" },
+    { 4158,     "CommDiagCont.DTI_Version" },
+    { 4159,     "AbstractCommEndDNN.DTI_Version" },
+    { 4168,     "HWObject.Rucksack" },
+    { 4169,     "decentralIOsystem.IOsysUsage" },
+    { 4170,     "StandardFile.Class_Rid" },
+    { 4171,     "DataLog.Class_Rid" },        /* V14 */
+    { 4172,     "DataLog.EntryCount" },
+    { 4174,     "DataLog.MaxRecords" },
+    { 4175,     "DataLog.RecordFormat" },
+    { 4176,     "DataLog.TimestampFormat" },
+    { 4177,     "DataLogEntry.Class_Rid" },
+    { 4178,     "DataLog.itsDataLogEntry" },
+    { 4179,     "Logs.itsDataLog" },
+    { 4180,     "StandardFile.Path" },
+    { 4181,     "StandardFile.Size" },
+    { 4182,     "DataLogEntry.HeaderName" },
+    { 4183,     "DataLogEntry.Tag" },
+    { 4184,     "StandardFile.FileAttributes" },
+    { 4185,     "StandardFile.Position" },
+    { 4186,     "CPUcommon.Compress" },
+    { 4187,     "IOinterface.Dirty" },
+    { 4189,     "CommCont.OpenUserConnGuaranteedConf" },
+    { 4190,     "CommCont.OpenUserConnUsedActual" },
+    { 4191,     "AbstractAddressParams.LocalInterfaceRID" },
+    { 4196,     "CPUcommon.OnlineCapabilities" },
+    { 4197,     "AS_CommAddrTV.Class_Rid" },
+    { 4198,     "AS_CommAddrTV.AddressType" },
+    { 4200,     "AS_CommAddrTV.Address" },
+    { 4201,     "CommCont.WebConnGuaranteedConf" },
+    { 4202,     "CommCont.WebConnUsedActual" },
+    { 4208,     "AS_Starttime.Year" },
+    { 4209,     "AS_Starttime.Month" },
+    { 4210,     "AS_Starttime.Minute" },
+    { 4211,     "AS_Starttime.Day" },
+    { 4212,     "AS_Starttime.Hour" },
+    { 4213,     "AS_Starttime.Class_Rid" },
+    { 4264,     "ControllerArea.TagsCount" },
+    { 4265,     "SWObjectsAppCreated.Class_Rid" },
+    { 4266,     "SWObjectsAppCreated.itsSWObject" },
+    { 4267,     "PLCProgram.itsSWObjectsAppCreated" },
+    { 4268,     "TagArray.Class_Rid" },
+    { 4269,     "TagArray.Symbolics" },
+    { 4270,     "TagArray.TagsCount" },
+    { 4271,     "PLCProgram.Culture" },
+    { 4272,     "TA_DB.Class_Rid" },
+    { 4273,     "ConstantsGlobal.Class_Rid" },
+    { 4274,     "ConstantsGlobal.ConstantsCount" },
+    { 4275,     "ConstantsGlobal.Symbolics" },
+    { 4277,     "CPUcommon.ParameterizationTime" },
+    { 4287,     "DataInterface.Title" },
+    { 4288,     "ASObjectES.Comment" },
+    { 4289,     "CardReaderWriter.MMCWriteProtected" },
+    { 4290,     "AS_IOmapping.Iconsisteny" },
+    { 4291,     "AS_IOmapping.Qconsistency" },
+    { 4292,     "CommCont.ESconsistent" },
+    { 4294,     "OB.InstanceDB" },
+    { 4349,     "AbstractConnEnd.itsApplAssociationEnd" },
+    { 4543,     "PLCProgram.DBnumberDynRange" },
+    { 4544,     "CPcommon.CPstateREQ" },
+    { 4546,     "NonPersistentConnections.Class_Rid" },
+    { 4547,     "CommCont.itsNonPersistentConnections" },
+    { 4548,     "NonPersistentConnections.itsCommCont" },
+    { 4550,     "ModuleLean.Rucksack" },
+    { 4551,     "HWConfiguration.Dirty" },
+    { 4552,     "ASRoot.itsNonPersistentConnections" },
+    { 4553,     "CommDiagCont.Class_Rid" },
+    { 4554,     "CPUcommon.MemSizeCode" },
+    { 4555,     "CPUcommon.MemSizeData" },
+    { 4556,     "CPUcommon.MemUsedSizeData" },
+    { 4557,     "CPUcommon.MemUsedSizeCode" },
+    { 4558,     "CPUcommon.TimeSynchConfig" },
+    { 4560,     "OB.PIP" },
+    { 4562,     "ASRoot.ProjectID" },
+    { 4565,     "AS_TimeTransformation.DaylightStartMinute" },
+    { 4566,     "AS_TimeTransformation.StandardStartMinute" },
+    { 4567,     "UpdateRequestToAllJob.Class_Rid" },
+    { 4568,     "UpdateRequestToAllJob.UpdateRequestList" },
+    { 4569,     "AlarmSubsystem.itsUpdateRequestToAllJob" },
+    { 4570,     "CPUcommon.CPUSwitch" },
+    { 4573,     "IODeviceAbstr.Tinfo" },
+    { 4574,     "TA_DB.VariableServer" },
+    { 4575,     "ModuleLean.IuMproxy" },
+    { 4576,     "Device.IuMproxy" },
+    { 4578,     "Block.TypeInfo" },
+    { 4579,     "AbstractConnEnd.reserved" },
+    { 4581,     "DataLog.HeaderLength" },
+    { 4582,     "CPUexecUnit.MaxRetrigger" },
+    { 4585,     "Subnet.Class_Rid" },
+    { 4586,     "Subnet.itsIOsystem" },
+    { 4587,     "IOsystem.itsSubnet" },
+    { 4588,     "HWConfiguration.itsSubnet" },
+    { 4589,     "Subnet.Rucksack" },
+    { 4590,     "Interface.itsSubnet" },
+    { 4591,     "Subnet.itsInterface" },
+    { 4600,     "MC_DB.Class_Rid" },
+    { 4601,     "TA_DB.ConfigMode" },
+    { 4602,     "UnitTable.Class_Rid" },
+    { 4603,     "ASRoot.itsUnitTable" },
+    { 4604,     "UnitTable.Units" },
+    { 4605,     "FWpackages.Class_Rid" },
+    { 4606,     "ASRoot.itsFWpackages" },
+    { 4607,     "TPbuiltinContainer.Class_Rid" },
+    { 4608,     "TPloadableContainer.Class_Rid" },
+    { 4609,     "FWpackages.itsTPbuiltinContainer" },
+    { 4610,     "TP.Class_Rid" },
+    { 4611,     "TPloadableContainer.itsTPloadable" },
+    { 4612,     "TPbuiltinContainer.itsTPbuiltin" },
+    { 4613,     "FWpackages.itsTPloadableContainer" },
+    { 4614,     "TA_DB.TPversion" },
+    { 4615,     "OB.LatestRuntime" },
+    { 4616,     "OB.MinRuntime" },
+    { 4617,     "OB.MaxRuntime" },
+    { 4618,     "OB.CallFrequency" },
+    { 4619,     "OB.RuntimeRatio" },
+    { 4620,     "CPUcommon.CommunicationLoadActual" },
+    { 4621,     "RoutingTables.Class_Rid" },
+    { 4622,     "RoutingTable.Class_Rid" },
+    { 4623,     "RoutingTables.itsRoutingTable" },
+    { 4624,     "ASRoot.itsRoutingTables" },
+    { 4625,     "RoutingTable.Index" },
+    { 4626,     "RoutingTable.SlotNumber" },
+    { 4627,     "RoutingTable.Table" },
+    { 4628,     "PLCProgram.Endianess" },
+    { 4629,     "IOinterface.itsDecentralIOsystemSlave" },
+    { 4630,     "decentralIOsystem.itsIOinterfaceSlave" },
+    { 4633,     "HWObject.DisplayMode" },
+    { 4634,     "HWObject.DisplayedOwnState" },
+    { 4635,     "HWObject.DisplayedSubordinateState" },
+    { 4637,     "ServoOB.Class_Rid" },
+    { 4638,     "ServoOB.itsSynchServoEvent" },
+    { 4639,     "IpoOB.Class_Rid" },
+    { 4641,     "IpoOB.itsIpoEvent" },
+    { 4642,     "IpoEvent.Class_Rid" },
+    { 4643,     "IpoEvent.itsIpoOB" },
+    { 4644,     "IpoEvent.Threshold" },
+    { 4645,     "SynchServoEvent.Class_Rid" },
+    { 4646,     "SynchServoEvent.itsServoOB" },
+    { 4648,     "TP.TPversion" },
+    { 4651,     "RoutingTable.SubslotNumber" },
+    { 4652,     "TA_DB.TechnologicalUnits" },
+    { 4656,     "MC_DB.TechnologicalInterface" },
+    { 4661,     "IpoEvent.ReductionFactor" },
+    { 4664,     "DB.OwnState" },
+    { 4665,     "DB.DNNMode" },
+    { 4666,     "DB.subDNN" },
+    { 4667,     "DB.superDNN" },
+    { 4668,     "DB.SubordinateState" },
+    { 4669,     "DB.ObjectState" },
+    { 4670,     "MC_DB.TOtype" },
+    { 4671,     "SDiagCont.AlarmAliasTable" },
+    { 4672,     "TextContainer.Class_Rid" },
+    { 4673,     "LanguageTexts.Class_Rid" },
+    { 4674,     "TextContainer.itsLanguageTexts" },
+    { 4675,     "ASRoot.itsTextContainer" },
+    { 4676,     "LanguageTexts.Language" },
+    { 4679,     "LanguageTexts.SystemLanguages" },
+    { 4680,     "EventDefinition.OBexecutionOrder" },
+    { 4681,     "AS_Protection.Password2" },
+    { 4682,     "AS_Protection.Password3" },
+    { 4683,     "ConstantsGlobal.LineComments" },
+    { 4685,     "IOsystem.problematicStations" },
+    { 4686,     "Device.problematicModules" },
+    { 4687,     "DB.KeepActualValues" },
+    { 4688,     "HWObject.CommandREQ" },
+    { 4690,     "SubmoduleAbstr.IuMxDataConf" },
+    { 4692,     "AS_CommandREQ.Class_Rid" },
+    { 4693,     "AS_CommandREQ.Command" },
+    { 4694,     "AS_CommandREQ.Result" },
+    { 4695,     "AS_CommandREQ.State" },
+    { 4696,     "AS_CommandREQ.RequestParamList" },
+    { 4697,     "AS_CommandREQ.ResponseParamList" },
+    { 4698,     "TISDescription.Class_Rid" },
+    { 4699,     "ForceDescription.Class_Rid" },                     /* V14 */
+    { 4700,     "TraceDescription.Class_Rid" },
+    { 4701,     "TISDescription.ChangeCounterCopy" },
+    { 4702,     "TISDescription.Configuration" },
+    { 4703,     "TISDescription.IntRefData" },
+    { 4704,     "TISDescription.JobModified" },
+    { 4705,     "TISDescription.LineComments" },
+    { 4706,     "TraceDescription.TraceMemorySize" },
+    { 4707,     "PkiItem.PrivateData_Rid" },                        /* V14 */
+    { 4708,     "PkiItem.Properties_Rid" },                         /* V14 */
+    { 4709,     "PkiItem.PublicData_Rid" },                         /* V14 */
+    { 4710,     "PkiStore.Class_Rid" },                             /* V14 */
+    { 4711,     "PkiContainer.PrivateKey_Rid" },                    /* V14 */
+    { 4712,     "PkiContainer.PublicKey_Rid" },                     /* V14 */
+    { 4713,     "PkiItem.Class_Rid" },                              /* V14 */
+    { 4714,     "PkiItem.Fingerprint_Rid" },                        /* V14 */
+    { 4715,     "PkiItem.ID_Rid" },                                 /* V14 */
+    { 4716,     "PkiItem.ItemType_Rid" },                           /* V14 */
+    { 4717,     "PkiContainer.Class_Rid" },                         /* V14 */
+    { 4718,     "MeasurementContainer.Class_Rid" },                 /* V14 */
+    { 4719,     "MeasurementContainer.itsLogs_Rid" },               /* V14 */
+    { 7564,     "DataInterface.XrefInfo" },
+    { 7566,     "HWObject.Deactivated" },
+    { 7567,     "FunctionalObject.RegisterPassing" },
+    { 7568,     "SynchronousCycleEvent.DataCycleFactor" },
+    { 7569,     "SynchronousCycleEvent.TCA_Start" },
+    { 7570,     "SynchronousCycleEvent.TCA_Valid" },
+    { 7571,     "SynchronousCycleOB.CACF" },
+    { 7572,     "MC_DB.TOAlarmReaction" },
+    { 7576,     "WebServer.Certificates" },
+    { 7577,     "WebServer.Topology" },
+    { 7578,     "WebServer.UserConf" },
+    { 7579,     "WebServer.VariableTables" },
+    { 7580,     "AS_Enumeration" },                                 /* opb */
+    { 7581,     "ServoOB.CACF" },
+    { 7583,     "CyclicServoEvent.Class_Rid" },
+    { 7586,     "ServoOB.itsCyclicServoEvent" },
+    { 7587,     "CyclicServoEvent.itsServoOB" },
+    { 7589,     "Block.FunctionalSignature" },
+    { 7590,     "PLCProgram.FCCactual" },
+    { 7591,     "FailsafeControl.FCCconfig" },
+    { 7592,     "CPUFexecUnit.Class_Rid" },
+    { 7593,     "CPU.itsCPUFexecUnit" },
+    { 7594,     "PLCProgram.itsCPUFexecUnit" },
+    { 7595,     "CPUFexecUnit.itsPLCProgram" },
+    { 7596,     "AS_AlarmAcknfyElem.AllStatesInfo" },
+    { 7597,     "AS_AlarmAcknfyElem.AckResult" },
+    { 7598,     "AS_AlarmAcknfyElem.CPUAlarmID" },
+    { 7600,     "AS_EnDisElem.EnDisInfo" },
+    { 7601,     "AS_EnDisElem.EnDisResult" },
+    { 7602,     "AS_EnDisElem.CPUAlarmID" },
+    { 7603,     "AS_EnDisElem.Class_Rid" },
+    { 7604,     "AS_AlarmAcknfyElem.Class_Rid" },
+    { 7605,     "Port.PortLeds" },
+    { 7646,     "ContinuingTisJob.JobModified" },
+    { 7647,     "AbstractTisJob.LargeBufferMemorySize" },
+    { 7648,     "ContinuingTisJob.TriggerAndAddresses" },
+    { 7649,     "MC_DB.TOAlarmReactionModified" },
+    { 7650,     "TA_DB.TechnologicalUnitsModified" },
+    { 7651,     "AbstractASExternalAddressParams.Class_Rid" },
+    { 7652,     "ASInternalAddressParams.Class_Rid" },
+    { 7653,     "ASInternalAddressParams.LocalLSelector" },
+    { 7654,     "ASInternalConnections.Class_Rid" },
+    { 7656,     "ASInternalConnections.FrontPanelGuaranteed" },
+    { 7657,     "ASInternalConnections.FrontPanelActual" },
+    { 7658,     "ASInternalConnections.SDBDistributionActual" },
+    { 7659,     "ASInternalConnections.SDBDistributionGuaranteed" },
+    { 7660,     "ASInternalConnections.OMSpDistributionActual" },
+    { 7661,     "ASInternalConnections.OMSpDistributionGuaranteed" },
+    { 7662,     "ASInternalConnections.TSelDictionaryActual" },
+    { 7663,     "ASInternalConnections.TSelDictionaryGuaranteed" },
+    { 7664,     "ASInternalConnections.CmCpServerApplActual" },
+    { 7665,     "ASInternalConnections.CmCpServerApplGuaranteed" },
+    { 7666,     "ConnEndOnGateway.Class_Rid" },
+    { 7667,     "ConnEndOnGateway.AdditionalDiagData" },
+    { 7668,     "GatewayAddressParams.TransparentAddressParams" },
+    { 7669,     "CommCont.itsASInternalConnections" },
+    { 7670,     "ASInternalConnections.itsCommCont" },
+    { 7671,     "ASRoot.itsASInternalConnections" },
+    { 7672,     "GatewayAddressParams.Class_Rid" },
+    { 7674,     "StationConfiguration.Class_Rid" },
+    { 7675,     "ASRoot.itsStationConfiguration" },
+    { 7676,     "StationCentralDevice.Class_Rid" },
+    { 7677,     "StationComponent.Class_Rid" },
+    { 7678,     "StationComponent.ComponentTypeID" },
+    { 7679,     "StationCentralDevice.itsStationComponent" },
+    { 7680,     "StationComponent.PingREQ" },
+    { 7681,     "StationManager.Class_Rid" },
+    { 7682,     "StationConfiguration.itsSDiagCont" },
+    { 7683,     "StationConfiguration.itsStationCentralDevice" },
+    { 7684,     "ASInternalAddressParams.RemoteLSelector" },
+    { 7685,     "ASInternalAddressParams.RemoteModuleAddress" },
+    { 7726,     "AS_UpdateRequestElem.Class_Rid" },
+    { 7727,     "AS_UpdateRequestElem.CPUAlarmID" },
+    { 7728,     "AS_UpdateRequestElem.UpdateReason" },
+    { 7729,     "PLCProgram.FCCbackup" },
+    { 7730,     "PLCProgram.LastModiFProg" },
+    { 7731,     "AlarmSubscriptionRef.AlarmDomain2" },
+    { 7733,     "DB.StructureModified" },
+    { 7734,     "FailsafeControl.FDisplayDB" },
+    { 7735,     "FailsafeControl.OverallSignature" },
+    { 7738,     "SubmoduleAbstr.DataRecordsTransferSequence" },
+    { 7739,     "SynchronousCycleOB.allowedPIPs" },
+    { 7740,     "SynchronousCycleEvent.IOsystemNumber" },
+    { 7741,     "CommCont.HmiAssConfigured" },
+    { 7751,     "AbstractConnEnd.ConnTrials" },
+    { 7752,     "AbstractConnEnd.ConnTrialsSuccess" },
+    { 7753,     "AbstractConnEnd.LastConnErrReason" },
+    { 7754,     "AbstractConnEnd.LastConnErrTimeStamp" },
+    { 7755,     "AbstractConnEnd.LastDisconnReason" },
+    { 7756,     "AbstractConnEnd.LastDisconnTimeStamp" },
+    { 7758,     "SWevent.Class_Rid" },
+    { 7759,     "StationComponent.ComponentID" },
+    { 7760,     "StationManager.ComponentTypeIDs" },
+    { 7761,     "SubmoduleAbstr.DisplayValuesDescription" },
+    { 7762,     "StationManager.ReconfigurationState" },
+    { 7767,     "AS_InitFbState.Class_Rid" },
+    { 7768,     "AS_InitFbState.RID" },
+    { 7769,     "AS_InitFbState.LID" },
+    { 7770,     "STAI.MessageType" },
+    { 7771,     "STAI.HmiInfo" },
+    { 7772,     "STAI.InitFbState" },
+    { 7813,     "DAI.HmiInfo" },
+    { 7818,     "CyclicServoEvent.itsIpoEvent" },
+    { 7819,     "IpoEvent.itsCyclicServoEvent" },
+    { 7820,     "SynchServoEvent.itsIpoEvent" },
+    { 7821,     "IpoEvent.itsSynchServoEvent" },
+    { 7822,     "LanguageTexts.itsTextLibrary" },
+    { 7823,     "IOsystem.NetworkDataCycleConfig" },
+    { 7824,     "SubmoduleAbstr.SubmoduleUsage" },
+    { 7825,     "RuntimeMeters2.Class_Rid" },
+    { 7827,     "IODeviceAbstr.DockingPort" },
+    { 7828,     "IODeviceAbstr.DockingUnit" },
+    { 7830,     "MC_DB.DBNameChecksum" },
+    { 7831,     "Block.AdditionalMAC" },
+    { 7832,     "DB.ValueInitialDelta" },
+    { 7833,     "DB.DescriptionRidRef" },
+    { 7834,     "StationConfiguration.Dirty" },
+    { 7835,     "StationManager.ResourcesActual" },
+    { 7836,     "StationManager.ResourcesConf" },
+    { 7837,     "CPUcommon.CPUServicesUsage" },
+    { 7838,     "RoutingTables.ESParamsIdent" },
+    { 7839,     "CommCont.ESParamsIdent" },
+    { 7842,     "FailsafeControl.Class_Rid" },
+    { 7843,     "Block.FailsafeBlockInfo" },
+    { 7844,     "FailsafeControl.FailsafeProgramInfo" },
+    { 7845,     "DataInterface.AlarmTexts" },
+    { 7847,     "PLCProgram.itsFailsafeControl" },
+    { 7853,     "DataInterface.AlarmDescription" },
+    { 7854,     "MultipleSTAI.Class_Rid" },
+    { 7855,     "MultipleSTAI.itsSDiagCont" },
+    { 7856,     "MultipleSTAI.itsDB" },
+    { 7859,     "MultipleSTAI.STAIs" },
+    { 7860,     "DB.itsMultipleSTAI" },
+    { 7861,     "SDiagCont.itsMultipleSTAI" },
+    { 7864,     "CPUcommon.TimeTransformationRuleAdapted" },
+    { 7904,     "MultipleSTAI.STAIsSyntaxID" },
+    { 7905,     "CPUcommon.TimeTransformationRuleActual" },
+    { 7917,     "DAI.SequenceCounter" },
+    { 7918,     "CPUcommon.CPUPassword" },
+    { 7919,     "CPUcommon.CPUPassword2" },
+    { 7920,     "CPUcommon.CPUPassword3" },
+    { 7921,     "CPUcommon.CPUPasswordFailsafe" },
+    { 7922,     "SMcommon.ParameterizationTime_Rid" },              /* V14 */
+    { 7923,     "SMcommon.SMPassword_Rid" },                        /* V14 */
+    { 7924,     "SMcommon.SMPassword2_Aid" },                       /* V14 */
+    { 7925,     "SMcommon.SMPassword3_Aid" },                       /* V14 */
+    { 7926,     "SMcommon.SMPasswordFailsafe_Aid" },                /* V14 */
+    { 7927,     "SMcommon.SMProtectionLevel_Aid" },                 /* V14 */
+    { 7928,     "StationManager.WriteFilterCommandREQ_Rid" },       /* V14 */
+    { 7929,     "StationManager.WriteFilterConfigState_Rid" },      /* V14 */
+    { 7930,     "StationManager.WriteFilterOnActual_Aid" },         /* V14 */
+    { 7931,     "StationManager.itsSMcommon_Rid" },                 /* V14 */
+    { 7935,     "SMcommon.LocalTime_Rid" },                         /* V14 */
+    { 7936,     "SMcommon.SystemTime_Aid" },                        /* V14 */
+    { 7937,     "SMcommon.TimeTransformationRuleActual_Aid" },      /* V14 */
+    { 7944,     "UDT.FailsafeCompliant_Rid" },                      /* V14 */
+    { 7945,     "EventDefinition.LastUserModified_Rid" },           /* V14 */
+    { 7946,     "CPUcommon.CompanyIdentification" },
+    { 7947,     "ModuleLean.IFRHash" },
+    { 7948,     "Subnet.IFRHash" },
+    { 7949,     "DataInterface.SPL_IFRHash" },
+    { 7950,     "TISDescription.IFRHash" },
+    { 7951,     "DataInterface.AlarmIFRHash" },
+    { 7952,     "ConstantsGlobal.IFRHash" },
+    { 7953,     "HWObject.IFRHash" },
+    { 7954,     "TA_DB.TA_IFRHash" },
+    { 7955,     "Block.FailsafeIFRHash" },
+    { 7956,     "FailsafeControl.FailsafeIFRHash" },
+    { 7978,     "SMcommon.TimeTransformationRuleAdapted_Rid" },     /* V14 */
+    { 7979,     "ASObjectAdapted.DataRecordsActual_Rid" },          /* V14 */
+    { 7980,     "ASObjectAdapted.DataRecordsAdapted_Aid" },         /* V14 */
+    { 7981,     "ASObjectAdapted.ReferencedObject_Aid" },           /* V14 */
+    { 7982,     "IOinterfaceC2C.SubslotNumber_Rid" },               /* V14 */
+    { 7983,     "IOinterfaceC2C.SlotNumber_Aid" },                  /* V14 */
+    { 7984,     "IOinterfaceC2C.API_Aid" },                         /* V14 */
+    { 7985,     "IODeviceAbstrC2C.RFI_UUID_Rid" },                  /* V14 */
+    { 7986,     "IODeviceAbstrC2C.RFI_Version_Aid" },               /* V14 */
+    { 7987,     "PkiStore.ParamsIdent_Rid" },                       /* V14 */
+    { 7988,     "WebServer.CertificateID_Rid" },                    /* V14 */
+    { 7989,     "FailsafeControl.ESsafetyModeInfo_Rid" },           /* V14 */
+    { 7990,     "PkiItem.IssuerID_Rid" },                           /* V14 */
+    { 7991,     "IODeviceAgent.StationNrAgent_Rid" },               /* V14 */
+    { 7992,     "IODeviceAgent.PrimaryREQ_Aid" },                   /* V14 */
+    { 7993,     "AbstractConnEnd.ActivateSecureConn_Rid" },         /* V14 */
+    { 7994,     "AbstractConnEnd.ExtTLSCapabilities_Rid" },         /* V14 */
+    { 7995,     "AbstractConnEnd.TLSClientCertRef_Rid" },           /* V14 */
+    { 7996,     "AbstractConnEnd.TLSServerCertRef_Rid" },           /* V14 */
+    { 7997,     "AbstractConnEnd.TLSServerReqClientCert_Aid" },     /* V14 */
+    { 8019,     "SMcommon.TimeTransformationRuleConfig_Rid" },      /* V14 */
+    { 8020,     "CPUexecUnit.AlarmOBsLoad_LastPC_Rid" },            /* V14 */
+    { 8021,     "CPUcommon.CommunicationLoad_LastPC_Rid" },         /* V14 */
+    { 8022,     "ASRoot.ESversionSafety_Rid" },                     /* V14 */
+    { 8023,     "WebServer.Topology2_Rid" },                        /* V14 */
+    { 8024,     "WebServer.CustomizedEntryPage_Aid" },              /* V14 */
+    { 8025,     "CardReaderWriter.MMCProgress_Rid" },               /* V14 */
+    { 8026,     "CardReaderWriter.MMCResult_Aid" },                 /* V14 */
+    { 8027,     "CPUcommon.CollectSecuEventsDelayUnit_Rid" },       /* V14 */
+    { 8028,     "CPUcommon.CollectSecuEventsDelayValue_Aid" },      /* V14 */
+    { 8029,     "Backup.BaseClass_Rid" },                           /* V14 */
+    { 8030,     "Backup.Class_Rid" },                               /* V14 */
+    { 8031,     "Restore.Class_Rid" },                              /* V14 */
+    { 8032,     "ModuleLean.itsRestore_Rid" },                      /* V14 */
+    { 8033,     "ModuleLean.itsBackup_Rid" },                       /* V14 */
+    { 8034,     "BackupRestore.Content_Rid" },                      /* V14 */
+    { 8035,     "BackupRestore.Filename_Aid" },                     /* V14 */
+    { 8036,     "BackupRestore.Params_Aid" },                       /* V14 */
+    { 8037,     "HWObject.GeoProxyRID_Rid" },                       /* V14 */
+    { 8038,     "SMcommon.CollectSecuEventsDelayUnit_Rid" },        /* V14 */
+    { 8039,     "SMcommon.CollectSecuEventsDelayValue_Aid" },       /* V14 */
+    { 8040,     "PLCProgramChange.Class_Rid" },                     /* V14 */
+    { 8044,     "PLCProgramChange.reserved_1_Rid" },                /* V14 */
+    { 8045,     "DBmapping.DBlength_Rid" },                         /* V14 */
+    { 8046,     "DBmapping.DBrid_Aid" },                            /* V14 */
+    { 8047,     "DBmapping.DBtimestamp_Rid" },                      /* V14 */
+    { 8048,     "IOSubmoduleDB.IDataType_Rid" },                    /* V14 */
+    { 8049,     "IOSubmoduleDB.QDataType_Aid" },                    /* V14 */
+    { 8050,     "IOSubmoduleDB.ITypeInfoRef_Aid" },                 /* V14 */
+    { 8051,     "IOSubmoduleDB.QTypeInfoRef_Aid" },                 /* V14 */
+    { 8052,     "ReleaseMngmt.ESreleases_Rid" },                    /* V14 */
+    { 8053,     "ReleaseMngmt.ESreleasesFingerprint_Aid" },         /* V14 */
+    { 8054,     "ReleaseMngmtRoot.ConfigObjectType_Rid" },          /* V14 */
+    { 8055,     "ReleaseMngmtRoot.DeviceCompVersions_Rid" },        /* V14 */
+    { 8056,     "IOSubmoduleDB.IOmappingDB_Rid" },                  /* V14 */
+    { 8057,     "IOSubmoduleDB.IbaseVS_Aid" },                      /* V14 */
+    { 8058,     "IOSubmoduleDB.QbaseVS_Aid" },                      /* V14 */
+    { 8059,     "CPUcommon.EnableFullTexts_Rid" },                  /* V14 */
+    { 8060,     "TA_DB.TechnologicalConnections_Rid" },             /* V14 */
+    { 8061,     "UDT.TypeInfo_Rid" },                               /* V14 */
+    { 8061,     "UDT.TypeInfo_Aid" },                               /* V14 */
+    { 8062,     "ASLog.LogEntry2_Rid" },                            /* V14 */
+    { 8063,     "centralIOcontroller.centralIOusage_Rid" },         /* V14 */
+    { 8064,     "CPUexecUnit.AlarmOBsLoadActual_Rid" },             /* V14 */
+    { 8065,     "CPUexecUnit.ProgramCycleLoadActual_Aid" },         /* V14 */
+    { 8066,     "CPUcommon.RestartMeasurementREQ_Rid" },            /* V14 */
+    { 8067,     "SWObject.LastUserModified_Rid" },                  /* V14 */
+    { 8068,     "TextContainer.LastUserModified_Rid" },             /* V14 */
+    { 8069,     "CPUproxy.ModuleIdentCompatibilityList_Rid" },      /* V14 */
+    { 8070,     "CPUcommon.ActionByReadREQ_Rid" },                  /* V14 */
+    { 8071,     "TextContainer.TextlistIFRHash_Rid" },              /* V14 */
+    { 8072,     "TextContainer.TextlistTexts_Rid" },                /* V14 */
+    { 8075,     "ASInternalConnections.OMSpCmCpUnsecGuaranteed_Rid" },  /* V14 */
+    { 8076,     "ASInternalConnections.OMSpCmCpUnsecActual_Rid" },      /* V14 */
+    { 8077,     "StationManager.itsWebServer_Rid" },                /* V14 */
+    { 8078,     "WebServer.itsUserCredentials_Rid" },               /* V14 */
+    { 8079,     "UserCredentials.Class_Rid" },                      /* V14 */
+    { 8080,     "WebServer.UserManagementMAC_Rid" },                /* V14 */
+    { 8081,     "UserCredentials.UserConfData_Rid" },               /* V14 */
+    { 8082,     "UserCredentials.UserName_Aid" },                   /* V14 */
+    { 8083,     "UserCredentials.UserRights_Aid" },                 /* V14 */
+    { 8084,     "PLCProgram.reserved_1_Rid" },                      /* V14 */
+    { 8124,     "ModuleLean.itsBackup_Aid" },                       /* V14 */
+    { 8125,     "ModuleLean.itsRestore_Aid" },                      /* V14 */
+    { 8127,     "OPC_UA.AccessConfiguration_Rid" },                 /* V14 */
+    { 8128,     "PLCProgram.itsPLCProgramChange_Rid" },             /* V14 */
+    { 8129,     "HCPUredCtrl.Class_Rid" },                          /* V14 */
+    { 8130,     "CPU.itsHCPUredCtrl_Rid" },                         /* V14 */
+    { 8131,     "CPUproxy.itsCPU1proxy_Rid" },                      /* V14 */
+    { 8132,     "CPUproxy.itsCPU2proxy_Aid" },                      /* V14 */
+    { 8133,     "centralIOsystem.HDevCoiningActual_Rid" },          /* V14 */
+    { 8134,     "centralIOsystem.HDevCoiningREQ_Rid" },             /* V14 */
+    { 8135,     "ContainerChanges.Class_Rid" },                     /* V14 */
+    { 8136,     "Container.itsContainerChanges_Rid" },              /* V14 */
+    { 8137,     "ContainerChanges.ObjectsSignature_Rid" },          /* V14 */
+    { 8138,     "TisTraceJob.Class_Rid" },                          /* V14 */
+    { 8139,     "TisTraceJob.ActivationTime_Rid" },                 /* V14 */
+    { 8140,     "TisTraceJob.InterpretationRules_Aid" },            /* V14 */
+    { 8141,     "OPC_UA.UserManagementMAC_Rid" },                   /* V14 */
+    { 8142,     "TisTraceJob.LargeBuffer_Rid" },                    /* V14 */
+    { 8143,     "Measurement.Class_Rid" },                          /* V14 */
+    { 8144,     "MeasurementContainer.itsMeasurement_Rid" },        /* V14 */
+    { 8145,     "Measurement.ActivationTime_Rid" },                 /* V14 */
+    { 8146,     "Measurement.Host_Rid" },                           /* V14 */
+    { 8147,     "Measurement.InterpretationRules_Rid" },            /* V14 */
+    { 8148,     "Measurement.LargeBuffer_Aid" },                    /* V14 */
+    { 8149,     "Measurement.LargeBufferMemorySize_Rid" },          /* V14 */
+    { 8150,     "Measurement.SequenceNumber_Rid" },                 /* V14 */
+    { 8151,     "Measurement.Request_Rid" },                        /* V14 */
+    { 8152,     "Measurement.Result_Aid" },                         /* V14 */
+    { 8153,     "Measurement.SavingTime_Rid" },                     /* V14 */
+    { 8154,     "Measurement.Trigger_Rid" },                        /* V14 */
+    { 8155,     "Measurement.TriggerAndAddresses_Rid" },            /* V14 */
+    { 8156,     "Measurement.User_Aid" },                           /* V14 */
+    { 8157,     "FailsafeRuntimeGroup.Class_Rid" },                 /* V14 */
+    { 8158,     "FailsafeRuntimeGroup.RtgData_Rid" },               /* V14 */
+    { 8159,     "FailsafeRuntimeGroup.RtgNumber_Aid" },             /* V14 */
+    { 8160,     "FailsafeRuntimeGroup.RtgSysInfoDB_Aid" },          /* V14 */
+    { 8161,     "PLCProgram.itsFailsafeRuntimeGroup_Rid" },         /* V14 */
+    { 8162,     "TA_DB.TechnologicalConnectionsModified_Rid" },     /* V14 */
+    { 8163,     "ObjectReference.Class_Rid" },                      /* V14 */
+    { 8164,     "ObjectReference.ReferencedObject_Rid" },           /* V14 */
+    { 8165,     "HWObject.CCNumber_Rid" },                          /* V14 */
+    { 8166,     "CC.Code_Rid" },                                    /* V14 */
+    { 8167,     "CC.InterfaceSignature_Aid" },                      /* V14 */
+    { 8168,     "CCAbstract.CCNumber_Rid" },                        /* V14 */
+    { 8169,     "CCAbstract.CCLanguage_Rid" },                      /* V14 */
+    { 8170,     "CCAbstract.CCType_Rid" },                          /* V14 */
+    { 8171,     "CC.BlockType_Rid" },                               /* V14 */
+    { 8172,     "HWObject.DNNPropagationBehavior_Rid" },            /* V14 */
+    { 8173,     "AlarmSubscriptionRef.SendAlarmTexts_Rid" },        /* V14 */
+    { 8174,     "CardReaderWriter.MMCAgingState_Rid" },             /* V14 */
+    { 8175,     "ASRoot.itsPkiContainer_Rid" },                     /* V14 */
+    { 8176,     "PkiContainer.itsPkiStore_Rid" },                   /* V14 */
+    { 8177,     "PkiStore.itsPkiItem_Rid" },                        /* V14 */
+    { 8178,     "CPUcommon.MemLowLatencySize_Rid" },                /* V14 */
+    { 8179,     "CPUcommon.MemLowLatencyUsedSize_Aid" },            /* V14 */
+    { 8180,     "Logs.itsMeasurementContainer_Rid" },               /* V14 */
+    { 8181,     "AlarmSubscriptionRef.AlarmTextLanguages_Rid" },    /* V14 */
+    { 8182,     "AlarmSubsystem.EnableFullTexts_Rid" },             /* V14 */
+    { 8183,     "CardReaderWriter.MMCAgingThreshold_Rid" },         /* V14 */
+    { 8184,     "PLCProgramChange.StationGUID_Rid" },               /* V14 */
+    { 8185,     "PLCProgramChange.ChangeCounterCopiesBroken_Rid" }, /* V14 */
+    { 8186,     "PLCProgramChange.DownloadGUID_Rid" },              /* V14 */
+    { 8187,     "PLCProgramChange.ChangeCounterRetain_Rid" },       /* V14 */
+    { 8188,     "PLCProgramChange.ChangeCounterPersistent_Aid" },   /* V14 */
+    { 8189,     "PLCProgramChange.OmsStoreModifiedExternally_Aid" },/* V14 */
+    { 8190,     "FunctionalObject.LongConstantsEncrypted_Rid" },    /* V14 */
+    { 8191,     "AS_GeoAddressActual.Class_Rid" },                  /* V14 */
+    { 8192,     "AS_GeoAddressActual.IOsystem_Rid" },               /* V14 */
+    { 8193,     "AS_GeoAddressActual.IODevice_Aid" },               /* V14 */
+    { 8194,     "AS_GeoAddressActual.Rack_Aid" },                   /* V14 */
+    { 8195,     "AS_GeoAddressActual.Slot_Aid" },                   /* V14 */
+    { 8196,     "AS_GeoAddressActual.API_Aid" },                    /* V14 */
+    { 8197,     "AS_GeoAddressActual.Subslot_Aid" },                /* V14 */
+    { 8198,     "AS_GeoAddressActual.KeptByConfigurationControl_Aid" }, /* V14 */
+    { 8199,     "HWObject.GeoAddressActual_Rid" },                  /* V14 */
+    { 8200,     "CPUcommon.ExtPSCapacity_Rid" },                    /* V14 */
+    { 8201,     "DataInterface.AlarmLastUserModified_Rid" },        /* V14 */
+    { 8202,     "CPUcommon.ExtPSmaxRetainSize_Rid" },               /* V14 */
+    { 8238,     "OPC_UA.ApplicationName_Rid" },                     /* V14 */
+    { 8239,     "OPC_UA.MinSamplingInterval_Rid" },                 /* V14 */
+    { 8240,     "OPC_UA.Class_Rid" },                               /* V14 */
+    { 8241,     "OPC_UA.itsCPU_Rid" },                              /* V14 */
+    { 8242,     "CPU.itsOPC_UA_Rid" },                              /* V14 */
+    { 8243,     "OPC_UA.Enable_Rid" },                              /* V14 */
+    { 8244,     "OPC_UA.EnableServer_Aid" },                        /* V14 */
+    { 8245,     "OPC_UA.PortNumber_Aid" },                          /* V14 */
+    { 8246,     "OPC_UA.MinPublishingInterval_Rid" },               /* V14 */
+    { 8247,     "OPC_UA.SessionTimeout_Rid" },                      /* V14 */
+    { 8248,     "OPC_UA.SubscriptionBufferSize_Rid" },              /* V14 */
+    { 8249,     "PLCProgramChange.CultureList_Rid" },               /* V14 */
+    { 8250,     "BackupContainer.Class_Rid" },                      /* V14 */
+    { 8291,     "BackupItem.Class_Rid" },                           /* V14 */
+    { 8292,     "BackupContainer.CommandREQ_Rid" },                 /* V14 */
+    { 8333,     "ModuleLean.itsBackupContainer_Rid" },              /* V14 */
+    { 8334,     "BackupItem.FileSize_Rid" },                        /* V14 */
+    { 8335,     "BackupContainer.itsBackupItem_Rid" },              /* V14 */
+    { 8336,     "AccessByCpuBL_DB.Class_Rid" },                     /* V14 */
+    { 8337,     "Diag_DB.Class_Rid" },                              /* V14 */
+    { 8338,     "SubmoduleAbstr.itsIOInfoForCPU_Rid" },             /* V14 */
+    { 8340,     "IOInfoForCPU.Class_Rid" },                         /* V14 */
+    { 8341,     "IOInfoForCPU.Data_Rid" },                          /* V14 */
+    { 8342,     "ReleaseMngmtRoot.TIAInfoTexts_Rid" },              /* V14 */
+    { 8343,     "Container.itsObjectReference_Rid" },               /* V14 */
+    { 8344,     "IODeviceAgent.Class_Rid" },                        /* V14 */
+    { 8345,     "decentralIOsystem.itsIODeviceAgent_Rid" },         /* V14 */
+    { 8348,     "CC.Class_Rid" },                                   /* V14 */
+    { 8349,     "CCAbstract.Class_Rid" },                           /* V14 */
+    { 8350,     "CCcontainer.Class_Rid" },                          /* V14 */
+    { 8351,     "CCcontainer.itsCCAbstract_Rid" },                  /* V14 */
+    { 8352,     "HWConfiguration.itsCCcontainer_Rid" },             /* V14 */
+    { 8353,     "IODeviceAgent.itsIODeviceAgentPrevious_Rid" },     /* V14 */
+    { 8354,     "IODeviceAgent.itsIODeviceAgentNext_Aid" },         /* V14 */
+    { 8355,     "OPC_UA.itsUserCredentials_Rid" },                  /* V14 */
+    { 8356,     "HWConfiguration.itsVL_ConfiguredTypes_Rid" },      /* V14 */
+    { 8357,     "IODeviceAbstr.itsDBmapping_Rid" },                 /* V14 */
+    { 8358,     "ASRoot.itsReleaseMngmt_Rid" },                     /* V14 */
+    { 8359,     "VL_ConfiguredTypes.itsTypeInfo_Rid" },             /* V14 */
+    { 8360,     "AdaptationRoot.itsC2C_Rid" },                      /* V14 */
+    { 8361,     "ASRoot.itsAdaptationRoot_Rid" },                   /* V14 */
+    { 8362,     "C2C.itsIOinterfaceC2C_Rid" },                      /* V14 */
+    { 8363,     "IOinterfaceC2C.itsIIODeviceC2C_Rid" },             /* V14 */
+    { 8364,     "IOinterfaceC2C.itsIODeviceC2C_Rid" },              /* V14 */
+    { 8365,     "CPU.itsSubmoduleRef_Rid" },                        /* V14 */
+    { 8366,     "CPU.itsHCPUredIOCtrl_Aid" },                       /* V14 */
+    { 8367,     "CPU.itsHCPUsyncIF_Aid" },                          /* V14 */
+    { 8368,     "IODevice.itsIODeviceAgent_Rid" },                  /* V14 */
+    { 10000,    "ASRootType" },
+    { 40200,    "LogPerformanceStartupMeasurement" },
+    { 65132,    "NativeObjects.theCentralDevice1_Rid" },            /* V14 */
+    { 65133,    "NativeObjects.theCPU1CentralIOcontroller_Rid" },   /* V14 */
+    { 65143,    "NativeObjects.theHCPU1syncIF1_Rid" },              /* V14 */
+    { 65144,    "NativeObjects.theHCPU1syncIF2_Rid" },              /* V14 */
+    { 65146,    "NativeObjects.theHCPU1redIOCtrl_Rid" },            /* V14 */
+    { 65147,    "NativeObjects.theHCPU1redCtrl_Rid" },              /* V14 */
+    { 65148,    "NativeObjects.theCPU1_Rid" },                      /* V14 */
+    { 65149,    "NativeObjects.theCPU1proxy_Rid" },                 /* V14 */
+    { 65150,    "NativeObjects.theCPU1common_Rid" },                /* V14 */
+    { 65151,    "NativeObjects.theCPU1CardReaderWriter_Rid" },      /* V14 */
+    { 65152,    "NativeObjects.theCPU1execUnit_Rid" },              /* V14 */
+    { 65153,    "NativeObjects.theCPU1WebServer_Rid" },             /* V14 */
+    { 65154,    "NativeObjects.theCPU1Display_Rid" },               /* V14 */
+    { 65155,    "NativeObjects.theCPU1FexecUnit_Rid" },             /* V14 */
+    { 65160,    "NativeObjects.theCPU1_PB1_Rid" },                  /* V14 */
+    { 65165,    "NativeObjects.theCPU1_IE1_Port1_Rid" },            /* V14 */
+    { 65172,    "NativeObjects.theCPU1_IE2_Rid" },                  /* V14 */
+    { 65173,    "NativeObjects.theCPU1_IE2_Port1_Rid" },            /* V14 */
+    { 65177,    "NativeObjects.theCPU1_IE1_NetworkParameters_Rid" },/* V14 */
+    { 65217,    "NativeObjects.theCPU1_OPC_UA_Rid" },               /* V14 */
+    { 65219,    "NativeObjects.theCPU1_IE3_NetworkParameters_Rid" },/* V14 */
+    { 65220,    "NativeObjects.theCPU1_IE3_Rid" },                  /* V14 */
+    { 65221,    "NativeObjects.theCPU1_IE3_Port1_Rid" },            /* V14 */
+    { 65225,    "NativeObjects.theCPU1_IE4_NetworkParameters_Rid" },/* V14 */
+    { 65230,    "NativeObjects.theCPU1_IE4_Rid" },                  /* V14 */
+    { 65332,    "NativeObjects.theCentralDevice2_Rid" },            /* V14 */
+    { 65333,    "NativeObjects.theCPU2CentralIOcontroller_Rid" },   /* V14 */
+    { 65343,    "NativeObjects.theHCPU2syncIF1_Rid" },              /* V14 */
+    { 65344,    "NativeObjects.theHCPU2syncIF2_Rid" },              /* V14 */
+    { 65346,    "NativeObjects.theHCPU2redIOCtrl_Rid" },            /* V14 */
+    { 65347,    "NativeObjects.theHCPU2redCtrl_Rid" },              /* V14 */
+    { 65348,    "NativeObjects.theCPU2_Rid" },                      /* V14 */
+    { 65349,    "NativeObjects.theCPU2proxy_Rid" },                 /* V14 */
+    { 65350,    "NativeObjects.theCPU2common_Rid" },                /* V14 */
+    { 65351,    "NativeObjects.theCPU2CardReaderWriter_Rid" },      /* V14 */
+    { 65352,    "NativeObjects.theCPU2execUnit_Rid" },              /* V14 */
+    { 65353,    "NativeObjects.theCPU2WebServer_Rid" },             /* V14 */
+    { 65354,    "NativeObjects.theCPU2Display_Rid" },               /* V14 */
+    { 65355,    "NativeObjects.theCPU2FexecUnit_Rid" },             /* V14 */
+    { 65360,    "NativeObjects.theCPU2_PB1_Rid" },                  /* V14 */
+    { 65364,    "NativeObjects.theCPU2_IE1_Rid" },                  /* V14 */
+    { 65365,    "NativeObjects.theCPU2_IE1_Port1_Rid" },            /* V14 */
+    { 65372,    "NativeObjects.theCPU2_IE2_Rid" },                  /* V14 */
+    { 65373,    "NativeObjects.theCPU2_IE2_Port1_Rid" },            /* V14 */
+    { 65377,    "NativeObjects.theCPU2_IE1_NetworkParameters_Rid" },/* V14 */
+    { 65378,    "NativeObjects.theCPU2_IE2_NetworkParameters_Rid" },/* V14 */
+    { 65417,    "NativeObjects.theCPU2_OPC_UA_Rid" },               /* V14 */
+    { 65419,    "NativeObjects.theCPU2_IE3_NetworkParameters_Rid" },/* V14 */
+    { 65420,    "NativeObjects.theCPU2_IE3_Rid" },                  /* V14 */
+    { 65421,    "NativeObjects.theCPU2_IE3_Port1_Rid" },            /* V14 */
+    { 65425,    "NativeObjects.theCPU2_IE4_NetworkParameters_Rid" },/* V14 */
+    { 65430,    "NativeObjects.theCPU2_IE4_Rid" },                  /* V14 */
+    { 33554433, "TI_BOOL" },
+    { 33554436, "TI_WORD" },
+    { 33554437, "TI_INT8" },
+    { 33554439, "TI_INT16" },
+    { 33554440, "TI_REAL32" },
+    { 33554451, "TI_S7_STRING" },
+    { 33554480, "TI_REAL64" },
+    { 33554482, "TI_INT32" },
+    { 33554484, "TI_UINT8" },
+    { 33554485, "TI_UINT16" },
+    { 33554486, "TI_UINT32" },
+    { 33554494, "TI_S7_WSTRING" },
+    { 2147467264, "TemporyRIDBegin" },
+    { 2147483647, "TemporyRIDEnd" },
+    { 0,        NULL }
 };
-#endif
+
 static value_string_ext id_number_names_ext = VALUE_STRING_EXT_INIT(id_number_names);
 
-/* Error codes */
-#ifdef USE_INTERNALS
-    #include "internals/packet-s7comm_plus-errorcodes.h"
-#else
+/**************************************************************************
+ * Error codes
+ */
 static const val64_string errorcode_names[] = {
-    { 0,                                        "OK" },
-    { 17,                                       "Message Session Pre-Legitimated" },
-    { 19,                                       "Warning Service Executed With Partial Error" },
-    { 22,                                       "Service Session Delegitimated" },
-    { -12,                                      "Object not found" },
-    { -17,                                      "Invalid CRC" },
-    { -134,                                     "Service Multi-ES Not Supported" },
-    { -255,                                     "Invalid LID" },
-    { 0,                                        NULL }
+    { -513,     "ConcurrentTransactionRunning" },                   /* V14*/
+    { -512,     "MultiESIncompatibleOtherESVersion" },              /* V14*/
+    { -511,     "MultiESLimitExceeded" },                           /* V14*/
+    { -510,     "MultiESConflict" },                                /* V14*/
+    { -509,     "StreamingError" },                                 /* V14*/
+    { -508,     "NotAllowedWithStreaming" },                        /* V14*/
+    { -507,     "NoSupportForTls" },                                /* V14*/
+    { -506,     "StoppingTlsFailed" },                              /* V14*/
+    { -505,     "StartTlsFailed" },                                 /* V14*/
+    { -504,     "PasswordAlreadyUsed" },
+    { -503,     "SpaceSignOnly_Hash" },
+    { -502,     "Invalid_TypeInfo_Format" },
+    { -501,     "SystemLimitExceeded" },
+    { -408,     "TextLib_buffer_overflow" },
+    { -407,     "TextLib_currently_not_available" },
+    { -406,     "Invalid_search_mode" },
+    { -405,     "TextLib_DublicatedTextID" },
+    { -404,     "TextLib_No_List_Header" },
+    { -403,     "TextLib_Not_Initialized" },
+    { -402,     "TextLib_Inconsistent_Structure" },
+    { -401,     "Invalid_Compiler_Alignment" },
+    { -353,     "SslHandshake" },                                   /* V14*/
+    { -352,     "SecurityDisconnect" },                             /* V14*/
+    { -351,     "IntegrityError" },
+    { -303,     "DsIncompletePreparation" },
+    { -302,     "DsTargetLostUnexpected" },
+    { -301,     "DsInconsistantContainer" },
+    { -300,     "DsNotInitialized" },
+    { -279,     "PlainStructureNeedsLittleEndianData" },            /* V14*/
+    { -278,     "PlainStructureNeedsBigEndianData" },               /* V14*/
+    { -277,     "PlainStructureNeedsNenaOffsets" },                 /* V14*/
+    { -276,     "PlainStructureNeedsClassicOffsets" },              /* V14*/
+    { -275,     "NotAllowedForPersistentData" },                    /* V14*/
+    { -274,     "NoDataPtrAvailable" },                             /* V14*/
+    { -273,     "TypeInfoHierarchyOverflow" },                      /* V14*/
+    { -272,     "OffsetPublished" },                                /* V14*/
+    { -271,     "VariableIsObsolete" },                             /* V14*/
+    { -270,     "NotOms" },                                         /* V14*/
+    { -269,     "StoreDefect" },                                    /* V14*/
+    { -268,     "Invalid_thread_context" },                         /* V14*/
+    { -267,     "Object_has_been_deleted " },                       /* V14*/
+    { -266,     "StoreNotExisting" },
+    { -265,     "StoreTransactionNotRunning" },
+    { -264,     "StoreTransactionAlreadyRunning" },
+    { -263,     "InvalidState" },
+    { -262,     "DuplicateQualifierValue" },
+    { -261,     "CBT_Container_Needed" },
+    { -260,     "NotCreateableByTransaction" },
+    { -259,     "InvalidTransactionState" },
+    { -258,     "InvalidVersion" },
+    { -257,     "ValueConversionNotPossible" },
+    { -256,     "InvalidTypeInfoModificationTime" },
+    { -255,     "InvalidLID" },
+    { -254,     "TypeInfoNotSet" },
+    { -253,     "OnlyTypeInfoAllowed" },
+    { -252,     "TypeInfoInvalidStructureType" },
+    { -251,     "StructNotAsBlobAccessible" },
+    { -250,     "WSTRING_not_supported" },
+    { -249,     "ConsistencyAsyncCallFailed" },
+    { -248,     "AsyncCallFailed" },
+    { -247,     "CallbackMissing" },
+    { -246,     "NullPointer" },
+    { -245,     "enError_StoreRefusedByBl" },
+    { -244,     "enError_StoreIsBusy" },
+    { -243,     "enError_StoreHandlerNotFree" },
+    { -242,     "FileFindElement" },
+    { -241,     "FileInvalidFindState" },
+    { -240,     "StateInvalidCase" },
+    { -239,     "AsyncFileRunning" },
+    { -238,     "SourceFileNotExisting" },
+    { -237,     "StoreAlreadyExisting" },
+    { -236,     "StoreInvalidHandle" },
+    { -235,     "ValueMissing" },
+    { -234,     "SerializerReinitFailed" },
+    { -233,     "StoreBadIndex" },
+    { -232,     "StoreWrongFormat" },
+    { -231,     "StoreInactive" },
+    { -230,     "StoreForceStore" },
+    { -227,     "FileUnlinkError" },
+    { -226,     "FileWriteError" },
+    { -225,     "FileReadError" },
+    { -223,     "StoreHasTransactionLock" },
+    { -222,     "Start_timer_error" },
+    { -221,     "InvalidConsistencyID" },
+    { -220,     "NotInConsistency" },
+    { -219,     "FileInvalidAccess" },
+    { -218,     "DirectoryRemoveError" },
+    { -217,     "DirectoryAlreadyClosed" },
+    { -216,     "DirectoryAlreadyOpen" },
+    { -215,     "FileNotFound" },
+    { -214,     "MessageBlockInitError" },
+    { -213,     "AsyncFileInstanceInUseError" },
+    { -212,     "HasFileNameError" },
+    { -211,     "NoFileName" },
+    { -210,     "FileInnerError" },
+    { -209,     "DirectoryCreateError" },
+    { -208,     "DirectoryOpenError" },
+    { -207,     "DirectoryCloseError" },
+    { -206,     "DirectoryReadError" },
+    { -205,     "InvalidOpenMode" },
+    { -204,     "FileAlreadyClose" },
+    { -203,     "FileAlreadyOpen" },
+    { -202,     "FileCloseError" },
+    { -201,     "FileOpenError" },
+    { -168,     "Tree_read_locked" },
+    { -167,     "ObjectNotLocked" },
+    { -166,     "ChildAlreadyLockedForDeletion" },
+    { -165,     "ExclusiveLockedAgainstDeletion" },
+    { -164,     "LockForDeletion" },
+    { -163,     "LockingLoopOverflow" },
+    { -162,     "TreeLockedAgainstDeletion" },
+    { -161,     "WrongLockForDeletionObject" },
+    { -160,     "LockingCounterUnderflow" },
+    { -159,     "LockingCounterOverflow" },
+    { -158,     "CallbackInterfaceIsMissing" },
+    { -157,     "ChildLocked" },
+    { -156,     "LockingStrategyAlreadyInQueue" },
+    { -155,     "LockingStrategyNotInProgress" },
+    { -154,     "ExclusiveLocked" },
+    { -153,     "LockingStrategyNotFound" },
+    { -152,     "LockingStrategyAlreadyInProgress" },
+    { -151,     "WrongLockingStrategy" },
+    { -150,     "TreeWriteLocked" },
+    { -136,     "ServiceCommFormatDiffersFromStoreFormat" },
+    { -135,     "ServiceAborted" },
+    { -134,     "ServiceMultiESNotSupported" },
+    { -133,     "ServiceNotChangableInErrorState" },
+    { -132,     "ServiceSubscriptionIsNotRunning" },
+    { -131,     "ServiceSubscriptionPrepareSequenceError" },
+    { -130,     "ServiceUnknownComFormat" },
+    { -129,     "ServiceObjectSerializationError" },
+    { -128,     "ServiceTypeAlreadyExists" },
+    { -127,     "ServiceAsyncRMC_impossible" },
+    { -126,     "ServiceWrongArgumentFormat" },
+    { -125,     "ServiceWrongNrOfArguments" },
+    { -124,     "ServiceNotChangableInRun" },
+    { -123,     "ServiceRequestSerializationError" },
+    { -122,     "ServiceNotificationParsingError" },
+    { -121,     "ServiceObjectParsingError" },
+    { -120,     "ServiceRequestParsingError" },
+    { -119,     "ServiceUnknownRequest" },
+    { -117,     "ServicePendingRequestNotFound" },
+    { -116,     "ServiceUnexpectedStream" },
+    { -115,     "ServiceUnexpectedResponse" },
+    { -114,     "ServiceCanNotCreateRequest" },
+    { -113,     "ServiceTooManySessions" },
+    { -112,     "ServiceTooManyRequests" },
+    { -111,     "ServiceTimeout" },
+    { -110,     "ServiceNotOwner" },
+    { -109,     "ServiceNotConnected" },
+    { -108,     "ServiceNotAvailable" },
+    { -108,     "ServiceNotAvaliable" },
+    { -107,     "ServiceNotAllowed" },
+    { -106,     "ServiceInvalidSession" },
+    { -105,     "ServiceInvalidObject" },
+    { -104,     "ServiceInvalidAddress" },
+    { -103,     "ServiceFailedToDisconnect" },
+    { -102,     "ServiceDisconnected" },
+    { -101,     "ServiceActivateFailed" },
+    { -100,     "ServiceAccessDenied" },
+    {  -99,     "PersistenceNotAvailable" },
+    {  -98,     "NotPersistent" },
+    {  -97,     "VariableWithQualifier" },
+    {  -96,     "InvalidObjectWithQualifier" },
+    {  -95,     "NotImplemented" },
+    {  -94,     "ObjectIsNotPassive" },
+    {  -93,     "ObjectAllreadyInTree" },
+    {  -92,     "ObjectIsActive" },
+    {  -91,     "ObjectIsPassive" },
+    {  -90,     "ObjectIsMarkedForDeletetion" },
+    {  -89,     "DataIsReferenced" },
+    {  -88,     "InfoNotAvailable" },
+    {  -87,     "OCBMissing" },
+    {  -86,     "NoDeleteAllowed" },
+    {  -85,     "StructOnlyInDetailsAccessible" },
+    {  -84,     "ValueNotMoveable" },
+    {  -82,     "OCBAlreadyUsed" },
+    {  -81,     "AIDAlreadySet" },
+    {  -80,     "DuplicateAID" },
+    {  -79,     "NoProxyObjectAllowed" },
+    {  -78,     "AllocatorNotFound" },
+    {  -77,     "ObjectFactoryNotfound" },
+    {  -76,     "CannotDeleteNativeObject" },
+    {  -75,     "ValueTimeout" },
+    {  -74,     "CompositionNotAllowed" },
+    {  -73,     "AsyncButCallbackInterfaceNotFound" },
+    {  -72,     "ElementIsTransistent" },
+    {  -71,     "HierarchyOverflow" },
+    {  -70,     "InvalidAssociation" },
+    {  -69,     "QualifierNotSync" },
+    {  -68,     "QualifierNotFound" },
+    {  -67,     "InvalidRoot" },
+    {  -66,     "HashIndexNotFound" },
+    {  -65,     "IteratorInterfaceNotFound" },
+    {  -64,     "ObjectAllreadyInAssociation" },
+    {  -63,     "AssociationNotFound" },
+    {  -62,     "AssociationNotQualified" },
+    {  -61,     "InvalidValueRange" },
+    {  -60,     "DuplicateRID" },
+    {  -59,     "LinkInterfaceNotFound" },
+    {  -58,     "AsyncOnly" },
+    {  -57,     "VariableTypeNotAllowed" },
+    {  -56,     "VariableIsSpecificOnly" },
+    {  -55,     "InvalidComposition" },
+    {  -54,     "NoFreeRID" },
+    {  -53,     "BufferOverflow" },
+    {  -52,     "DuplicateLink" },
+    {  -51,     "ObjectIsLocked" },
+    {  -50,     "ReadOnlyObject" },
+    {  -49,     "StringMustHaveHexCharacters_only" },
+    {  -48,     "LinkNotFound" },
+    {  -47,     "InvalidMetaType" },
+/*  {  -46,     "TypeInfo_max_complexity_reached" }, */
+    {  -46,     "ObjectIsNotInstantiable" },
+    {  -45,     "CannotCreateAbstractObject" },
+    {  -44,     "NoSeparateLoadMemoryFileAllowed" },
+    {  -43,     "CreateChildObjectWithinCreateChildObject" },
+    {  -42,     "M_N_AssocNotSupported" },
+    {  -41,     "ReadOnlyProperty" },
+    {  -40,     "DirectoryNotFound" },
+    {  -39,     "FilenameExcedRange" },
+    {  -38,     "ClassNotAllowed" },
+    {  -37,     "UnexpectedAttribute" },
+    {  -36,     "NumericUnderflow" },
+    {  -35,     "NumericOverflow" },
+    {  -34,     "UnexpectedToken" },
+    {  -33,     "BadCast" },
+    {  -32,     "InvalidAID" },
+    {  -30,     "InvalidRID" },
+    {  -29,     "ObjectExistsWithSameID" },
+    {  -28,     "UnexpectedFragType" },
+    {  -27,     "UnexpectedEndTag" },
+    {  -26,     "UnknownStartTag" },
+    {  -25,     "InvalidTypeID" },
+    {  -24,     "InvalidID" },
+    {  -23,     "WritingDataError" },
+    {  -22,     "NoMoreDataAvailable" },
+    {  -21,     "ReadingDataError" },
+    {  -20,     "StreamIsCurrentlyUsed" },
+    {  -19,     "Invalid_namespace_ID" },
+    {  -18,     "CanNotDeliver" },
+    {  -17,     "InvalidCRC" },
+    {  -16,     "DuplicateNameInCurrentHierarchy" },
+    {  -15,     "ClassNotSupportedFromClassFactory" },
+    {  -14,     "ClassNotFound" },
+    {  -13,     "CardinalityOverflow" },
+    {  -12,     "ObjectNotFound" },
+    {  -11,     "InvalidFileHandle" },
+    {  -10,     "InvalidDestinationReferenceType2" },
+    {   -9,     "InvalidSourceReferenceType2" },
+    {   -8,     "ReferencesAreNotConnected" },
+    {   -7,     "InvalidDestinationReferenceType" },
+    {   -6,     "InvalidSourceReferenceType" },
+    {   -5,     "ErrorInSprintf" },
+    {   -4,     "NotEnoughMemoryAvailable" },
+    {   -3,     "InvalidArgumentValue" },
+    {   -2,     "InvalidValueType" },
+    {   -1,     "UnknownError" },
+    {    0,     "OK" },
+/*  {    0,     "Unknown" }, */
+    {    1,     "MessageTypeCreated" },
+    {    2,     "MessageLinkEnd" },
+/*  {    2,     "TypeInfoMembersWithNamesTrimmer" }, */
+    {    3,     "MessageValueUnchanged" },
+/*  {    3,     "TypeInfoMembersNoNamesTrimmer" }, */
+    {    4,     "MessageSetStructAttribute" },
+    {    5,     "MessageResponseNeeded" },
+    {    6,     "MessageAsyncCallPending" },
+    {    7,     "MessageAssociationWrongSide" },
+    {    8,     "MessageLockPending" },
+    {    9,     "MessageAlreadyLocked" },
+    {   10,     "WarningDefaultValue" },
+    {   11,     "MessageCanMoveValue" },
+    {   12,     "MessageLoadSucceeded" },
+    {   13,     "MessageContentAlreadyMoved" },
+    {   14,     "WarningStoreEmpty" },
+    {   15,     "MessageValueSwapped" },
+    {   16,     "MessageStoreActive" },
+    {   17,     "MessageSessionPreLegitimated" },
+/*  {   17,     "MessageSessionPreLegitimzated" }, */
+    {   18,     "ServiceIgnored" },
+    {   19,     "WarningServiceExecutedWithPartialError" },
+    {   21,     "ServiceSubscriptionTooManyNotifies" },
+    {   22,     "ServiceSessionDelegitimated" },
+    {   23,     "EndOfFile" },
+    {   24,     "ServiceSubscriptionDisabled" },
+    {   25,     "ServiceLegitimatedForLevel2" },
+    {   26,     "ServiceLegitimatedForLevel3" },
+    {   27,     "ServiceMultiResponsePending" },
+    {   28,     "Next_Messageblock" },
+    {   29,     "Object_Skipped" },
+    {   30,     "WarningDsCannotDistribute" },
+    {   31,     "WarningDsContainerItemNotFound" },
+    {   32,     "WarningDsPreconditionMissing" },
+    {   33,     "ServiceLegitimatedForLevel1" },
+    {   34,     "WaningServiceTransactionAborted" },
+    {   35,     "MessageBLOBreallocated" },
+    {   36,     "MessageDirAlreadyExists" },
+    {   37,     "MessageTemporarilyOutOfResources" },
+    {   38,     "MessageLegitimLevelCurrentlyDisabled" },
+    {   39,     "RescheduleHandler" },
+    {   40,     "BlobEndReached" },                                 /* V14 */
+    {   41,     "WarningSingleES" },                                /* V14 */
+    {   42,     "WarningMultiES" },                                 /* V14 */
+    {   43,     "WarningMultiESwithSWToken," },                     /* V14 */
+    {  207,     "CompClassAssociationEnd" },
+    {  208,     "CompClassComposition" },
+    {  209,     "CompStructVariableType" },
+    {  212,     "CompMetaTypesClass" },
+    {  218,     "CompRootTypes" },
+    {  219,     "CompTypesMetaTypes" },
+    {    0,     NULL }
 };
-#endif
 
 static const val64_string genericerrorcode_names[] = {
     { 0,        "Ok" },
@@ -698,7 +2793,7 @@ static const value_string tagdescr_offsetinfotype_names[] = {
 #define S7COMMP_TAGDESCR_SECTION_OPERAND           7
 
 static const value_string tagdescr_section_names[] = {
-    { S7COMMP_TAGDESCR_SECTION_NONE,             "Undefined" },
+    { S7COMMP_TAGDESCR_SECTION_NONE,            "Undefined" },
     { S7COMMP_TAGDESCR_SECTION_INPUT,           "Input" },
     { S7COMMP_TAGDESCR_SECTION_OUTPUT,          "Output" },
     { S7COMMP_TAGDESCR_SECTION_INOUT,           "InOut" },
@@ -988,7 +3083,7 @@ static const value_string lid_access_aid_names[] = {
 };
 
 static const value_string attrib_blocklanguage_names[] = {
-    { 0,       "Undefined" },
+    { 0,        "Undefined" },
     { 1,        "STL" },
     { 2,        "LAD_CLASSIC" },
     { 3,        "FBD_CLASSIC" },
@@ -1031,7 +3126,7 @@ static const value_string attrib_blocklanguage_names[] = {
     { 0,        NULL }
 };
 
-static const value_string attrib_serversessionrole[] = {
+static const value_string attrib_serversessionrole_names[] = {
     { 0x00000000,   "Undefined" },
     { 0x00000001,   "ES" },
     { 0x00000002,   "HMI" },
@@ -1039,7 +3134,7 @@ static const value_string attrib_serversessionrole[] = {
     { 0,            NULL }
 };
 
-static const value_string attrib_filteroperation[] = {
+static const value_string attrib_filteroperation_names[] = {
     { 1,            "Equal" },
     { 2,            "Unequal" },
     { 3,            "LessThan" },
@@ -2642,14 +4737,13 @@ static const char s7commp_dict_CompilerSettings_90000001[] = {
     0x6f, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x61, 0x6c, 0x6c, 0x79
 };
 
-/**************************************************************************
- **************************************************************************/
 /* Header Block */
 static gint hf_s7commp_header = -1;
 static gint hf_s7commp_header_protid = -1;              /* Header Byte  0 */
 static gint hf_s7commp_header_protocolversion = -1;     /* Header Bytes 1 */
 static gint hf_s7commp_header_datlg = -1;               /* Header Bytes 2, 3*/
 static gint hf_s7commp_header_keepaliveseqnum = -1;     /* Sequence number in keep alive telegrams */
+static gint hf_s7commp_header_keepalive_res1 = -1;
 
 static gint hf_s7commp_data = -1;
 static gint hf_s7commp_data_item_address = -1;
@@ -2733,10 +4827,7 @@ static gint hf_s7commp_data_retval_genericerrorcode = -1;
 static gint hf_s7commp_data_retval_servererror = -1;
 static gint hf_s7commp_data_retval_debuginfo = -1;
 static gint hf_s7commp_data_retval_errorextension = -1;
-/* Z.Zt. nicht verwendet, da 64 Bit Feld nicht vernuenftig unterstuetzt wird. */
-/* y needs to match the definition of the 6th argument from
- * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h
- */
+
 static int * const s7commp_data_returnvalue_fields[] = {
     &hf_s7commp_data_retval_errorcode,
     &hf_s7commp_data_retval_omsline,
@@ -2748,8 +4839,7 @@ static int * const s7commp_data_returnvalue_fields[] = {
     NULL
 };
 
-/* These are the ids of the subtrees that we are creating */
-static gint ett_s7commp = -1;                           /* S7 communication tree, parent of all other subtree */
+static gint ett_s7commp = -1;                           /* S7 communication tree, parent of all other subtrees */
 static gint ett_s7commp_header = -1;                    /* Subtree for header block */
 static gint ett_s7commp_data = -1;                      /* Subtree for data block */
 static gint ett_s7commp_data_returnvalue = -1;          /* Subtree for returnvalue */
@@ -2780,6 +4870,10 @@ static gint hf_s7commp_itemaddr_area_sub = -1;
 static gint hf_s7commp_itemaddr_lid_value = -1;
 static gint hf_s7commp_itemaddr_idcount = -1;
 static gint hf_s7commp_itemaddr_filter_sequence = -1;
+static gint hf_s7commp_itemaddr_lid_accessaid = -1;
+static gint hf_s7commp_itemaddr_blob_startoffset = -1;
+static gint hf_s7commp_itemaddr_blob_bytecount = -1;
+static gint hf_s7commp_itemaddr_blob_bitoffset = -1;
 
 /* Item Value */
 static gint hf_s7commp_itemval_itemnumber = -1;
@@ -2790,9 +4884,7 @@ static gint hf_s7commp_itemval_datatype_flags_address_array = -1;       /* 0x20 
 static gint hf_s7commp_itemval_datatype_flags_sparsearray = -1;         /* 0x40 for nullterminated array with key/value */
 static gint hf_s7commp_itemval_datatype_flags_0x80unkn = -1;            /* 0x80 unknown, seen in S7-1500 */
 static gint ett_s7commp_itemval_datatype_flags = -1;
-/* s7commp_itemval_datatype_flags_fields needs to match the definition of the 6th argument from
- * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h
- */
+
 static int * const s7commp_itemval_datatype_flags_fields[] = {
     &hf_s7commp_itemval_datatype_flags_array,
     &hf_s7commp_itemval_datatype_flags_address_array,
@@ -2846,6 +4938,7 @@ static gint hf_s7commp_packedstruct_data = -1;
 
 /* List elements */
 static gint hf_s7commp_listitem_terminator = -1;
+static gint hf_s7commp_structitem_terminator = -1;
 static gint hf_s7commp_errorvaluelist_terminator = -1;
 
 static gint hf_s7commp_explore_req_id = -1;
@@ -2893,9 +4986,7 @@ static gint hf_s7commp_tagdescr_attributeflags_isin = -1;
 static gint hf_s7commp_tagdescr_attributeflags_appwriteable = -1;
 static gint hf_s7commp_tagdescr_attributeflags_appreadable = -1;
 static gint ett_s7commp_tagdescr_attributeflags = -1;
-/* s7commp_tagdescr_attributeflags_fields needs to match the definition of the 6th argument from
- * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h:2759
- */
+
 static int * const s7commp_tagdescr_attributeflags_fields[] = {
     &hf_s7commp_tagdescr_attributeflags_hostrelevant,
     &hf_s7commp_tagdescr_attributeflags_retain,
@@ -2961,6 +5052,7 @@ static int * const s7commp_tagdescr_bitoffsetinfo_fields[] = {
     NULL
 };
 
+static gint hf_s7commp_tagdescr_unknown1 = -1;
 static gint hf_s7commp_tagdescr_lid = -1;
 static gint hf_s7commp_tagdescr_subsymbolcrc = -1;
 static gint hf_s7commp_tagdescr_s7stringlength = -1;
@@ -2972,6 +5064,8 @@ static gint hf_s7commp_tagdescr_bitoffsettype1 = -1;
 static gint hf_s7commp_tagdescr_bitoffsettype2 = -1;
 static gint hf_s7commp_tagdescr_arraylowerbounds = -1;
 static gint hf_s7commp_tagdescr_arrayelementcount = -1;
+static gint hf_s7commp_tagdescr_mdarraylowerbounds = -1;
+static gint hf_s7commp_tagdescr_mdarrayelementcount = -1;
 static gint hf_s7commp_tagdescr_paddingtype1 = -1;
 static gint hf_s7commp_tagdescr_paddingtype2 = -1;
 static gint hf_s7commp_tagdescr_numarraydimensions = -1;
@@ -2981,6 +5075,24 @@ static gint hf_s7commp_tagdescr_nonoptimized_addr_16 = -1;
 static gint hf_s7commp_tagdescr_optimized_addr_16 = -1;
 static gint hf_s7commp_tagdescr_nonoptimized_struct_size = -1;
 static gint hf_s7commp_tagdescr_optimized_struct_size = -1;
+static gint hf_s7commp_tagdescr_fb_pa_relid = -1;
+static gint hf_s7commp_tagdescr_fb_pa_info4 = -1;
+static gint hf_s7commp_tagdescr_fb_pa_info5 = -1;
+static gint hf_s7commp_tagdescr_fb_pa_info6 = -1;
+static gint hf_s7commp_tagdescr_fb_pa_info7 = -1;
+static gint hf_s7commp_tagdescr_fb_pa_retainoffset = -1;
+static gint hf_s7commp_tagdescr_fb_pa_volatileoffset = -1;
+static gint hf_s7commp_tagdescr_fbarr_classicsize = -1;
+static gint hf_s7commp_tagdescr_fbarr_retainsize = -1;
+static gint hf_s7commp_tagdescr_fbarr_volatilesize = -1;
+static gint hf_s7commp_tagdescr_struct_info4 = -1;
+static gint hf_s7commp_tagdescr_struct_info5 = -1;
+static gint hf_s7commp_tagdescr_struct_info6 = -1;
+static gint hf_s7commp_tagdescr_struct_info7 = -1;
+static gint hf_s7commp_tagdescr_unspoffsetinfo1 = -1;
+static gint hf_s7commp_tagdescr_unspoffsetinfo2 = -1;
+static gint hf_s7commp_tagdescr_sfbinstoffset1 = -1;
+static gint hf_s7commp_tagdescr_sfbinstoffset2 = -1;
 
 /* Object */
 static gint hf_s7commp_object_relid = -1;
@@ -2992,11 +5104,14 @@ static gint hf_s7commp_object_relunknown1 = -1;
 static gint hf_s7commp_object_blocklength = -1;
 static gint hf_s7commp_object_createobjidcount = -1;
 static gint hf_s7commp_object_createobjid = -1;
+static gint hf_s7commp_object_createobjrequnknown1 = -1;
+static gint hf_s7commp_object_createobjrequnknown2 = -1;
 static gint hf_s7commp_object_deleteobjid = -1;
 static gint hf_s7commp_object_deleteobj_fill = -1;
 
 /* Setmultivar/Setvariable */
 static gint hf_s7commp_setvar_unknown1 = -1;
+static gint hf_s7commp_setvar_unknown2 = -1;
 static gint hf_s7commp_setvar_objectid = -1;
 static gint hf_s7commp_setvar_itemcount = -1;
 static gint hf_s7commp_setvar_itemaddrcount = -1;
@@ -3009,10 +5124,15 @@ static gint hf_s7commp_getmultivar_linkid = -1;
 static gint hf_s7commp_getmultivar_itemaddrcount = -1;
 static gint hf_s7commp_getvar_itemcount = -1;
 
+/* GetVarSubStreamed */
+static gint hf_s7commp_getvarsubstr_res_unknown1 = -1;
+static gint hf_s7commp_getvarsubstr_req_unknown1 = -1;
+
 /* SetVarSubstreamed, stream data */
 static gint hf_s7commp_streamdata = -1;
 static gint hf_s7commp_streamdata_frag_data_len = -1;
 static gint hf_s7commp_streamdata_frag_data = -1;
+static gint hf_s7commp_setvarsubstr_req_unknown1 = -1;
 
 /* Notification */
 static gint hf_s7commp_notification_vl_retval = -1;
@@ -3020,6 +5140,9 @@ static gint hf_s7commp_notification_vl_refnumber = -1;
 static gint hf_s7commp_notification_vl_unknown0x9c = -1;
 
 static gint hf_s7commp_notification_subscrobjectid = -1;
+static gint hf_s7commp_notification_v1_unknown2 = -1;
+static gint hf_s7commp_notification_v1_unknown3 = -1;
+static gint hf_s7commp_notification_v1_unknown4 = -1;
 static gint hf_s7commp_notification_unknown2 = -1;
 static gint hf_s7commp_notification_unknown3 = -1;
 static gint hf_s7commp_notification_unknown4 = -1;
@@ -3044,9 +5167,7 @@ static gint hf_s7commp_subscrreflist_item_head = -1;
 static gint ett_s7commp_subscrreflist_item_head = -1;
 static gint hf_s7commp_subscrreflist_item_head_unknown = -1;
 static gint hf_s7commp_subscrreflist_item_head_lidcnt = -1;
-/* s7commp_subscrreflist_item_head_fields needs to match the definition of the 6th argument from
- * proto_tree_add_bitmask_value which is defined in wireshark/epan/proto.h
- */
+
 static int * const s7commp_subscrreflist_item_head_fields[] = {
     &hf_s7commp_subscrreflist_item_head_unknown,
     &hf_s7commp_subscrreflist_item_head_lidcnt,
@@ -3135,6 +5256,12 @@ static gint hf_s7commp_hmiinfo_version = -1;
 static gint hf_s7commp_hmiinfo_clientalarmid = -1;
 static gint hf_s7commp_hmiinfo_priority = -1;
 
+/* Ext. decoded ID values */
+static gint hf_s7commp_attrib_timestamp = -1;
+static gint hf_s7commp_attrib_serversessionrole = -1;
+static gint hf_s7commp_attrib_filteroperation = -1;
+static gint hf_s7commp_attrib_blocklanguage = -1;
+
 /* Getlink */
 static gint hf_s7commp_getlink_requnknown1 = -1;
 static gint hf_s7commp_getlink_requnknown2 = -1;
@@ -3210,7 +5337,9 @@ static const fragment_items s7commp_frag_items = {
     "S7COMM-PLUS fragments"
 };
 
+#if ENABLE_PROTO_TREE_ADD_TEXT==1
 static gint hf_s7commp_proto_tree_add_text_dummy = -1;      /* dummy header field for conversion to wireshark 2.0 */
+#endif
 
 typedef struct {
     gboolean first_fragment;
@@ -3233,17 +5362,15 @@ typedef struct {
     guint16 start_function;
 } conv_state_t;
 
-/* options */
-static gboolean s7commp_reassemble = TRUE;
+/* Options */
+static gboolean s7commp_opt_reassemble = TRUE;
 #ifdef HAVE_ZLIB
 static gboolean s7commp_opt_decompress_blobs = TRUE;
 #else
 static gboolean s7commp_opt_decompress_blobs = FALSE;
 #endif
 
-/*
- * reassembly of S7COMMP
- */
+/* Reassembly of S7COMMP */
 static reassembly_table s7commp_reassembly_table;
 
 static void
@@ -3253,7 +5380,6 @@ s7commp_defragment_init(void)
                           &addresses_reassembly_table_functions);
 }
 
-
 /* Register this protocol */
 void
 proto_reg_handoff_s7commp(void)
@@ -3261,11 +5387,7 @@ proto_reg_handoff_s7commp(void)
     static gboolean initialized = FALSE;
     if (!initialized) {
         xml_handle = find_dissector_add_dependency("xml", proto_s7commp);
-        #ifdef DONT_ADD_AS_HEURISTIC_DISSECTOR
-            register_dissector("dlt", dissect_s7commp, proto_s7commp);
-        #else
-            heur_dissector_add("cotp", dissect_s7commp, "S7 Communication Plus over COTP", "s7comm_plus_cotp", proto_s7commp, HEURISTIC_ENABLE);
-        #endif
+        heur_dissector_add("cotp", dissect_s7commp, "S7 Communication Plus over COTP", "s7comm_plus_cotp", proto_s7commp, HEURISTIC_ENABLE);
         initialized = TRUE;
     }
 }
@@ -3288,7 +5410,6 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
     if ((str = try_val_to_str_ext(id_number, &id_number_names_ext))) {
         g_snprintf(result, ITEM_LABEL_LENGTH, "%s", str);
     } else {
-        /*cls = ((id_number & 0xff000000) >> 24);*/
         xindex = ((id_number & 0x00ff0000) >> 16);
         section = (id_number & 0xffff);
 
@@ -3362,7 +5483,7 @@ void
 proto_register_s7commp (void)
 {
     static hf_register_info hf[] = {
-        /*** Header fields ***/
+        /* Header fields */
         { &hf_s7commp_header,
           { "Header", "s7comm-plus.header", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is the header of S7 communication plus", HFILL }},
@@ -3378,15 +5499,16 @@ proto_register_s7commp (void)
         { &hf_s7commp_header_keepaliveseqnum,
           { "Keep alive sequence number", "s7comm-plus.header.keepalive_seqnum", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Sequence number in keep alive telegrams", HFILL }},
-
-        /*** Fields in data part ***/
+        { &hf_s7commp_header_keepalive_res1,
+          { "Reserved", "s7comm-plus.header.keepalive_res1", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        /* Fields in data part */
         { &hf_s7commp_data,
           { "Data", "s7comm-plus.data", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is the data part of S7 communication plus", HFILL }},
-
         { &hf_s7commp_data_returnvalue,
           { "Return value", "s7comm-plus.returnvalue", FT_UINT64, BASE_HEX, NULL, 0x0,
-            "varuint64: Return value", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_data_retval_errorcode,
           { "Error code", "s7comm-plus.returnvalue.errorcode", FT_INT64, BASE_DEC|BASE_VAL64_STRING, VALS64(errorcode_names), G_GUINT64_CONSTANT(0x000000000000ffff),
             NULL, HFILL }},
@@ -3408,7 +5530,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_retval_errorextension,
           { "Error extension", "s7comm-plus.returnvalue.errorextension", FT_BOOLEAN, 64, NULL, G_GUINT64_CONSTANT(0x4000000000000000),
             NULL, HFILL }},
-
         { &hf_s7commp_data_opcode,
           { "Opcode", "s7comm-plus.data.opcode", FT_UINT8, BASE_HEX, VALS(opcode_names), 0x0,
             NULL, HFILL }},
@@ -3454,18 +5575,15 @@ proto_register_s7commp (void)
         { &hf_s7commp_data_sessionid,
           { "Session Id", "s7comm-plus.data.sessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
             "Session Id, negotiated on session start", HFILL }},
-
         { &hf_s7commp_data_item_address,
           { "Item Address", "s7comm-plus.data.item_address", FT_NONE, BASE_NONE, NULL, 0x0,
             "Address of one Item", HFILL }},
         { &hf_s7commp_data_item_value,
           { "Item Value", "s7comm-plus.data.item_value", FT_NONE, BASE_NONE, NULL, 0x0,
             "Value of one item", HFILL }},
-
         { &hf_s7commp_data_data,
           { "Data unknown", "s7comm-plus.data.data", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_data_req_set,
           { "Request Set", "s7comm-plus.data.req_set", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is a set of data in a request telegram", HFILL }},
@@ -3475,10 +5593,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_notification_set,
           { "Notification Data Set", "s7comm-plus.notification_dataset", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is a set of data in a notification data telegram", HFILL }},
-
         { &hf_s7commp_data_id_number,
           { "ID Number", "s7comm-plus.data.id_number", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
-            "varuint32: ID Number for function", HFILL }},
+            NULL, HFILL }},
         /* Lists */
         { &hf_s7commp_valuelist,
           { "ValueList", "s7comm-plus.valuelist", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -3492,16 +5609,16 @@ proto_register_s7commp (void)
         /* Item Address */
         { &hf_s7commp_item_count,
           { "Item Count", "s7comm-plus.item.count", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Number of items following", HFILL }},
+            "Number of items following", HFILL }},
         { &hf_s7commp_item_no_of_fields,
           { "Number of fields in complete Item-Dataset", "s7comm-plus.item.no_of_fields", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Number of fields in complete Item-Dataset", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemaddr_crc,
           { "Symbol CRC", "s7comm-plus.item.addr.symbol_crc", FT_UINT32, BASE_HEX, NULL, 0x0,
             "CRC generated out of symbolic name with (x^32+x^31+x^30+x^29+x^28+x^26+x^23+x^21+x^19+x^18+x^15+x^14+x^13+x^12+x^9+x^8+x^4+x+1)", HFILL }},
         { &hf_s7commp_itemaddr_area,
           { "Access base-area", "s7comm-plus.item.addr.area", FT_UINT32, BASE_HEX, NULL, 0x0,
-            "varuint32: Base area inside Datablock with Number", HFILL }},
+            "Base area inside Datablock with Number", HFILL }},
         { &hf_s7commp_itemaddr_area1,
           { "Accessing area", "s7comm-plus.item.addr.area1", FT_UINT16, BASE_HEX, VALS(var_item_area1_names), 0x0,
             "Always 0x8a0e for Datablock", HFILL }},
@@ -3516,18 +5633,29 @@ proto_register_s7commp (void)
             "This is the sub area for all following IDs", HFILL }},
         { &hf_s7commp_itemaddr_lid_value,
           { "LID Value", "s7comm-plus.item.addr.lid_value", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: LID Value", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemaddr_idcount,
           { "Number of following IDs", "s7comm-plus.item.addr.idcount", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Number of following IDs", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemaddr_filter_sequence,
           { "Item address sequence", "s7comm-plus.item.addr.address_filter_sequence", FT_STRING, BASE_NONE, NULL, 0x0,
             "Combined string of all access relevant parts. Can be used as a filter", HFILL }},
-
-        /*** Item value ***/
+        { &hf_s7commp_itemaddr_lid_accessaid,
+          { "LID-access Aid", "s7comm-plus.item.addr.lid_accessaid", FT_UINT32, BASE_DEC, VALS(lid_access_aid_names), 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_itemaddr_blob_startoffset,
+          { "Blob startoffset", "s7comm-plus.item.addr.blob_startoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_itemaddr_blob_bytecount,
+          { "Blob bytecount", "s7comm-plus.item.addr.blob_bytecount", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_itemaddr_blob_bitoffset,
+          { "Blob bitoffset", "s7comm-plus.item.addr.blob_bitoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        /* Item value */
         { &hf_s7commp_itemval_itemnumber,
           { "Item Number", "s7comm-plus.item.val.item_number", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Item Number", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemval_elementid,
           { "Element Tag-Id", "s7comm-plus.item.val.elementid", FT_UINT8, BASE_HEX, VALS(itemval_elementid_names), 0x0,
             NULL, HFILL }},
@@ -3547,7 +5675,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_datatype_flags_0x80unkn,
           { "Unknown-Flag1", "s7comm-plus.item.val.datatype_flags.unknown1", FT_BOOLEAN, 8, NULL, 0x80,
             "Current unknown flag. A S7-1500 sets this flag sometimes", HFILL }},
-
         { &hf_s7commp_itemval_sparsearray_term,
           { "Sparsearray key terminating Null", "s7comm-plus.item.val.sparsearray_term", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
@@ -3559,30 +5686,28 @@ proto_register_s7commp (void)
             "VLQ", HFILL }},
         { &hf_s7commp_itemval_stringactlen,
           { "String actual length", "s7comm-plus.item.val.stringactlen", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemval_blobrootid,
           { "Blob root ID", "s7comm-plus.item.val.blobrootid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "If 0 then standard format. If >0 then special format similar to struct", HFILL }},
         { &hf_s7commp_itemval_blobsize,
           { "Blob size", "s7comm-plus.item.val.blobsize", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_itemval_blob_unknown1,
           { "Blob special unknown 8 bytes (always zero?)", "s7comm-plus.item.val.blob_unknown1", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_itemval_blobtype,
           { "Blob type", "s7comm-plus.item.val.blobtype", FT_UINT8, BASE_HEX, NULL, 0x0,
             "Blob type: 0x00=ID-Value-List, 0x03=RawBlock", HFILL }},
-
         { &hf_s7commp_itemval_datatype,
           { "Datatype", "s7comm-plus.item.val.datatype", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
             "Type of data following", HFILL }},
         { &hf_s7commp_itemval_arraysize,
           { "Array size", "s7comm-plus.item.val.arraysize", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Number of values of the specified datatype following", HFILL }},
+            "Array size: Number of values of the specified datatype following", HFILL }},
         { &hf_s7commp_itemval_value,
           { "Value", "s7comm-plus.item.val.value", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* Values of different datatypes */
         { &hf_s7commp_itemval_bool,
           { "Value", "s7comm-plus.value.bool", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -3653,7 +5778,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_itemval_struct,
           { "Value", "s7comm-plus.value.struct", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             "Value (Struct)", HFILL }},
-
         /* Get/Set a packed struct */
         { &hf_s7commp_packedstruct,
           { "Packed struct", "s7comm-plus.item.packedstruct", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -3670,15 +5794,16 @@ proto_register_s7commp (void)
         { &hf_s7commp_packedstruct_data,
           { "Packed struct data", "s7comm-plus.item.packedstruct.data", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* List elements */
         { &hf_s7commp_listitem_terminator,
           { "Terminating Item/List", "s7comm-plus.listitem_terminator", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
+        { &hf_s7commp_structitem_terminator,
+          { "Terminating Struct", "s7comm-plus.structitem_terminator", FT_NONE, BASE_NONE, NULL, 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_errorvaluelist_terminator,
           { "Terminating ErrorValueList", "s7comm-plus.errorvaluelist_terminator", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* Exploring plc */
         { &hf_s7commp_explore_req_id,
           { "Explore request ID (Root/Link-ID?)", "s7comm-plus.explore.req_id", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
@@ -3704,7 +5829,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_explore_resseqinteg,
           { "Explore Seq+IntegrId from Request", "s7comm-plus.explore.resseqinteg", FT_UINT32, BASE_DEC, NULL, 0x0,
             "Can be calculated by adding Sequencenumber + IntegrityId from corresponding request", HFILL }},
-
          /* Explore result, variable (tag) description */
         { &hf_s7commp_tagdescr_offsetinfo,
           { "Offset Info", "s7comm-plus.tagdescr.offsetinfo", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -3714,7 +5838,7 @@ proto_register_s7commp (void)
             "Describes how to interpret the last VLQ values", HFILL }},
         { &hf_s7commp_tagdescr_namelength,
           { "Length of name", "s7comm-plus.tagdescr.namelength", FT_UINT8, BASE_DEC, NULL, 0x0,
-            "varuint32: Tag description - Length of name", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_name,
           { "Name", "s7comm-plus.tagdescr.name", FT_STRING, STR_UNICODE, NULL, 0x0,
             NULL, HFILL }},
@@ -3727,7 +5851,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_softdatatype,
           { "SoftDataType", "s7comm-plus.tagdescr.softdatatype", FT_UINT32, BASE_DEC | BASE_EXT_STRING, &tagdescr_softdatatype_names_ext, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_tagdescr_attributeflags,
           { "Attributes", "s7comm-plus.tagdescr.attributeflags", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -3797,7 +5920,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_attributeflags_appreadable,
           { "App-Readable", "s7comm-plus.tagdescr.attributeflags.appreadable", FT_BOOLEAN, 32, NULL, S7COMMP_TAGDESCR_ATTRIBUTE_APPREADABLE,
             NULL, HFILL }},
-
         { &hf_s7commp_tagdescr_attributeflags2,
           { "Attributes", "s7comm-plus.tagdescr.attributeflags", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -3828,7 +5950,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_attributeflags2_bitoffset,
           { "Bitoffset", "s7comm-plus.tagdescr.attributeflags.bitoffset", FT_UINT16, BASE_DEC, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_BITOFFSET,
             NULL, HFILL }},
-
         { &hf_s7commp_tagdescr_bitoffsetinfo,
           { "Bitoffsetinfo", "s7comm-plus.tagdescr.bitoffsetinfo", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -3844,49 +5965,57 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_bitoffsetinfo_optbitoffset,
           { "Optimized Bitoffset", "s7comm-plus.tagdescr.bitoffsetinfo.bitoffset.optimized", FT_UINT8, BASE_DEC, NULL, S7COMMP_TAGDESCR_BITOFFSETINFO_OPTBITOFFSET,
             NULL, HFILL }},
-
+        { &hf_s7commp_tagdescr_unknown1,
+          { "Unknown in first Block (LittleEndian)", "s7comm-plus.tagdescr.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_lid,
           { "LID", "s7comm-plus.tagdescr.lid", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Tag description - LID", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_subsymbolcrc,
           { "Subsymbol CRC", "s7comm-plus.tagdescr.subsymbolcrc", FT_UINT32, BASE_HEX, NULL, 0x0,
             "Calculated CRC from symbol name plus softdatatype-id", HFILL }},
         { &hf_s7commp_tagdescr_s7stringlength,
           { "Length of S7String", "s7comm-plus.tagdescr.s7stringlength", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Length of S7String", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_structrelid,
           { "Relation Id for Struct", "s7comm-plus.tagdescr.structrelid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_lenunknown,
           { "Unknown for this datatype", "s7comm-plus.tagdescr.lenunknown", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Unknown for this datatype", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_offsettype1,
           { "OffsetType1", "s7comm-plus.tagdescr.offsettype1", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: OffsetType1", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_offsettype2,
           { "OffsetType2", "s7comm-plus.tagdescr.offsettype2", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: OffsetType2", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_bitoffsettype1,
           { "BitOffsetType1", "s7comm-plus.tagdescr.bitoffsettype1", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: BitOffsetType1", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_bitoffsettype2,
           { "BitOffsetType2", "s7comm-plus.tagdescr.bitoffsettype2", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: BitOffsetType2", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_arraylowerbounds,
           { "Array lower bounds", "s7comm-plus.tagdescr.arraylowerbounds", FT_INT32, BASE_DEC, NULL, 0x0,
-            "varint32: Array lower bounds", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_arrayelementcount,
           { "Array element count", "s7comm-plus.tagdescr.arrayelementcount", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Array element count", HFILL }},
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_mdarraylowerbounds,
+          { "Mdim-Array lower bounds", "s7comm-plus.tagdescr.mdarraylowerbounds", FT_INT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_mdarrayelementcount,
+          { "Mdim-Array element count", "s7comm-plus.tagdescr.mdarrayelementcount", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_paddingtype1,
           { "PaddingType1", "s7comm-plus.tagdescr.paddingtype1", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: PaddingType1", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_paddingtype2,
           { "PaddingType2", "s7comm-plus.tagdescr.paddingtype2", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: PaddingType2", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_numarraydimensions,
           { "Number of array dimensions", "s7comm-plus.tagdescr.numarraydimensions", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "varuint32: Number of array dimensions", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_nonoptimized_addr,
           { "Nonoptimized address", "s7comm-plus.tagdescr.address.nonoptimized", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
@@ -3905,14 +6034,66 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_optimized_struct_size,
           { "Optimized structure size", "s7comm-plus.tagdescr.structsize.optimized", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-
+        { &hf_s7commp_tagdescr_fb_pa_relid,
+          { "FB/ProgramAlarm Relation-Id", "s7comm-plus.tagdescr.fb_pa.relid", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_info4,
+          { "FB/ProgramAlarm Info 4", "s7comm-plus.tagdescr.fb_pa.info4", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_info5,
+          { "FB/ProgramAlarm Info 5", "s7comm-plus.tagdescr.fb_pa.info5", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_info6,
+          { "FB/ProgramAlarm Info 6", "s7comm-plus.tagdescr.fb_pa.info6", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_info7,
+          { "FB/ProgramAlarm Info 7", "s7comm-plus.tagdescr.fb_pa.info7", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_retainoffset,
+          { "Retain Section Offset", "s7comm-plus.tagdescr.fb_pa.retainoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fb_pa_volatileoffset,
+          { "Volatile Section Offset", "s7comm-plus.tagdescr.fb_pa.volatileoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fbarr_classicsize,
+          { "Classic Section Size", "s7comm-plus.tagdescr.fbarr.classicsize", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fbarr_retainsize,
+          { "Retain Section Size", "s7comm-plus.tagdescr.fbarr.retainsize", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_fbarr_volatilesize,
+          { "Volatile Section Size", "s7comm-plus.tagdescr.fbarr.volatilesize", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_struct_info4,
+          { "Struct Info 4", "s7comm-plus.tagdescr.struct.info4", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_struct_info5,
+          { "Struct Info 5", "s7comm-plus.tagdescr.struct.info5", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_struct_info6,
+          { "Struct Info 6", "s7comm-plus.tagdescr.struct.info6", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_struct_info7,
+          { "Struct Info 7", "s7comm-plus.tagdescr.struct.info7", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_unspoffsetinfo1,
+          { "Unspecified Offsetinfo 1 (unused?)", "s7comm-plus.tagdescr.unspoffsetinfo1", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_unspoffsetinfo2,
+          { "Unspecified Offsetinfo 2 (unused?)", "s7comm-plus.tagdescr.unspoffsetinfo2", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_sfbinstoffset1,
+          { "Unknown SFB Instance Offset 1", "s7comm-plus.tagdescr.sfbinstoffset1", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_tagdescr_sfbinstoffset2,
+          { "Unknown SFB Instance Offset 2", "s7comm-plus.tagdescr.sfbinstoffset2", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_accessability,
           { "Accessability", "s7comm-plus.tagdescr.accessability", FT_UINT32, BASE_DEC, VALS(tagdescr_accessability_names), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_section,
           { "Section", "s7comm-plus.tagdescr.section", FT_UINT32, BASE_DEC, VALS(tagdescr_section_names), 0x0,
             NULL, HFILL }},
-
         /* Fields for object traversion */
         { &hf_s7commp_element_object,
           { "Object", "s7comm-plus.object", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -3929,11 +6110,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_element_block,
           { "Block", "s7comm-plus.block", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_objectqualifier,
           { "ObjectQualifier", "s7comm-plus.objectqualifier", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* Extended Keep alive */
         { &hf_s7commp_extkeepalive_reserved1,
           { "Reseved 1", "s7comm-plus.extkeepalive.reserved1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -3950,14 +6129,13 @@ proto_register_s7commp (void)
         { &hf_s7commp_extkeepalive_message,
           { "Message", "s7comm-plus.extkeepalive.message", FT_STRING, STR_ASCII, NULL, 0x0,
             NULL, HFILL }},
-
         /* Object */
         { &hf_s7commp_object_relid,
           { "Relation Id", "s7comm-plus.object.relid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_object_classid,
           { "Class Id", "s7comm-plus.object.classid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
-            "varuint32: Class Id", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_object_classflags,
           { "Class Flags", "s7comm-plus.object.classflags", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -4057,53 +6235,58 @@ proto_register_s7commp (void)
         { &s7commp_object_classflags_bit31,
           { "Bit31", "s7comm-plus.object.classflags.bit31", FT_BOOLEAN, 32, NULL, 0x80000000,
             NULL, HFILL }},
-
         { &hf_s7commp_object_attributeid,
           { "Attribute Id", "s7comm-plus.object.attributeid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
-            "varuint32: Attribute Id", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_object_attributeidflags,
           { "Attribute Id Flags", "s7comm-plus.object.attributeidflags", FT_UINT32, BASE_HEX, NULL, 0x0,
-            "varuint32: Attribute Id Flags", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_object_relunknown1,
           { "Unknown Value 1", "s7comm-plus.object.relunknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_object_blocklength,
           { "Block length", "s7comm-plus.object.blocklength", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_object_createobjidcount,
           { "Number of following Object Ids", "s7comm-plus.object.createobjidcount", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_object_createobjid,
           { "Object Id", "s7comm-plus.object.createobjid", FT_UINT32, BASE_HEX, NULL, 0x0,
-            "varuint32: Object Id", HFILL }},
+            NULL, HFILL }},
+        { &hf_s7commp_object_createobjrequnknown1,
+          { "Unknown value 1", "s7comm-plus.object.createobjrequnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_object_createobjrequnknown2,
+          { "Unknown value 2", "s7comm-plus.object.createobjrequnknown2", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
         { &hf_s7commp_object_deleteobjid,
           { "Delete Object Id", "s7comm-plus.object.deleteobjid", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_object_deleteobj_fill,
           { "Filling byte", "s7comm-plus.object.req_deleteobj_fill", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* Setmultivar/Setvariable */
         { &hf_s7commp_setvar_unknown1,
           { "Unknown", "s7comm-plus.setvar.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_setvar_unknown2,
+          { "Request SetVariable unknown Byte", "s7comm-plus.setvar.req_unknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_setvar_objectid,
           { "In Object Id", "s7comm-plus.setvar.objectid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
         { &hf_s7commp_setvar_itemcount,
           { "Item count", "s7comm-plus.setvar.itemcount", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Item count", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_setvar_itemaddrcount,
           { "Item address count", "s7comm-plus.setvar.itemaddrcount", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Item address count", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_setvar_rawvaluelen,
           { "Raw value length", "s7comm-plus.setvar.rawvaluelen", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Raw value length", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_setvar_fill,
           { "Filling byte", "s7comm-plus.setvar.req_setmultivar_fill", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* GetMultiVariables/GetVariable */
         { &hf_s7commp_getmultivar_unknown1,
           { "Unknown", "s7comm-plus.getmultivar.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -4113,11 +6296,17 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_getmultivar_itemaddrcount,
           { "Item address count", "s7comm-plus.getmultivar.itemaddrcount", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Item address count", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_getvar_itemcount,
           { "Item count", "s7comm-plus.getvar.itemcount", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-
+        /* GetVarSubStreamed */
+        { &hf_s7commp_getvarsubstr_res_unknown1,
+          { "GetVarSubStreamed response unknown 1", "s7comm-plus.getvarsubstr.res_unknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_getvarsubstr_req_unknown1,
+          { "GetVarSubStreamed request unknown 1", "s7comm-plus.getvarsubstr.req_unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
         /* SetVarSubstreamed, stream data */
         { &hf_s7commp_streamdata,
           { "Stream data", "s7comm-plus.streamdata", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -4128,7 +6317,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_streamdata_frag_data,
           { "Stream data (fragment)", "s7comm-plus.streamdata.data", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
+        { &hf_s7commp_setvarsubstr_req_unknown1,
+          { "Request SetVarSubStreamed unknown 1", "s7comm-plus.setvarsubstr.req_unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
         /* Notification */
         { &hf_s7commp_notification_vl_retval,
           { "Return value", "s7comm-plus.notification.vl.retval", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -4139,9 +6330,17 @@ proto_register_s7commp (void)
         { &hf_s7commp_notification_vl_unknown0x9c,
           { "Unknown value after value 0x9c", "s7comm-plus.notification.vl.refnumber", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_notification_subscrobjectid,
           { "Subscription Object Id", "s7comm-plus.notification.subscrobjectid", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_notification_v1_unknown2,
+          { "Notification v1, Unknown 2", "s7comm-plus.notification.v1unknown2", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_notification_v1_unknown3,
+          { "Notification v1, Unknown 3", "s7comm-plus.notification.v1unknown3", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_notification_v1_unknown4,
+          { "Notification v1, Unknown 4", "s7comm-plus.notification.v1unknown4", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_notification_unknown2,
           { "Unknown 2", "s7comm-plus.notification.unknown2", FT_UINT16, BASE_HEX, NULL, 0x0,
@@ -4157,7 +6356,7 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_notification_seqnum_vlq,
           { "Notification sequence number (VLQ)", "s7comm-plus.notification.seqnum_vlq", FT_UINT32, BASE_DEC, NULL, 0x0,
-            "VLQ: Notification sequence number", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_notification_seqnum_uint8,
           { "Notification sequence number", "s7comm-plus.notification.seqnum_ui8", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
@@ -4173,14 +6372,12 @@ proto_register_s7commp (void)
         { &hf_s7commp_notification_timetick,
           { "Add-1 Notification timetick", "s7comm-plus.notification.timetick", FT_RELATIVE_TIME, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         { &hf_s7commp_notification_p2_subscrobjectid,
           { "Part 2 - Subscription Object Id", "s7comm-plus.notification.p2.subscrobjectid", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_notification_p2_unknown1,
           { "Part 2 - Unknown 1", "s7comm-plus.notification.p2.unknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* SubscriptionReferenceList */
         { &hf_s7commp_subscrreflist,
           { "SubscriptionReferenceList", "s7comm-plus.subscrreflist", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -4212,7 +6409,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_subscrreflist_item_unknown1,
           { "Unknown 1", "s7comm-plus.subscrreflist.item.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* SecurityKeyEncryptedKey */
         { &hf_s7commp_securitykeyencryptedkey,
           { "Encrypted key", "s7comm-plus.securitykeyencryptedkey", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -4256,7 +6452,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_securitykeyencryptedkey_encrypted_challenge,
           { "Encrypted challenge", "s7comm-plus.securitykeyencryptedkey.encrypted_challenge", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
         /* zlib compressed blob */
         { &hf_s7commp_compressedblob,
           { "zlib compressed blob", "s7comm-plus.compressedblob", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -4267,7 +6462,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_compressedblob_dictionary_id,
           { "Dictionary checksum (Adler-32)", "s7comm-plus.compressedblob.dictionary_id", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* MultipleStai */
         { &hf_s7commp_multiplestai,
           { "MultipleStai", "s7comm-plus.multiplestai", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -4286,14 +6480,13 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_multiplestai_hmiinfo_length,
           { "HmiInfo length", "s7comm-plus.multiplestai.hmiinfo_length", FT_UINT16, BASE_DEC, NULL, 0x0,
-            "HmiInfo length, constant 9", HFILL }},
+            NULL, HFILL }},
         { &hf_s7commp_multiplestai_lidcount,
           { "LidCount", "s7comm-plus.multiplestai.lidcount", FT_UINT16, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_multiplestai_lid,
           { "Lids", "s7comm-plus.multiplestai.lids", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-
         /* HmiInfo */
         { &hf_s7commp_hmiinfo,
           { "HmiInfo", "s7comm-plus.hmiinfo", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -4310,7 +6503,19 @@ proto_register_s7commp (void)
         { &hf_s7commp_hmiinfo_priority,
           { "Priority", "s7comm-plus.hmiinfo.priority", FT_UINT8, BASE_DEC, NULL, 0x0,
             "Priority of the alarm", HFILL }},
-
+        /* Ext. decoded ID values */
+        { &hf_s7commp_attrib_timestamp,
+          { "Timestamp", "s7comm-plus.attrib.timestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_attrib_serversessionrole,
+          { "ServerSessionRole", "s7comm-plus.attrib.serversessionrole", FT_UINT32, BASE_DEC, VALS(attrib_serversessionrole_names), 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_attrib_filteroperation,
+          { "FilterOperation", "s7comm-plus.attrib.filteroperation", FT_INT32, BASE_DEC, VALS(attrib_filteroperation_names), 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_attrib_blocklanguage,
+          { "Blocklanguage", "s7comm-plus.attrib.blocklanguage", FT_UINT16, BASE_DEC, VALS(attrib_blocklanguage_names), 0x0,
+            NULL, HFILL }},
         /* Getlink */
         { &hf_s7commp_getlink_requnknown1,
           { "Request unknown 1", "s7comm-plus.getlink.requnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -4324,7 +6529,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_getlink_linkid,
           { "Link-Id", "s7comm-plus.getlink.linkid", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* BeginSequence */
         { &hf_s7commp_beginseq_transactiontype,
           { "Transaction Type", "s7comm-plus.beginseq.transactiontype", FT_UINT8, BASE_DEC, NULL, 0x0,
@@ -4338,12 +6542,10 @@ proto_register_s7commp (void)
         { &hf_s7commp_beginseq_requestid,
           { "Request Id", "s7comm-plus.beginseq.requestid", FT_UINT32, BASE_CUSTOM, CF_FUNC(s7commp_idname_fmt), 0x0,
             NULL, HFILL }},
-
         /* EndSequence */
         { &hf_s7commp_endseq_requnknown1,
           { "Request unknown 1", "s7comm-plus.endseq.requnknown1", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* Invoke */
         { &hf_s7commp_invoke_subsessionid,
           { "Sub Session Id", "s7comm-plus.invoke.subsessionid", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -4357,7 +6559,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_invoke_resunknown1,
           { "Response unknown 1", "s7comm-plus.invoke.resunknown1", FT_UINT8, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-
         /* Integrity part for 1500 */
         { &hf_s7commp_integrity,
           { "Integrity part", "s7comm-plus.integrity", FT_NONE, BASE_NONE, NULL, 0x0,
@@ -4371,8 +6572,7 @@ proto_register_s7commp (void)
         { &hf_s7commp_integrity_digest,
           { "Packet Digest", "s7comm-plus.integrity.digest", FT_BYTES, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-
-        /*** Trailer fields ***/
+        /* Trailer fields */
         { &hf_s7commp_trailer,
           { "Trailer", "s7comm-plus.trailer", FT_NONE, BASE_NONE, NULL, 0x0,
             "This is the trailer part of S7 communication plus", HFILL }},
@@ -4385,7 +6585,6 @@ proto_register_s7commp (void)
         { &hf_s7commp_trailer_datlg,
           { "Data length", "s7comm-plus.trailer.datlg", FT_UINT16, BASE_DEC, NULL, 0x0,
             "Specifies the entire length of the data block in bytes", HFILL }},
-
         /* Fragment fields */
         { &hf_s7commp_fragment_overlap,
           { "Fragment overlap", "s7comm-plus.fragment.overlap", FT_BOOLEAN, BASE_NONE, NULL, 0x0,
@@ -4416,12 +6615,13 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_fragments,
           { "S7COMM-PLUS Fragments", "s7comm-plus.fragments", FT_NONE, BASE_NONE, NULL, 0x0,
-            NULL, HFILL }},
-
+            NULL, HFILL }}
+#if ENABLE_PROTO_TREE_ADD_TEXT==1
         /* Dummy header-field for conversion to wireshark 2.0. Should be removed competely later. */
-        { &hf_s7commp_proto_tree_add_text_dummy,
+        ,{ &hf_s7commp_proto_tree_add_text_dummy,
           { "TEXT", "s7comm-plus.proto_tree_add_text_dummy", FT_STRING, BASE_NONE, NULL, 0,
              NULL, HFILL }}
+#endif
     };
 
     static ei_register_info ei[] = {
@@ -4500,7 +6700,7 @@ proto_register_s7commp (void)
                                    "Reassemble segmented S7COMM-PLUS telegrams",
                                    "Whether segmented S7COMM-PLUS telegrams should be "
                                    "reassembled.",
-                                   &s7commp_reassemble);
+                                   &s7commp_opt_reassemble);
 
     prefs_register_bool_preference(s7commp_module, "decompress_blobs",
                                    "Uncompress S7COMM-PLUS blobs",
@@ -4517,8 +6717,9 @@ proto_register_s7commp (void)
 * As the function proto_tree_add_text() is no longer public in the libwireshark, because you should
 * use appropriate header-fields.
 * But for reverse-engineering, this is much easier to use.
-* This should be removed competely later.
+* This should be removed completely later.
 *******************************************************************************************************/
+#if ENABLE_PROTO_TREE_ADD_TEXT==1
 static proto_item *
 proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, const char *format, ...)
 {
@@ -4536,7 +6737,7 @@ proto_tree_add_text(proto_tree *tree, tvbuff_t *tvb, gint start, gint length, co
     pi = proto_tree_add_string_format(tree, hf_s7commp_proto_tree_add_text_dummy, tvb, start, length, "DUMMY", "%s", s);
     return pi;
 }
-
+#endif
 /*******************************************************************************************************
 * Helper function for adding the id-name to the given proto_tree.
 * If the given id is known in the id_number_names_ext list, then text+id is added,
@@ -4574,15 +6775,10 @@ s7commp_pinfo_append_idname(packet_info *pinfo, guint32 id_number, gchar *str_pr
     }
 }
 /*******************************************************************************************************
+ * Variable length quantity decode funtcions
+ * (http://en.wikipedia.org/wiki/Variable-length_quantity)
  *
- * Spezial gepacktes Datenformat
- * siehe: http://en.wikipedia.org/wiki/Variable-length_quantity
- *
- * In der Datei packet-wap.c gibt es eine Funktion fuer unsigned:
- * guint tvb_get_guintvar (tvbuff_t *tvb, guint offset, guint *octetCount)
- * welche aber keine Begrenzung auf eine max-Anzahl hat (5 fuer int32).
- * Solange das Protokoll noch nicht sicher erkannt wird, ist diese Version hier sicherer.
- *
+ * TODO: Can this be replaced with tvb_get_varint() from proto.c?
  *******************************************************************************************************/
 static guint32
 tvb_get_varint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
@@ -4619,7 +6815,7 @@ tvb_get_varuint32(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     guint32 val = 0;
     guint8 octet;
     guint8 cont;
-    for (counter = 1; counter <= 4+1; counter++) {        /* grosse Werte benoetigen 5 Bytes: 4*7 bit + 4 bit */
+    for (counter = 1; counter <= 4+1; counter++) {
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 7;
@@ -4641,7 +6837,7 @@ tvb_get_varuint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     guint64 val = 0;
     guint8 octet;
     guint8 cont;
-    for (counter = 1; counter <= 8; counter++) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+    for (counter = 1; counter <= 8; counter++) {
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         val <<= 7;
@@ -4669,7 +6865,7 @@ tvb_get_varint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     gint64 val = 0;
     guint8 octet;
     guint8 cont;
-    for (counter = 1; counter <= 8; counter++) {  /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
+    for (counter = 1; counter <= 8; counter++) {
         octet = tvb_get_guint8(tvb, offset);
         offset += 1;
         if ((counter == 1) && (octet & 0x40)) {   /* check sign */
@@ -4695,13 +6891,11 @@ tvb_get_varint64(tvbuff_t *tvb, guint8 *octet_count, guint32 offset)
     return  val;
 }
 /*******************************************************************************************************
+ * Functions for adding a variable-length-quantifier (VLQ) value to the tree.
  *
- * Funktionen zum Hinzufuegen eines VLQ Wertes zu proto_tree.
- *
- * Die Funktionen sind in Anlehnung an die Wireshark internen Funktionen aus proto.c erstellt.
- * Die Anzahl Bytes welche der VLQ benoetigt, wird in octet_count geschrieben.
- * Die _ret_ Funktionen geben zusaetzlich in retval den eigentlichen Wert zurueck.
- *
+ * The functions are designed similar to the other proto_tree_add_xxx functions from proto.c.
+ * The actual length of the VLQ is written to octet_count.
+ * The _ret_ functions write the VLQ value in retval.
  *******************************************************************************************************/
 static proto_item *
 proto_tree_add_varuint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start, guint8 *octet_count)
@@ -4726,7 +6920,6 @@ proto_tree_add_ret_varuint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint 
     return proto_tree_add_uint(tree, hfindex, tvb, start, *octet_count, value);
 }
 /*******************************************************************************************************/
-#if 0 // the following function causes an unused function warning
 static proto_item *
 proto_tree_add_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start, guint8 *octet_count)
 {
@@ -4736,7 +6929,6 @@ proto_tree_add_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start
     value = tvb_get_varint32(tvb, octet_count, start);
     return proto_tree_add_int(tree, hfindex, tvb, start, *octet_count, value);
 }
-#endif
 /*******************************************************************************************************/
 static proto_item *
 proto_tree_add_ret_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint start, guint8 *octet_count, gint32 *retval)
@@ -4751,42 +6943,12 @@ proto_tree_add_ret_varint32(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint s
     return proto_tree_add_int(tree, hfindex, tvb, start, *octet_count, value);
 }
 /*******************************************************************************************************
+ * Convert a Timespan value (LT / LTIME in nanoseconds) to a string.
  *
- * Returns a timestamp as string from a unix-timestamp 64 bit value. Needs a char array of size 34.
- * Format:
- * Jan 31, 2014 23:59:59.999.999.999
- *
- *******************************************************************************************************/
-static void
-s7commp_get_timestring_from_uint64(guint64 timestamp, char *str, gint max)
-{
-    guint16 nanosec, microsec, millisec;
-    struct tm *mt;
-    time_t t;
-
-    nanosec = timestamp % 1000;
-    timestamp /= 1000;
-    microsec = timestamp % 1000;
-    timestamp /= 1000;
-    millisec = timestamp % 1000;
-    timestamp /= 1000;
-    t = timestamp;
-    mt = gmtime(&t);
-    str[0] = '\0';
-    if (mt != NULL) {
-        g_snprintf(str, max, "%s %2d, %d %02d:%02d:%02d.%03d.%03d.%03d", mon_names[mt->tm_mon], mt->tm_mday,
-            mt->tm_year + 1900, mt->tm_hour, mt->tm_min, mt->tm_sec,
-            millisec, microsec, nanosec);
-    }
-}
-/*******************************************************************************************************
- *
- * Timespan (LT / LTIME) is interpreted as nanoseconds.
- * Use the display style from programming software:
+ * Using the same format as used in plc programming software. Examples:
  * LT#-106751d_23h_47m_16s_854ms_775us_808ns
  * LT#+106751d_23h_47m_16s_854ms_775us_807ns
  * Needs at least 42 chars.
- *
  *******************************************************************************************************/
 static void
 s7commp_get_timespan_from_int64(gint64 timespan, char *str, gint max)
@@ -4865,7 +7027,6 @@ s7commp_decode_integrity(tvbuff_t *tvb,
         offset += integrity_len;
     } else {
         expert_add_info(pinfo, integrity_tree, &ei_s7commp_integrity_digestlen_error);
-        proto_tree_add_text(integrity_tree, tvb, offset-1, 1, "Error in dissector: Integrity Digest length should be 32!");
         col_append_str(pinfo->cinfo, COL_INFO, " (DISSECTOR-ERROR)"); /* add info that something went wrong */
     }
     proto_item_set_len(integrity_tree, offset - offset_save);
@@ -4919,7 +7080,6 @@ s7commp_decode_integrity_wid(tvbuff_t *tvb,
 
     return offset;
 }
-
 /*******************************************************************************************************
  *
  * Decodes a return value, coded as 64 Bit VLQ. Includes an errorcode and some flags.
@@ -4959,7 +7119,6 @@ s7commp_decode_returnvalue(tvbuff_t *tvb,
 
     return offset;
 }
-
 /*******************************************************************************************************
  *
  * Decoding of an ULInt value as timestamp
@@ -4973,28 +7132,25 @@ s7commp_decode_attrib_ulint_timestamp(tvbuff_t *tvb,
 {
     guint64 uint64val = 0;
     guint8 octet_count = 0;
-    gchar *str_val = NULL;
     proto_item *pi = NULL;
+    nstime_t tmptime;
 
     if (datatype != S7COMMP_ITEM_DATATYPE_ULINT) {
         return offset;
     }
 
-    str_val = (gchar *)wmem_alloc(wmem_packet_scope(), S7COMMP_ITEMVAL_STR_VAL_MAX);
-    str_val[0] = '\0';
-
     uint64val = tvb_get_varuint64(tvb, &octet_count, offset);
-    s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
-    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "Timestamp: %s", str_val);
+    tmptime.secs = (time_t)(uint64val / 1000000000LL);
+    tmptime.nsecs = uint64val % 1000000000LL;
+    pi = proto_tree_add_time(tree, hf_s7commp_attrib_timestamp, tvb, offset, octet_count, &tmptime);
+    PROTO_ITEM_SET_GENERATED(pi);
     offset += octet_count;
 
-    PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
-
 /*******************************************************************************************************
  *
- * Decoding if attribute Blocklanguage (ID 2523)
+ * Decoding of attribute Blocklanguage (ID 2523)
  *
  *******************************************************************************************************/
 static guint32
@@ -5003,23 +7159,21 @@ s7commp_decode_attrib_blocklanguage(tvbuff_t *tvb,
                                     guint32 offset,
                                     guint8 datatype)
 {
-    guint16 blocklang;
     proto_item *pi = NULL;
 
     if (datatype != S7COMMP_ITEM_DATATYPE_UINT) {
         return offset;
     }
 
-    blocklang = tvb_get_ntohs(tvb, offset);
-    pi = proto_tree_add_text(tree, tvb, offset, 2, "Blocklanguage: %s", val_to_str(blocklang, attrib_blocklanguage_names, "Unknown Blocklanguage: %u"));
+    pi = proto_tree_add_item(tree, hf_s7commp_attrib_blocklanguage, tvb, offset, 2, ENC_BIG_ENDIAN);
+    PROTO_ITEM_SET_GENERATED(pi);
     offset += 2;
 
-    PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
 /*******************************************************************************************************
  *
- * Decoding if attribute ServerSessionRole (ID 299)
+ * Decoding of attribute ServerSessionRole (ID 299)
  *
  *******************************************************************************************************/
 static guint32
@@ -5028,7 +7182,6 @@ s7commp_decode_attrib_serversessionrole(tvbuff_t *tvb,
                                         guint32 offset,
                                         guint8 datatype)
 {
-    guint32 role;
     guint8 octet_count = 0;
     proto_item *pi = NULL;
 
@@ -5036,10 +7189,9 @@ s7commp_decode_attrib_serversessionrole(tvbuff_t *tvb,
         return offset;
     }
 
-    role = tvb_get_varuint32(tvb, &octet_count, offset);
-    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "ServerSessionRole: %s", val_to_str(role, attrib_serversessionrole, "Unknown ServerSessionRole: 0x%08x"));
-    offset += octet_count;
+    pi = proto_tree_add_varuint32(tree, hf_s7commp_attrib_serversessionrole, tvb, offset, &octet_count);
     PROTO_ITEM_SET_GENERATED(pi);
+    offset += octet_count;
 
     return offset;
 }
@@ -5079,7 +7231,7 @@ s7commp_decode_attrib_hmiinfo(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
- * Decoding Of attribute MultipleSTAI.STAIs (ID 7859)
+ * Decoding of attribute MultipleSTAI.STAIs (ID 7859)
  *
  *******************************************************************************************************/
 static guint32
@@ -5116,7 +7268,7 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
     hmiinfo_length = tvb_get_ntohs(tvb, offset);
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_hmiinfo_length, tvb, offset, 2, ENC_NA);
     offset += 2;
-    /* hmiinfo erkennt z.Zt. nur korrekt Alarm AP mit length = 9 */
+    /* Currently only the structure of Alarm AP with length = 9 is known */
     if (messagetype == S7COMMP_MULTIPLESTAI_MESSAGETYPE_ALARMAP && hmiinfo_length == 9) {
         offset = s7commp_decode_attrib_hmiinfo(tvb, subtree, offset, S7COMMP_ITEM_DATATYPE_BLOB, hmiinfo_length);
 
@@ -5145,7 +7297,6 @@ s7commp_decode_attrib_filteroperation(tvbuff_t *tvb,
                                     guint32 offset,
                                     guint8 datatype)
 {
-    gint32 operation;
     guint8 octet_count = 0;
     proto_item *pi = NULL;
 
@@ -5153,11 +7304,10 @@ s7commp_decode_attrib_filteroperation(tvbuff_t *tvb,
         return offset;
     }
 
-    operation = tvb_get_varint32(tvb, &octet_count, offset);
-    pi = proto_tree_add_text(tree, tvb, offset, octet_count, "FilterOperation: %s", val_to_str(operation, attrib_filteroperation, "Unknown operation: %d"));
+    pi = proto_tree_add_varint32(tree, hf_s7commp_attrib_filteroperation, tvb, offset, &octet_count);
+    PROTO_ITEM_SET_GENERATED(pi);
     offset += octet_count;
 
-    PROTO_ITEM_SET_GENERATED(pi);
     return offset;
 }
 /*******************************************************************************************************
@@ -5486,10 +7636,9 @@ s7commp_decode_packed_struct(tvbuff_t *tvb,
     tmptime.nsecs = uint64val % 1000000000;
     proto_tree_add_time(value_item_tree, hf_s7commp_packedstruct_interfacetimestamp, tvb, offset, 8, &tmptime);
     offset += 8;
-
-    /* Bisher war an dieser Stelle immer eine 2, was theoretisch fuer USint stehen koennte.
-     * Wenn das eine Transportgroesse ist, muesste die Elementanzahl entsprechend umgerechnet werden.
-     * Solange kein solches Paket gesichtet wurde, ohne Umrechnung belassen.
+    /* NOTE: So far here was always a 2, which could possibly stand for USInt.
+     * If this is kind of transportsize, the elementcount would have to be recalculated.
+     * But as far as no such packet was seen, keep it without recalculation.
      */
     proto_tree_add_item(value_item_tree, hf_s7commp_packedstruct_transpsize, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
@@ -5517,14 +7666,11 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
                               guint8 datatype,
                               guint8 datatype_flags,
                               guint32 sparsearray_key,
-                              guint32 length_of_value,  /* length of the value in bytes */
+                              guint32 length_of_value,              /* length of the value in bytes */
                               guint32 id_number)
 {
     guint32 offset = 0;
     switch (id_number) {
-        //case 1048:  /* 1048 = SubscriptionReferenceList */
-        //    offset = s7commp_decode_attrib_subscriptionreflist(tvb, tree, value_start_offset, datatype, length_of_value);
-        //    break;
         case 6:     /*    6 = TypeInfoModificationTime */
         case 410:   /*  410 = VariableTypeTypeInfoReserveDataModified */
         case 529:   /*  529 = VariableTypeStructModificationTime */
@@ -5568,8 +7714,8 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 2585:  /* FunctionalObject.NetworkTitles */
         case 2589:  /* FunctionalObject.DebugInfo */
         case 4275:  /* ConstantsGlobal.Symbolics */
-            /* Spezial-Ausnahme: Sparsearray Elemente mit einem Sparsearray-Key >= 0x80000000 sind nicht,
-             * oder wenn dann anders komprimiert.
+            /* Exception: Sparsearray elements with a Sparsearray-Key >= 0x80000000 are not compressed,
+             * or at least compressed with a different method.
              */
             if ((datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY) && (sparsearray_key & 0x80000000)) {
                 break;
@@ -5615,6 +7761,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     proto_item *array_item = NULL;
     proto_tree *array_item_tree = NULL;
     proto_tree *current_tree = NULL;
+    proto_item *pi = NULL;
 
     guint64 uint64val = 0;
     guint32 uint32val = 0;
@@ -5655,19 +7802,18 @@ s7commp_decode_value(tvbuff_t *tvb,
     is_address_array = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY) && (datatype != S7COMMP_ITEM_DATATYPE_STRUCT);
     is_sparsearray = (datatype_flags & S7COMMP_DATATYPE_FLAG_SPARSEARRAY);
     is_struct_addressarray = (datatype_flags & S7COMMP_DATATYPE_FLAG_ADDRESS_ARRAY) && (datatype == S7COMMP_ITEM_DATATYPE_STRUCT);
-    /* Besonderheit bei Adressarray und Datentyp Struct:
-     * Hier folgt nach dem Struct-Wert (ueblicherweise eine AID) die Anzahl der folgenden
-     * Array-Elemente. Die Elemente bestehen aber wieder aus einer ID mit Wert, darum
-     * kann es in diesem Fall nicht wie die anderen Arrays innerhalb dieser Funktion zerlegt werden,
-     * sondern es wird pro Array Element die Zerlegefunktion fuer eine ID/Value Liste aufgerufen.
+    /* Special handling of addressarray and datatype struct:
+     * After the Struct value (typical an AID) the number of array elements follows.
+     * Each array element consists of an ID/value pair. Therefore it cannot dissected the same way
+     * as the other arrays. For each array element the dissect function for an ID/value list is called.
      */
 
     datatype_of_value = datatype;
     if (is_array || is_address_array || is_sparsearray) {
         if (is_sparsearray) {
-            /* Bei diesem Array-Typ gibt es keine Angabe ueber die Anzahl. Das Array ist Null-terminiert.
-             * Damit die for-Schleife aber auch hierfuer verwendet werden kann, wird die Anzahl auf 999999 gesetzt,
-             * und die Schleife bei erreichen der terminierenden Null explizit verlassen.
+            /* With a sparsearray there is no field for the array size, instead the array is null-terminated.
+             * To use the standard for-loop here also for this type of array, we set the array-size to 999999
+             * and exit the loop for this arraytype at the terminating null.
              */
             array_size = 999999;
         } else {
@@ -5675,7 +7821,7 @@ s7commp_decode_value(tvbuff_t *tvb,
             offset += octet_count;
         }
         /* To display an array value, build a separate tree for the complete array.
-         * Under the array tree the array values are displayed.
+         * Under the array tree the values for each element are displayed.
          */
         array_item = proto_tree_add_item(data_item_tree, hf_s7commp_itemval_value, tvb, offset, -1, FALSE);
         array_item_tree = proto_item_add_subtree(array_item, ett_s7commp_itemval_array);
@@ -5710,19 +7856,17 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += octet_count;
             }
         } else {
-            /* Sonderbehandung Adressarray (ausschliesslich?) mit datatype VARIANT
-             * TODO: Dieses ist nur eine vorlaeufige Auswertung, da zur Bestimmung des Aufbaus
-             *       noch zu wenige Aufzeichnungen vorliegen. Wenn der Aufbau feststeht, sollte diese
-             *       gesamte Funktion ueberarbeitet werden (Datentyp-Auswertung und Array-Verarbeitung trennen).
-             * Erste Vermutung: 1. Byte datatype flags (unbestaetigt)
-             *                  2. Byte Type-ID, dann weiter mit Wert anhand der Typ-ID.
-             * Bei einem Sparsearray scheint der Aufbau anders zu sein.
+            /* Special for Adressarray (exclusively?) with datatype VARIANT:
+             * TODO: This is a preliminary evaluation, as there are not enough data/captures to determine the
+             *       exact construction.
+             * First guess: 1st byte datatype flags (unconfirmed), 2nd byte type-id, then standard dissection based on type-id.
+             * When this comes in a Sparsearray, it seems to be different again.
              */
             if (datatype == S7COMMP_ITEM_DATATYPE_VARIANT) {
                 proto_tree_add_bitmask(current_tree, tvb, offset, hf_s7commp_itemval_datatype_flags,
                     ett_s7commp_itemval_datatype_flags, s7commp_itemval_datatype_flags_fields, ENC_BIG_ENDIAN);
                 offset += 1;
-                datatype_of_value = tvb_get_guint8(tvb, offset);    /* Datentyp fuer switch-Auswertung aendern */
+                datatype_of_value = tvb_get_guint8(tvb, offset);    /* change datatype for switch/case evaluation */
                 proto_tree_add_uint(current_tree, hf_s7commp_itemval_varianttypeid, tvb, offset, 1, datatype_of_value);
                 offset += 1;
             }
@@ -5819,7 +7963,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 offset += 2;
                 break;
             case S7COMMP_ITEM_DATATYPE_STRUCT:
-                if (struct_level) *struct_level += 1; /* entering a new structure level */
+                if (struct_level) *struct_level += 1;
                 length_of_value = 4;
                 value_start_offset = offset;
                 struct_value = tvb_get_ntohl(tvb, offset);
@@ -5861,10 +8005,10 @@ s7commp_decode_value(tvbuff_t *tvb,
                 length_of_value = 8;
                 value_start_offset = offset;
                 uint64val = tvb_get_ntoh64(tvb, offset);
-                s7commp_get_timestring_from_uint64(uint64val, str_val, S7COMMP_ITEMVAL_STR_VAL_MAX);
                 tmptime.secs = (time_t)(uint64val / 1000000000);
                 tmptime.nsecs = uint64val % 1000000000;
-                proto_tree_add_time(current_tree, hf_s7commp_itemval_timestamp, tvb, offset, length_of_value, &tmptime);
+                pi = proto_tree_add_time(current_tree, hf_s7commp_itemval_timestamp, tvb, offset, length_of_value, &tmptime);
+                g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", proto_item_get_display_repr(wmem_packet_scope(), pi));
                 offset += 8;
                 break;
             case S7COMMP_ITEM_DATATYPE_TIMESPAN:
@@ -5912,15 +8056,16 @@ s7commp_decode_value(tvbuff_t *tvb,
             case S7COMMP_ITEM_DATATYPE_BLOB:
                 proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobrootid, tvb, offset, &octet_count, &uint32val);
                 offset += octet_count;
-                /* Wenn Wert > 1 dann Spezialformat, mit 8 zusaetzlichen Bytes + 1 Typkennung + entsprechende Auswertung.
-                 * Beim HMI-Projekttransfer mit erfolgt eine Uebertragung mit ID=1 (als SubStream) jedoch dann ohne extra Bytes.
+                /* If first value > 1 then special format with 8 additional bytes + 1 type-id + value.
+                 * On HMI project transfer this occurs with ID=1 (as SubStream) but without the extra bytes.
                  */
                 if (uint32val > 1) {
                     proto_tree_add_item(current_tree, hf_s7commp_itemval_blob_unknown1, tvb, offset, 8, ENC_NA);
                     offset += 8;
-                    /* - Wenn der folgende Wert 0x03, dann folgt eine Laengenangabe und die angegebene Anzahl an Bytes.
-                     *   Dies wird z.B. bei Alarm-Begleitwerten verwendet, dann innerhalb eines Blob-Arrays.
-                     * - Wenn der folgende Wert 0x00, dann folgt eine ID-Value Liste (z.B. bei Programm-Transfer).
+                    /* - If next value == 0x03, then follows a length specification and the number of bytes.
+                     *   This is used in alarms and the associated values inside the blob-array.
+                     * - If next value == 0x00, then follows a n ID/value list
+                     *   This is used in program transfer.
                      */
                     proto_tree_add_item_ret_uint(current_tree, hf_s7commp_itemval_blobtype, tvb, offset, 1, ENC_BIG_ENDIAN, &blobtype);
                     offset += 1;
@@ -5968,7 +8113,6 @@ s7commp_decode_value(tvbuff_t *tvb,
         }
 
         if (is_array || is_address_array || is_sparsearray) {
-            /* Leere Werte mit <Empty> kennzeichnen */
             if (strlen(str_val) == 0) {
                 g_strlcpy(str_val, "<Empty>", S7COMMP_ITEMVAL_STR_VAL_MAX);
             }
@@ -5992,7 +8136,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 TODO: Add array index to value item, like "Value [1]: ..."
             */
         }
-        /* Erweitertes Decodieren der Daten ausgewaehlter IDs */
+        /* Extended decoding of some known and interesting IDs */
         s7commp_decode_value_extended(tvb, pinfo, current_tree, value_start_offset, datatype, datatype_flags, sparsearray_key, length_of_value, id_number);
     } /* for */
 
@@ -6008,11 +8152,9 @@ s7commp_decode_value(tvbuff_t *tvb,
         proto_item_set_len(array_item_tree, offset - start_offset);
         proto_item_append_text(data_item_tree, " (%s) %s = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_arr_prefix, str_arrval);
     } else if (is_struct_addressarray) {
-        proto_tree_add_text(data_item_tree, tvb, offset - length_of_value, length_of_value, "Value: %s", str_val);
         proto_tree_add_ret_varuint32(data_item_tree, hf_s7commp_itemval_arraysize, tvb, offset, &octet_count, &array_size);
         offset += octet_count;
         proto_item_append_text(data_item_tree, " (Addressarray %s) = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_val);
-        /* Das Handling der Array-Elemente erfolgt hier */
         for (array_index = 1; array_index <= array_size; array_index++) {
             start_offset = offset;
             array_item = proto_tree_add_item(data_item_tree, hf_s7commp_itemval_value, tvb, offset, -1, FALSE);
@@ -6024,21 +8166,21 @@ s7commp_decode_value(tvbuff_t *tvb,
             proto_item_set_len(array_item_tree, offset - start_offset);
         }
         if (struct_level) {
-            *struct_level = -1;       /* Zur Signalisierung benutzen, dass anschliessend keine Item-ID sondern eine Element-ID folgen muss. */
+            *struct_level = -1;       /* Use this as indication that as next value an Element-ID must follow instead of an Item-ID.*/
         }
     } else { /* not an array or address array */
         proto_item_append_text(data_item_tree, " (%s) = %s", val_to_str(datatype, item_datatype_names, "Unknown datatype: 0x%02x"), str_val);
     }
-    /* Sonderbehandlung bei Datentyp struct bestimmten IDs:
-     * Es werden die struct-Elemente nicht einzeln sondern gepackt uebertragen (z.B. DTL-Struct).
-     * Der ID-Bereich in dem dieses moeglich ist, ist nur vermutet (Type Info).
-     * Die Auswertung an dieser Stelle funktioniert nur, solange hier nicht auch Arrays erlaubt sind.
+    /* Special handling of datatype struct and some specific ID ranges:
+     * Some struct elements aren't transmitted as single elements. Instead they are packed (e.g. DTL-Struct).
+     * The ID number range where this is used is only guessed (Type Info).
+     * This evaluation at this code-location only works as far as arrays aren't possible (never seen or been able to produce at this time).
      */
     if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT &&
         ((struct_value > 0x90000000 && struct_value < 0x9fffffff) ||
          (struct_value > 0x02000000 && struct_value < 0x02ffffff)) ) {
         offset = s7commp_decode_packed_struct(tvb, current_tree, offset);
-        if (struct_level) *struct_level -= 1; /* in diesem Fall keine neue Strukturebene, da auch keine terminierende Null */
+        if (struct_level) *struct_level -= 1; /* in this case no new struct-level, as there isn't a terminating null */
     }
     return offset;
 }
@@ -6079,7 +8221,7 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
             offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, id_number);
             /* Extended decoding */
             switch (id_number) {
-                case 1048:  /* 1048 = SubscriptionReferenceList. An dieser Position weil Array of int */
+                case 1048:  /* 1048 = SubscriptionReferenceList. Done at this location because it's an array of integers. */
                     s7commp_decode_attrib_subscriptionreflist(tvb, tree, start_offset + octet_count);
                     break;
             }
@@ -6283,11 +8425,11 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     proto_tree_add_varuint32(tree, hf_s7commp_tagdescr_lid, tvb, offset, &octet_count);
     offset += octet_count;
 
-    /* Dieser Wert hat je nach Datentyp eine unterschiedliche Funktion.
-     * Ist das Element eine Struktur, so kann mit einer folgenden Abfrage eines Sub-Elements im Datenbaustein anhand der ID
-     * die Beziehung zu dem uebergeordneten Element hergestellt werden.
-     */
     length_of_value = tvb_get_varuint32(tvb, &octet_count, offset);
+    /* Depending on the datatype the value has different functions:
+     * If the element is a struct, then based on the ID you can get the relation from a sub-element in a datablock
+     * to the parent element.
+     */
     if (datatype == S7COMMP_ITEM_DATATYPE_S7STRING) {
         proto_tree_add_uint(tree, hf_s7commp_tagdescr_s7stringlength, tvb, offset, octet_count, length_of_value);
     } else if (datatype == S7COMMP_ITEM_DATATYPE_STRUCT) {
@@ -6341,7 +8483,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
             number_of_array_dimensions = (gint32)tvb_get_varuint32(tvb, &octet_count, offset);
             proto_tree_add_uint(offsetinfo_tree, hf_s7commp_tagdescr_numarraydimensions, tvb, offset, octet_count, number_of_array_dimensions);
             offset += octet_count;
-            /* Multidimensional Array max. 6 dimensions */
+            /* Multidimensional array max. 6 dimensions (limit of 6 comes from plc programming software) */
             for (array_dimension = 0; array_dimension < number_of_array_dimensions; array_dimension++) {
                 svlq_value = tvb_get_varint32(tvb, &octet_count, offset);
                 proto_tree_add_int_format(offsetinfo_tree, hf_s7commp_tagdescr_arraylowerbounds, tvb, offset, octet_count, svlq_value,
@@ -6358,7 +8500,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
             }
             /* Displaystyle [a..b, c..d, e..f], using order which is used in variable declaration */
             if (number_of_array_dimensions > 6) {
-                number_of_array_dimensions = 6; /* limit to max 6 dims  */
+                number_of_array_dimensions = 6;
             }
             proto_item_append_text(tree, "-Array[");
             for (array_dimension = (number_of_array_dimensions - 1); array_dimension >= 0; array_dimension--) {
@@ -6368,13 +8510,12 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
             }
             break;
     }
-    /* Passt nicht ins Schema oben, unbekannt wozu die weiteren zwei Werte dienen */
+    /* This doesn't fit in the scheme above, unknown what the two values are for */
     if (offsetinfotype == 0x08) {
-        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Unknown SFB Instance Offset 1: %u", vlq_value);
+        /* Unknown SFB Instance Offsets 1 and 2 */
+        proto_tree_add_varuint32(offsetinfo_tree, hf_s7commp_tagdescr_sfbinstoffset1, tvb, offset, &octet_count);
         offset += octet_count;
-        vlq_value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(offsetinfo_tree, tvb, offset, octet_count, "Unknown SFB Instance Offset 2: %u", vlq_value);
+        proto_tree_add_varuint32(offsetinfo_tree, hf_s7commp_tagdescr_sfbinstoffset2, tvb, offset, &octet_count);
         offset += octet_count;
     }
     proto_item_set_len(offsetinfo_tree, offset - start_offset);
@@ -6406,19 +8547,17 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
     int d;
     guint8 offsetinfotype;
 
-    /* Hier koennen mehrere Datenbloecke vorhanden sein (gleiches bei varnamelist).
-     * Ist die Laenge == 0, dann folgt kein weiterer Datenblock mehr.
-     * Nur der erste Datenblock besitzt zusaetzlich noch eine 4-Byte ID (oder Flags?).
-     *
-     * Die Bytereihenfolge ist in diesem Block Little-Endian!!
-     * Auf so eine Idee muss man erstmal kommen, ob da noch die S7 classic Abteilung am Werk war...
+    /* The variable typelist is a list of information-blocks, where a length of 0 indicates the end of the list.
+     * Only the first block contains an additional 4-Byte ID (or flags?).
+     * Oddly enough the byte order is little-endian!
      */
     block_len = tvb_get_ntohs(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_object_blocklength, tvb, offset, 2, block_len);
     offset += 2;
     max_offset = offset + block_len;
 
-    proto_tree_add_text(tree, tvb, offset, 4, "Unknown in first Block (LittleEndian): 0x%08x / %u", tvb_get_letohl(tvb, offset), tvb_get_letohl(tvb, offset));
+    /* Unknown in first block */
+    proto_tree_add_item(tree, hf_s7commp_tagdescr_unknown1, tvb, offset, 4, ENC_LITTLE_ENDIAN);
     offset += 4;
 
     while (block_len > 0) {
@@ -6430,17 +8569,16 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
             proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_lid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
             offset += 4;
 
-            /* Die CRC hier wird rein aus dem Symbol hier, plus softdatatype-id (1=Bool, 5=Int, ...) uebermittelt.
-             * Fuer den Zugriff auf eine Variable in einem DB reicht diese alleine nicht aus,
-             * sondern es muss die Pruefsumme ueber den gesamten Symbolpfad gebildet werden:
+            /* The CRC is calculated by the symbolname plus softdatatype-id (1=Bool, 5=Int, ...).
+             * If the variable is inside a datablock, the checksum is generated over the complete symbol path:
              * DBname.structname.variablenname
-             * Als Trennzeichen "." ist hierbei 0x09 einzusetzen und dann ein zweites Mal darueber die
-             * Pruefsumme zu bilden.
+             * For the delimiter "." the value 0x09 instead in the calculation.
+             * Then generate the checksum a second time.
              */
             proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_subsymbolcrc, tvb, offset, 4, ENC_LITTLE_ENDIAN);
             offset += 4;
 
-            softdatatype = tvb_get_guint8(tvb, offset); /* hier nur 1 Byte */
+            softdatatype = tvb_get_guint8(tvb, offset);
             proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_softdatatype, tvb, offset, 1, softdatatype);
             offset += 1;
 
@@ -6450,15 +8588,15 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                 proto_item_append_text(tag_tree, "[%d]: Unknown softdatatype 0x%04x", i, softdatatype);
             }
 
-            /* Werte dieser 2 Bytes:
-             * Bei M/I/C/T:                           0x8a40 = 1000 1010 0100 0000
-             * Bei M/I/C/T wenn "nicht sichtbar":     0x8240 = 1000 0010 0100 0000
-             * Bei M/I/C/T wenn "nicht erreichbar":   0x8040 = 1000 0000 0100 0000
-             * Bei Variablen in einem optimierten DB: 0x8ac0 = 1000 1010 1100 0000
-             * Bei Struct in einem optimierten DB:    0xcac0 = 1100 1010 1100 0000
-             * Bei Variablen in einem NICHT opt. DB:  0x8a40 = 1000 1010 0100 0000
-             * Bei String/WStr in einem NICHT opt. DB:0x9a40 = 1001 1010 0100 0000
-             * Structmember                           0x1a80 = 0001 1010 1000 0000
+            /* Some values of these 2 Bytes:
+             * M/I/C/T:                                 0x8a40 = 1000 1010 0100 0000
+             * M/I/C/T if "not visible":                0x8240 = 1000 0010 0100 0000
+             * M/I/C/T if "not reachable":              0x8040 = 1000 0000 0100 0000
+             * Variable inside a "optimized" DB:        0x8ac0 = 1000 1010 1100 0000
+             * Struct inside a "optimized" DB:          0xcac0 = 1100 1010 1100 0000
+             * Variablen inside a "not optimized" DB:   0x8a40 = 1000 1010 0100 0000
+             * String/WStr inside a "not optimized" DB: 0x9a40 = 1001 1010 0100 0000
+             * Structmember                             0x1a80 = 0001 1010 1000 0000
              */
             attributeflags2 = tvb_get_ntohs(tvb, offset);
             proto_tree_add_bitmask(tag_tree, tvb, offset, hf_s7commp_tagdescr_attributeflags2,
@@ -6466,15 +8604,15 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
             offsetinfotype = ((attributeflags2 & S7COMMP_TAGDESCR_ATTRIBUTE2_OFFSETINFOTYPE) >> 12);
             offset += 2;
 
-            /* Bei nicht-optimierten immer 0x08?
-             * Sinnvoll auswerten laesst sich der Wert nur bei im IQM-Bereich.
-             * Bitoffset pro Nibble:
+            /* In a "not optimized" DB always 0x08?
+             * Only useful at variables in the I/Q/M area.
+             * Bitoffset per Nibble:
              * Bit .0 = 0x08
              * Bit .1 = 0x19
              * Bit .2 = 0x2a
              * Bit .3 = 0x3b
              * Bit .4 = 0x4c
-             * Wenn kein Bool-Typ, dann 0x00
+             * If not a Bool-Type then 0x00
              */
             proto_tree_add_bitmask(tag_tree, tvb, offset, hf_s7commp_tagdescr_bitoffsetinfo,
                 ett_s7commp_tagdescr_bitoffsetinfo, s7commp_tagdescr_bitoffsetinfo_fields, ENC_BIG_ENDIAN);
@@ -6482,14 +8620,12 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
             /* "legacy" offset */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD:
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_nonoptimized_addr_16, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_optimized_addr_16, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     break;
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STD:
                     /* fields swapped in contrast to previous case! */
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_optimized_addr_16, tvb, offset, 2, ENC_LITTLE_ENDIAN);
@@ -6497,7 +8633,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_nonoptimized_addr_16, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     break;
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRING:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRING:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAY1DIM:
@@ -6509,29 +8644,26 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                         softdatatype == S7COMMP_SOFTDATATYPE_WSTRING) {
                         proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_s7stringlength, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     } else {
-                        proto_tree_add_text(tag_tree, tvb, offset, 2, "General Offsetinfo 1: %u (unused?)", tvb_get_letohs(tvb, offset));
+                        proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo1, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     }
                     offset += 2;
-                    proto_tree_add_text(tag_tree, tvb, offset, 2, "General Offsetinfo 2: %u (unused?)", tvb_get_letohs(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo2, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     break;
-                /*************************************************************************/
                 default:
-                    proto_tree_add_text(tag_tree, tvb, offset, 2, "General Offsetinfo 1: %u (unused?)", tvb_get_letohs(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo1, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
-                    proto_tree_add_text(tag_tree, tvb, offset, 2, "General Offsetinfo 2: %u (unused?)", tvb_get_letohs(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unspoffsetinfo2, tvb, offset, 2, ENC_LITTLE_ENDIAN);
                     offset += 2;
                     break;
             }
 
             /* "new" offset */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STD:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STD:
                     /* nothing special here */
                     break;
-                /*************************************************************************/
                 default:
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_optimized_addr, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
@@ -6542,29 +8674,27 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
             /* sub-FB/ProgramAlarm data */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM:
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Relation-Id: 0x%08x", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_relid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 4: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info4, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 5: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info5, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 6: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info6, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "FB/ProgramAlarm Info 7: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info7, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Retain Section Offset: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_retainoffset, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Volatile Section Offset: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_volatileoffset, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
                     break;
             }
 
             /* array dimensions */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAY1DIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAY1DIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM:
@@ -6577,7 +8707,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     offset += 4;
                     proto_item_append_text(tag_tree, "-Array[%d..%d]", array_lowerbounds, array_lowerbounds + (array_elementcount - 1));
                     break;
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAYMDIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM:
@@ -6589,21 +8718,19 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_arrayelementcount, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
                     break;
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY:
                     array_elementcount = (gint32)tvb_get_letohl(tvb, offset);
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_arrayelementcount, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Classic Section Size: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fbarr_classicsize, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Retain Section Size: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fbarr_retainsize, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Volatile Section Size: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fbarr_volatilesize, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
                     break;
             }
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_ARRAYMDIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_ARRAYMDIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM:
@@ -6612,7 +8739,8 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     /* Multidimensional Array max. 6 dimensions */
                     for (d = 0; d < 6; d++) {
                         mdarray_lowerbounds[d] = (gint32)tvb_get_letohl(tvb, offset);
-                        proto_tree_add_text(tag_tree, tvb, offset, 4, "MdimArray Info DIM %d, Array lower bounds: %d", d + 1, mdarray_lowerbounds[d]);
+                        item = proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_mdarraylowerbounds, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                        proto_item_prepend_text(item, "DIM[%d] ", d + 1);
                         offset += 4;
                     }
                     mdarray_actdimensions = 0;
@@ -6621,7 +8749,8 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                         if (mdarray_elementcount[d] > 0) {
                             mdarray_actdimensions++;
                         }
-                        proto_tree_add_text(tag_tree, tvb, offset, 4, "MdimArray Info DIM %d, Array element count: %d", d + 1, mdarray_elementcount[d]);
+                        item = proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_mdarrayelementcount, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                        proto_item_prepend_text(item, "DIM[%d] ", d + 1);
                         offset += 4;
                     }
                     /* Displaystyle [a..b, c..d, e..f] */
@@ -6640,7 +8769,6 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
 
             /* struct info */
             switch (offsetinfotype) {
-                /*************************************************************************/
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT1DIM:
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM:
@@ -6655,13 +8783,13 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTELEM_STRUCT:
                     proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_structrelid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 4: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_struct_info4, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 5: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_struct_info5, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 6: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_struct_info6, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_text(tag_tree, tvb, offset, 4, "Struct Info 7: %u", tvb_get_letohl(tvb, offset));
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_struct_info7, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
                     break;
             }
@@ -6701,7 +8829,7 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
 
     while (block_len > 0) {
         do {
-            /* Laenge eines Namens max. 128 Zeichen */
+            /* Max. length of a name is 128 chars */
             length_of_value = tvb_get_guint8(tvb, offset);
             item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, (1 + length_of_value + 1), FALSE);
             tag_tree = proto_item_add_subtree(item, ett_s7commp_element_tagdescription);
@@ -6710,7 +8838,7 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
             proto_tree_add_item_ret_string(tag_tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA, wmem_packet_scope(), &str_name);
             proto_item_append_text(tag_tree, "[%d]: Name=%s", i, str_name);
             offset += length_of_value;
-            /* String-terminierende Null? Bei Laengenangabe eigentlich ueberfluessig */
+            /* Although the string length is given before, we have a possibly terminating null here */
             proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_unknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
             offset += 1;
             i++;
@@ -6749,7 +8877,7 @@ s7commp_decode_object(tvbuff_t *tvb,
         start_offset = offset;
         element_id = tvb_get_guint8(tvb, offset);
         switch (element_id) {
-            case S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT:              /* 0xa1 */
+            case S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_object, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_object);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -6779,12 +8907,12 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, append_class);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_TERMOBJECT:               /* 0xa2 */
+            case S7COMMP_ITEMVAL_ELEMENTID_TERMOBJECT:
                 proto_tree_add_uint(tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 terminate = TRUE;
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_RELATION:                 /* 0xa4 */
+            case S7COMMP_ITEMVAL_ELEMENTID_RELATION:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_relation, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_relation);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -6795,7 +8923,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset += 4;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_STARTTAGDESC:             /* 0xa7 */
+            case S7COMMP_ITEMVAL_ELEMENTID_STARTTAGDESC:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_tagdescription, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_tagdescription);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -6803,12 +8931,12 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset = s7commp_decode_tagdescription(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC:              /* 0xa8 */
+            case S7COMMP_ITEMVAL_ELEMENTID_TERMTAGDESC:
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
                 offset += 1;
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_VARNAMELIST:                /* 0xac */
+            case S7COMMP_ITEMVAL_ELEMENTID_VARNAMELIST:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_block, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_block);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -6817,7 +8945,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset = s7commp_decode_varnamelist(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_VARTYPELIST:                /* 0xab */
+            case S7COMMP_ITEMVAL_ELEMENTID_VARTYPELIST:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_block, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_block);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -6826,7 +8954,7 @@ s7commp_decode_object(tvbuff_t *tvb,
                 offset = s7commp_decode_vartypelist(tvb, data_item_tree, offset);
                 proto_item_set_len(data_item_tree, offset - start_offset);
                 break;
-            case S7COMMP_ITEMVAL_ELEMENTID_ATTRIBUTE:                /* 0xa3 */
+            case S7COMMP_ITEMVAL_ELEMENTID_ATTRIBUTE:
                 data_item = proto_tree_add_item(tree, hf_s7commp_element_attribute, tvb, offset, -1, FALSE);
                 data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_element_attribute);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_elementid, tvb, offset, 1, element_id);
@@ -6860,7 +8988,6 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     guint8 next_byte;
     guint8 octet_count = 0;
-    guint32 value = 0;
 
     start_offset = offset;
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
@@ -6872,19 +8999,18 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
     offset += 4;
     offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, id_number);
     proto_item_set_len(data_item_tree, offset - start_offset);
-    /* es folgen noch 4 Null-Bytes */
-    proto_tree_add_text(tree, tvb, offset, 4, "Unknown value 1: 0x%08x", tvb_get_ntohl(tvb, offset));
+    /* 4 bytes with zeros (as seen so far) */
+    proto_tree_add_item(tree, hf_s7commp_object_createobjrequnknown1, tvb, offset, 4, ENC_BIG_ENDIAN);
     offset += 4;
 
-    /* Es gibt z.Zt. keine bekannte Moeglichkeit anhand der vorigen Werte festzustellen, ob hier noch ein eingeschobener Wert (VLQ) folgt.
-     * Dieser zusaetzliche Wert ist so wie es aussieht nur bei einer 1500 vorhanden.
-     * Darum wird geprueft, ob der naechste Wert nicht ein Objekt-Anfang darstellt.
-     * Das eingeschobene Byte ist aber definitiv nur bei Data-Telegrammen vorhanden.
+    /* This is kind of a heuristic check if there is an additional VLQ-value here.
+     * This value seems to be only there in communication with a 1500 (which on protocol level can't be detected),
+     * and occurs only in Data-Telegrams.
+     * As a working solution it's checked if the next value is not an Object-Start element.
      */
     next_byte = tvb_get_guint8(tvb, offset);
     if (((protocolversion == S7COMMP_PROTOCOLVERSION_2) || (protocolversion == S7COMMP_PROTOCOLVERSION_3)) && next_byte != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-        value = tvb_get_varuint32(tvb, &octet_count, offset);
-        proto_tree_add_text(tree, tvb, offset, octet_count, "Unknown VLQ-Value in Data-CreateObject: %u", value);
+        proto_tree_add_varuint32(tree, hf_s7commp_object_createobjrequnknown2, tvb, offset, &octet_count);
         offset += octet_count;
     }
     return s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
@@ -6910,7 +9036,6 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     object_id_count = tvb_get_guint8(tvb, offset);
-    /* TODO: hier die gleiche ID wie beim Request, d.h. aus der Liste? */
     proto_tree_add_uint(tree, hf_s7commp_object_createobjidcount, tvb, offset, 1, object_id_count);
     offset += 1;
     for (i = 0; i < object_id_count; i++) {
@@ -6925,8 +9050,9 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
             s7commp_pinfo_append_idname(pinfo, object_id, ", ");
         }
     }
-    /* Ein Daten-Objekt gibt es nur beim Connect.
-     * Das Vorhandensein an errorextension feststellen scheitert.
+    /* A data object is only present in the connection setup response,
+     * which uses in the header protocol-version 1.
+     * Checking bei the presence of errorextension field was not successful.
      */
     if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
@@ -6949,7 +9075,7 @@ s7commp_decode_request_deleteobject(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_object_deleteobjid, tvb, offset, 4, object_id);
     s7commp_pinfo_append_idname(pinfo, object_id, " ObjId=");
     offset += 4;
-    /* Fuellbyte oder andere Funktion? */
+    /* fillbyte / unknown */
     proto_tree_add_item(tree, hf_s7commp_object_deleteobj_fill, tvb, offset, 1, FALSE);
     offset += 1;
     return offset;
@@ -6979,13 +9105,11 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
     if (errorextension) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
     }
-    /* Wann hier eine Id folgt kann an keinem der vorherigen Werte festgemacht werden.
-     * Die erste Vermutung es an einer hohen object_id festzumachen scheiterte, da bei einer 1200 mit FW4.1
-     * der Wert auch bei 0xd3 aufgetreten ist.
-     * Da sich der folgende Wert mit (Sequence-Number + integrity_id) des Requests berechnet, kann der Wert
-     * nicht Null sein. Da er VLQ-codiert ist und es sich immer meistens 4 Nullbytes vor dem Trailer befinden,
-     * pruefen wir hier der Einfachheit halber ob das naechste Byte != null ist solange keine bessere Loesung
-     * in Sicht ist.
+    /* If there is an integrity-id cannot be detected on previous values.
+     * As the value which is following after the integrity-id is calculated by
+     * (Sequence-Number + integrity_id) of the request, the value cannot be zero. As it's VLQ coded
+     * and there are at least 1 or more fill-bytes with null before the trailer, we just check
+     * the next byte on zero/non-zero if there is not better solution.
      */
     if (tvb_get_guint8(tvb, offset)) {
         *has_integrity_id = TRUE;
@@ -6995,7 +9119,6 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
 
     return offset;
 }
-
 /*******************************************************************************************************
  *
  * Decodes part 1 of an item address
@@ -7016,15 +9139,11 @@ s7commp_decode_item_address_part1(tvbuff_t *tvb,
     guint16 var_area1 = 0;
     guint16 db_number = 0;
 
-    /**************************************************************
-     * 2. Feld
-     * Das zweite Feld ist eine ID aus der ID-Namensliste, welche so etwas wie die "Base-Area" angibt auf den
-     * sich die weiteren IDs beziehen.
-     * Fuer dem Merkerbereich ist dort auch eine mit der Funktion uebereinstimmende ID vorhanden (82).
-     * Fuer Datenbausteine gibt es keine explizite ID, weil sich diese aus einem fixen und einem variablen Teil
-     * zusammensetzt.
-     *   0x8a0e nnnn, mit nnnn = Nummer des Datenbausteins.
-     * Demnach entspricht eine id > 0x8a0e0000=2316173312 (DB0) und id < 0x8a0effff=2316238847 (DB65535) einem DB-Zugriff.
+    /* The first value is an ID from the ID list which can be seen as kind of base-area for the following IDs.
+     * E.g. for Marker (M) area this is ID 82. For datablocks there is no fixed ID as it consists of a fixed and a
+     * variable part:
+     * 0x8a0e nnnn, with 8a0e is the fixed part for datablock and nnnn is the datablock number.
+     * As result id > 0x8a0e0000=2316173312 (DB0) and id < 0x8a0effff=2316238847 (DB65535) address datablocks.
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
 
@@ -7079,18 +9198,13 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
     guint32 start_offset;
     proto_item *pi = NULL;
     int str_len = 0;
-    /* Z.Zt. max. Schachtelungstiefe von 8 erlaubt. = (10+1)*8 + 8+1
-     * plus ggf. Arrayindizes, 256 sollten fuer alle Eventualitaeten reichen.
-     */
     gchar addr_filter_seq_str[256];
 
-    /**************************************************************
-     * 4. Feld
-     * Eine ID aus der ID-Namensliste. Hiermit wird angezeigt, welcher Typ von Wert gelesen werden soll.
-     * Bei Merkern: 3736 = ControllerArea.ValueActual
-     * Bei DBs: 2550 = DB.ValueActual
-     * Vermutlich lassen sich damit auch Startwerte im DB lesen (ueber 2548).
-     * Es lassen sich auch diverse andere Objekte der SPS lesen.
+    /* 4th field is a ID from the id-list which gives the type of value which has to be accessed.
+     * For example to read Marker (M) 3736 = ControllerArea.ValueActual is used.
+     * To read the actual value from a datablock (DB) 2550 = DB.ValueActual is used, maybe
+     * initial values could be read with 2548.
+     * It's possible to access other objects with a plain ID.
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
     proto_tree_add_uint(tree, hf_s7commp_itemaddr_area_sub, tvb, offset, octet_count, value);
@@ -7103,11 +9217,9 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
 
     *number_of_fields += 1;
 
-    /**************************************************************
-     * 5. bis n. Feld
-     * LID pro Nest-Level
+    /* 5th to nth field contain a LID per nest-level
      */
-    is_datablock_access = ((id_value >= 0x8a0e0000) && (id_value <= 0x8a0effff));     /* Datenbaustein mit Nummer */
+    is_datablock_access = ((id_value >= 0x8a0e0000) && (id_value <= 0x8a0effff));     /* Datablock with number */
     is_iqmct_access = ((id_value >= 80) && (id_value <= 84));                         /* 80=I, 81=Q, 82=M, 83=C, 84=T */
     is_classicblob_access = (crc == 0) && (is_datablock_access || is_iqmct_access);
 
@@ -7118,34 +9230,35 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
         if (is_classicblob_access) {
             lid_cnt = 2;
             first_lid = tvb_get_varuint32(tvb, &octet_count, offset);
-            /* Wenn Zugriffsart == 3 (ClassicBlob), dann wird mit Absolutadressen gearbeitet.
-             * Das Prinzip funktioniert nur, wenn als erste LID keiner dieser Werte erlaubt ist.
-             * Andernfalls waere der Zugriff nicht eindeutig zu unterscheiden.
-             * Es ist zur Zeit auch nur die Funktion von 3 bekannt.
+            /* ClassicBlob / Absolute-addressmode:
+             * With accesstype==3 (ClassicBlob) the absolute-addressmode is used with addressoffsets like in the 300/400.
+             * This check works only when as first LID the ID is not allowed, otherwise the accesstype could
+             * not be clearly differentiated to other accesstypes.
+             * Only accesstype==3 is currently known.
              */
             if (first_lid == 3) {
-                /* 1. LID: Zugriffsart */
-                proto_tree_add_text(tree, tvb, offset, octet_count, "LID-access Aid: %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
+                /* 1. LID: accesstype / LID-access Aid */
+                proto_tree_add_uint(tree, hf_s7commp_itemaddr_lid_accessaid, tvb, offset, octet_count, first_lid);
                 proto_item_append_text(tree, ", %s (%u)", val_to_str(first_lid, lid_access_aid_names, "%u"), first_lid);
                 offset += octet_count;
                 lid_cnt += 1;
                 *number_of_fields += 1;
-                /* 2. Startadresse */
+                /* 2. Startaddress */
                 a_offs = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(tree, tvb, offset, octet_count, "Blob startoffset: %u", a_offs);
+                proto_tree_add_uint(tree, hf_s7commp_itemaddr_blob_startoffset, tvb, offset, octet_count, a_offs);
                 offset += octet_count;
                 lid_cnt += 1;
                 *number_of_fields += 1;
-                /* 3. Anzahl an Bytes */
+                /* 3. Number of bytes */
                 a_cnt = tvb_get_varuint32(tvb, &octet_count, offset);
-                proto_tree_add_text(tree, tvb, offset, octet_count, "Blob bytecount: %u", a_cnt);
+                proto_tree_add_uint(tree, hf_s7commp_itemaddr_blob_bytecount, tvb, offset, octet_count, a_cnt);
                 offset += octet_count;
                 lid_cnt += 1;
                 *number_of_fields += 1;
-                /* Wenn jetzt noch ein Feld folgt, dann ist es ein Bitoffset */
+                /* If another value following then it's a bitoffset */
                 if (lid_nest_depth >= lid_cnt) {
                     a_bitoffs = tvb_get_varuint32(tvb, &octet_count, offset);
-                    proto_tree_add_text(tree, tvb, offset, octet_count, "Blob bitoffset: %u", a_bitoffs);
+                    proto_tree_add_uint(tree, hf_s7commp_itemaddr_blob_bitoffset, tvb, offset, octet_count, a_bitoffs);
                     offset += octet_count;
                     lid_cnt += 1;
                     *number_of_fields += 1;
@@ -7156,7 +9269,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                     str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".O%u.C%u", a_offs, a_cnt);
                 }
             }
-            /* TODO: Wenn jetzt noch LIDs folgen, erstmal als weitere IDs anzeigen */
+            /* TODO: If more LIDs are following, show these as plain IDs as long as it's not clear what they are for. */
             if (lid_nest_depth >= lid_cnt) {
                 proto_item_append_text(tree, ", LID=");
             }
@@ -7174,7 +9287,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                 *number_of_fields += 1;
             }
         } else {
-            /* Standard fuer symbolischen Zugriff mit crc und LIDs */
+            /* Standard for access via symbolic name with CRC and LIDs */
             proto_item_append_text(tree, ", LID=");
             for (lid_cnt = 2; lid_cnt <= lid_nest_depth; lid_cnt++) {
                 value = tvb_get_varuint32(tvb, &octet_count, offset);
@@ -7190,7 +9303,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
             }
         }
     }
-    /* Gesamte Sequenz als filterbaren Eintrag generieren */
+    /* Use the complete address sequence for something the user can set a filter on */
     pi = proto_tree_add_string_format(tree, hf_s7commp_itemaddr_filter_sequence, tvb, start_offset,
         offset - start_offset, addr_filter_seq_str, "Item address sequence: %s", addr_filter_seq_str);
     PROTO_ITEM_SET_GENERATED(pi);
@@ -7222,58 +9335,44 @@ s7commp_decode_item_address(tvbuff_t *tvb,
     adr_item_tree = proto_item_add_subtree(adr_item, ett_s7commp_data_item);
     proto_item_append_text(adr_item_tree, " [%u]:", item_nr);
 
-    /**************************************************************
-     * 1. Feld
-     * CRC als varuint
+    /* Adressing variables:
+     * There are at least these types of addressing:
+     * 1) Symbolic access with symbol CRC and LID
+     * 2) Absolute address for "not-optimized" DBs and I/Q/M/C/T area
+     * 3) Accessing objects with ID
      *
-     * Es gibt mindestens zwei Interpretationsarten:
-     * 1) Symbolischer Zugriff vom HMI ueber CRC und LID
-     * 2) Zugriff auf Objekte ueber AID/RID
+     * The general structure is the same for all variants, but the interpretation is different.
+     * If the first field with the CRC is zero, then it's an object-id or absolute-address mode access.
+     * Symbolic access can be done with or without the CRC check (without check it's zero).
      *
-     * Vom Aufbau her sind beide Adressen identisch nur die Interpretation ist eine andere. Die Unterscheidung
-     * erfolgt anhand des ersten Feldes (crc). Ist dieses Null, dann ist es eine Object ID Interpretation.
-     * Ohne crc scheint es sich bei den LIDs um Adressen zu handeln, wenn der DB ein nicht-optimierter DB ist, oder
-     * der Speicherbereich IQMCT ist.
-     * Zumindest bei I/Q/M und nicht opt. DBs passt das mit den Adressen ueberein, bei T/C wird die Nummer mal zwei genommen.
-     * Optimierte DBs werden nach aktueller Erkenntnis immer mit crc gelesen.
-     * Beispiel: M122.7: 3.122.1.7
-     *                   3 = ClassicBlob, 122 = offset, 1 = Typ BOOL??? nur dann folgt eine Bitadresse, 7=bitoffset
-     *                   Antwort ist dann mit Datentyp BOOL
-     * Beispiel: DB1.intVar2 (nicht opt. an DB1.DBW2): 3.2.2
-     *                   3 = ClassicBlob, 2 = offset, 2 = Typ Blob?, bzw. Laenge 2 Bytes?
-     *                   Antwort ist mit Datentyp Blob von Groesse 2
-     * Beispiel: DB1.dateAndTimeVar_48_0 = 3.48.8
-     *                   3 = ClassicBlob, 48 = offset, 8 = length
+     * Example: M122.7: 3.122.1.7
+     *                  3 = ClassicBlob, 122 = offset, 1 = Typ BOOL, 7=bitoffset
+     * Example: DB1.intVar2 (not-opt. at DB1.DBW2): 3.2.2
+     *                  3 = ClassicBlob, 2 = offset, 2 = Typ USInt
+     * Example: DB1.dateAndTimeVar_48_0 = 3.48.8
+     *                  3 = ClassicBlob, 48 = offset, 8 = length
      */
     proto_tree_add_ret_varuint32(adr_item_tree, hf_s7commp_itemaddr_crc, tvb, offset, &octet_count, &crc);
     offset += octet_count;
 
     *number_of_fields += 1;
 
-    /**************************************************************
-     * ID aus der Namensliste
-     */
     offset = s7commp_decode_item_address_part1(tvb, adr_item_tree, number_of_fields, &id_value, offset);
 
     proto_item_append_text(adr_item_tree, ", SYM-CRC=%x", crc);
-    /**************************************************************
-     * 3. Feld
-     * LID Nesting Depth
-     *
-     * 0x01: Merker                 Folgende LIDs: 1
-     * 0x02: DB.VAR                 Folgende LIDs: 1
-     * 0x03: DB.STRUCT.VAR          Folgende LIDs: 2
-     * 0x03: DB.ARRAY[INDEX]        Folgende LIDs: 2
-     * 0x04: DB.STRUCT.STRUCT.VAR   Folgende LIDs: 3
-     * -> Die Werte gelten nur wenn mit crc != 0 gelesen wird!
+    /* LID Nesting Depth:
+     * Sample nesting depths for addressing:
+     * 0x01: Marker                 following LIDs: 1
+     * 0x02: DB.VAR                 following LIDs: 1
+     * 0x03: DB.STRUCT.VAR          following LIDs: 2
+     * 0x03: DB.ARRAY[INDEX]        following LIDs: 2
+     * 0x04: DB.STRUCT.STRUCT.VAR   following LIDs: 3
+     * These values are only valid with accessing with a CRC != 0
      */
     proto_tree_add_ret_varuint32(adr_item_tree, hf_s7commp_itemaddr_idcount, tvb, offset, &octet_count, &lid_nest_depth);
     offset += octet_count;
     *number_of_fields += 1;
 
-    /**************************************************************
-     * Felder 4 und 5 und weitere LIDs
-     */
     offset = s7commp_decode_item_address_part2(tvb, adr_item_tree, number_of_fields, id_value, crc, lid_nest_depth, offset);
 
     proto_item_set_len(adr_item_tree, offset - start_offset);
@@ -7284,10 +9383,9 @@ s7commp_decode_item_address(tvbuff_t *tvb,
  *
  * Decodes a plc address in subscription array.
  *
- * Abgeleitet von s7commp_decode_item_address().
- * Unterschiede:
- * - "Symbol-CRC" und "Access base-area" tauschen die Reihenfolge
- * - Kein "Number of following IDs" als Einzelwert, sondern in den 16 Bits eines 32 Bit Werts codiert.
+ * Derived from s7commp_decode_item_address() with the differences:
+ * - "Symbol-CRC" and "Access base-area" swap the order
+ * - "Number of following IDs" is not a single value, but coded in 16 bits of a 32 bit VLQ
  *
  *******************************************************************************************************/
 static guint32
@@ -7312,9 +9410,9 @@ s7commp_decode_item_address_sub(tvbuff_t *tvb,
     adr_item_tree = proto_item_add_subtree(adr_item, ett_s7commp_data_item);
     proto_item_append_text(adr_item_tree, " [%u]:", item_nr);
 
-    /* z.B. 0x80040003
-     * Wofuer die linken 2 Bytes stehen ist nicht bekannt.
-     * In den rechten 2 Bytes steht die Anzahl der LIDs.
+    /* Example: 0x80040003
+     * What the left 2 bytes (0x8004) stand for is not known,
+     * the right 2 bytes give the number of following LIDs.
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
     lid_nest_depth = value & 0xffff;
@@ -7332,30 +9430,19 @@ s7commp_decode_item_address_sub(tvbuff_t *tvb,
     offset += octet_count;
     *number_of_fields += 1;
 
-    /**************************************************************
-     * ID aus der Namensliste
-     */
     offset = s7commp_decode_item_address_part1(tvb, adr_item_tree, number_of_fields, &id_value, offset);
 
-    /**************************************************************
-     * CRC als varuint
-     */
     proto_tree_add_ret_varuint32(adr_item_tree, hf_s7commp_itemaddr_crc, tvb, offset, &octet_count, &crc);
     proto_item_append_text(adr_item_tree, ", SYM-CRC=%x", crc);
     offset += octet_count;
     *number_of_fields += 1;
 
-    /**************************************************************
-     * Felder 4 und 5 und weitere LIDs
-     */
     offset = s7commp_decode_item_address_part2(tvb, adr_item_tree, number_of_fields, id_value, crc, lid_nest_depth, offset);
 
     proto_item_set_len(adr_item_tree, offset - start_offset);
 
     return offset;
 }
-
-
 /*******************************************************************************************************
  *
  * Request SetMultiVariables
@@ -7381,8 +9468,8 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset;
 
-    /* Wenn die ersten 4 Bytes 0x00, dann ist es ein 'normaler' Schreib-Befehl.
-     * Es kann sein, dass hier die Session-ID steht, dann ist der Aufbau anders.
+    /* When the first 4 bytes are all zero, then this is a "standard" write command.
+     * When this value is the session-id (!= 0), then the structure is different.
      */
     value = tvb_get_ntohl(tvb, offset);
     offset += 4;
@@ -7394,8 +9481,8 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
 
         proto_tree_add_varuint32(tree, hf_s7commp_item_no_of_fields, tvb, offset, &octet_count);
         offset += octet_count;
-        /* Es lassen sich mehrere Variablen mit einem write schreiben.
-         * Danach folgen erst die Adressen und dann die Werte.
+        /* It's possible to write many variables with a single request.
+         * First all addresses, then the values which have to be written.
          */
         list_start_offset = offset;
         list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
@@ -7423,7 +9510,7 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         list_start_offset = offset;
         list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
-        id_number_offset = offset;  /* Startaddresse der 1. ID */
+        id_number_offset = offset;  /* Startaddress of 1st ID */
         for (i = 1; i <= item_address_count; i++) {
             proto_tree_add_varuint32(list_item_tree, hf_s7commp_data_id_number, tvb, offset, &octet_count);
             offset += octet_count;
@@ -7434,22 +9521,20 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         list_item = proto_tree_add_item(tree, hf_s7commp_valuelist, tvb, offset, -1, FALSE);
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_valuelist);
         for (i = 1; i <= item_count; i++) {
-            /* Nochmal zugehoerige ID auslesen um die ID zum Datensatz zu bekommen. */
+            /* Readout the related ID again, to get the ID for the complete dataset for further dissection */
             id_number = tvb_get_varuint32(tvb, &octet_count, id_number_offset);
             id_number_offset += octet_count;
             offset_save = offset;
-
             offset = s7commp_decode_itemnumber_value_list(tvb, pinfo, list_item_tree, offset, FALSE);
-
-            /* ID 1048 = SubscriptionReferenceList gesondert decodieren */
+            /* Decode ID 1048 = SubscriptionReferenceList with more details, useful for standard HMI diagnosis */
             if (id_number == 1048) {
-                tvb_get_varuint32(tvb, &octet_count, offset); /* Laenge des Item-number elements */
+                tvb_get_varuint32(tvb, &octet_count, offset); /* get length of the item-number element */
                 s7commp_decode_attrib_subscriptionreflist(tvb, list_item_tree, offset_save + octet_count);
             }
         }
         proto_item_set_len(list_item_tree, offset - list_start_offset);
     }
-    /* Fuellbyte oder andere Funktion? */
+    /* fillbyte / unknown */
     proto_tree_add_item(tree, hf_s7commp_setvar_fill, tvb, offset, 1, FALSE);
     offset += 1;
     return offset;
@@ -7474,8 +9559,7 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
     proto_tree *list_item_tree = NULL;
     guint32 list_start_offset;
 
-    /* Zum Variablen-Lesen muessen die ersten 4 Bytes 0 sein. Andernfalls ist es eine Link-Id.
-     */
+    /* For variable-read the first 4 bytes must be zero, otherwise it's a link-id */
     value = tvb_get_ntohl(tvb, offset);
     if (value == 0) {
         proto_tree_add_uint(tree, hf_s7commp_getmultivar_unknown1, tvb, offset, 4, value);
@@ -7485,7 +9569,7 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
     offset += 4;
     proto_tree_add_ret_varuint32(tree, hf_s7commp_item_count, tvb, offset, &octet_count, &item_count);
     offset += octet_count;
-    if (value == 0x0) {
+    if (value == 0) {
         proto_tree_add_varuint32(tree, hf_s7commp_item_no_of_fields, tvb, offset, &octet_count);
         offset += octet_count;
         list_start_offset = offset;
@@ -7543,8 +9627,8 @@ s7commp_decode_response_setmultivar(tvbuff_t *tvb,
 {
     guint16 errorcode = 0;
     gboolean errorextension = FALSE;
-    /* Der Unterschied zum Read-Response ist, dass man hier sofort im Fehlerbereich ist wenn das erste Byte != 0.
-     * Ein erfolgreiches Schreiben einzelner Werte scheint nicht extra bestaetigt zu werden.
+    /* In difference to a read-response we go immediately into the error-area when the first byte != 0.
+     * A successful write-request seems not generate a explicit return-value.
      */
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
@@ -7571,20 +9655,18 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
     guint8 item_return_value;
     int struct_level;
     int n_access_errors = 0;
-    /* Return value: Ist der Wert ungleich 0, dann folgt ein Datensatz mit dem bekannten
-     * Aufbau aus den anderen Telegrammen.
-     * Liegt ein Adressfehler vor, so werden hier auch Fehlerwerte uebertragen. Dann ist Datatype=NULL
-     * Folgende Rueckgabewerte wurden gesichtet:
-     *  hex       bin       ref-id  value
-     *  0x03 = 0000 0011 -> ntohl   -       Fehler bei einer Adresse (S7-1500 - Plcsim), wie 0x13
-     *  0x13 = 0001 0011 -> ntohl   -       Fehler bei einer Adresse (S7-1200) und 1500-Plcsim
-     *  0x81 = 1000 0001 ->         object  Standard Objekt beginnend mit 0xa1 (nur bei Protokoll-Version v1?)
-     *  0x83 = 1000 0011 ->         value   Standard value Aufbau, dann notification value-list (nur bei Protokoll-Version v1?)
-     *  0x92 = 1001 0010 -> ntohl   value   Erfolg (S7-1200)
-     *  0x9b = 1001 1011 -> vlq32   value   Bei 1500 und 1200 gesehen. Es folgt eine ID oder Nummer, dann flag, typ, wert.
-     *  0x9c = 1001 1100 -> ntohl   ?       Bei Beobachtung mit einer Variablentabelle (S7-1200), Aufbau scheint dann anders zu sein
-     *         +-> Bit 8 = true bei Erfolg?
-     * Danach koennen noch weitere Daten folgen, deren Aufbau bisher nicht bekannt ist.
+    /* Return value: If the value != 0 then follows a dataset with the common known structure.
+     * If an access error occurs, we have here an error-value, in this case datatype==NULL.
+     * TODO: The returncodes follow not any known structure. I've tried to reproduce some errors
+     * on different controllers and generations with the following results:
+     *  hex       bin       ref-id  value   description
+     *  0x03 = 0000 0011 -> ntohl   -       Addressing error (S7-1500 - Plcsim), like 0x13
+     *  0x13 = 0001 0011 -> ntohl   -       Addressing error (S7-1200) and 1500-Plcsim
+     *  0x81 = 1000 0001 ->         object  Standard object starts with 0xa1 (only in protocol version v1?)
+     *  0x83 = 1000 0011 ->         value   Standard value structure, then notification value-list (only in protocol version v1?)
+     *  0x92 = 1001 0010 -> ntohl   value   Success (S7-1200)
+     *  0x9b = 1001 1011 -> vlq32   value   Seen on 1500 and 1200. Following ID or number, then flag, type, value
+     *  0x9c = 1001 1100 -> ntohl   ?       Online with variable status table (S7-1200), structure seems to be completely different
      */
     do {
         struct_level = 0;
@@ -7603,7 +9685,7 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
             proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_retval, tvb, offset, 1, item_return_value);
             offset += 1;
             if (item_return_value == 0x92) {
-                /* Item reference number. Is sent to plc on the subscription-telegram for the addresses. */
+                /* Item reference number: Is sent to plc in the subscription-telegram for the addresses. */
                 item_number = tvb_get_ntohl(tvb, offset);
                 proto_tree_add_uint(data_item_tree, hf_s7commp_notification_vl_refnumber, tvb, offset, 4, item_number);
                 offset += 4;
@@ -7625,9 +9707,9 @@ s7commp_decode_notification_value_list(tvbuff_t *tvb,
                 proto_item_append_text(data_item_tree, " [%u]: Access error", item_number);
                 offset += 4;
                 n_access_errors++;
-            } else if (item_return_value == 0x81) {     /* Bei Protokoll Version v1, sowie auch bei 1500 im 2. Teil zur Uebertragung von ProgramAlarm */
+            } else if (item_return_value == 0x81) {     /* Only in protocol version v1, but also used in S7-1500 in part 2 for ProgramAlarm */
                 offset = s7commp_decode_object(tvb, pinfo, data_item_tree, offset, TRUE);
-            } else if (item_return_value == 0x83) {     /* Vermutlich nur in Protokoll Version v1*/
+            } else if (item_return_value == 0x83) {     /* Probably only in protocol version v1 */
                 offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, 0);
             } else {
                 expert_add_info_format(pinfo, data_item_tree, &ei_s7commp_notification_returnvalue_unknown, "Notification unknown return value: 0x%02x", item_return_value);
@@ -7667,13 +9749,12 @@ s7commp_decode_notification(tvbuff_t *tvb,
     gboolean add_data_info_column = FALSE;
     guint32 list_start_offset;
 
-    /* 4 Bytes Subscription Object Id */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_subscrobjectid, tvb, offset, 4, subscr_object_id);
     s7commp_pinfo_append_idname(pinfo, subscr_object_id, " ObjId=");
     offset += 4;
 
-    /* 6/7: Unbekannt */
+    /* Unknown, but relevant! */
     unknown2 = tvb_get_ntohs(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_unknown2, tvb, offset, 2, unknown2);
     offset += 2;
@@ -7684,21 +9765,20 @@ s7commp_decode_notification(tvbuff_t *tvb,
     if (unknown2 == 0x0400) {
         proto_tree_add_item(tree, hf_s7commp_notification_unknown4, tvb, offset, 2, ENC_BIG_ENDIAN);
         offset += 2;
-
-        /* Es gibt drei Nummern:
-         * 1) Nummerierung fuer Creditlimit: Wird bei Aufbau der notification-session ein Wert angegeben, so erfolgt die UEbertragung
-         *                                  bis zur in modifiy-session angegebenen Limit.
-         * 2) Sequenznummer: Wurde beim Session-Aufbau -1 angegeben, so ist die Zahl bei 1) Null, und es folgt hier eine aufsteigende Nummer.
-         * 3) Subscription Change Counter: Erhoeht sich um 1 wenn eine Subscription geaendert wurde
-         *                                 (z.B. loeschen oder hinzufuegen von weiteren Variablen).
-         *                                 Es gibt seit neuestem eine zweite Variante wie dieser Wert uebertragen wird.
-         *                                 Wenn ein Werteintrag mit Returnvalue 0x05 folgt, dann steht dort der Aenderungszaehler.
-         *                                 Das Feld hier ist aber trotzdem vorhanden, nur der Wert ist dann 0.
-         * Bei der Sequenznummer gibt es Unterschied zwischen der 1200 (vor FW3?) und der 1500 zu geben.
-         * Bei der 1200 ist diese immer nur 1 Byte, bei der 1500 ist es ein VLQ.
-         * Es scheint abhaengig von der ersten ID zu sein. Ist diese groesser 0x7000000 dann ist es ein VLQ.
-         * Es scheint generell so, dass eine 1200 IDs beginnend mit 0x1.. und eine 1500 mit 0x7.. verwendet.
-         * Eine 1200 mit FW4 verwendet ebenfall > 0x700000. An der Protokollversion kann es nicht festgemacht werden.
+        /* There are three values:
+         * 1) Numbering for creditlimit: On setup of the notification-session there is a limit for this value.
+         *    The notifications are sent until this limit is reached.
+         * 2) Sequence number: If -1 is set on notification-session setup, the value at 1) is zero and this
+         *    value is incremented by 1 on each notification.
+         * 3) Subscription Change Counter: Is incremented by 1 on each change of the subscription itself (delete or add an element).
+         *    On newer CPUs there is a new variant of this: If the returnvalue is 0x05, then there
+         *    is a change-counter. This field is still present, but then with value == 0.
+         * In the sequencenumber coding is a difference between the 1200 (before Firmware 3?) and 1500.
+         * In the 1200 the number is only 1 byte fixed (which overflows and then starts at 0), in the 1500 it's a VLQ.
+         * It seems to be depending on the first ID: if > 0x7000000 then it's a VLQ.
+         * In general it seems that old 1200 (< FW3) use IDs begin with 0x1.. and 1500 use IDs begin with 0x7...
+         * A newer 1200 with firmware 4 also uses IDs begin with 0x7...
+         * Detecting this on the protocol version is not possible.
          */
         if (subscr_object_id < 0x70000000) {
             seqnum = tvb_get_guint8(tvb, offset);
@@ -7722,13 +9802,12 @@ s7commp_decode_notification(tvbuff_t *tvb,
             proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
             offset += 1;
             if (subscrccnt == 0) {
-                /* Mit neueren S7-1500 wenn subscrccnt vorher 0 war:
-                 * Nach einem Byte mit bisher gesehenen 0x04 oder 0x05 folgt ein 6 Byte langer Time-Tick
-                 * auf Microsekunden-Basis und dann der eigentliche Wert von subscrccnt.
-                 * Der Zaehler setzt auch nach SPS Run-Stop oder Spannungsausfall beim alten Wert fort.
-                 * Bei einer Test-CPU ergab ein rueckrechnen auf 0 einen Zeitpunkt im Jahr 2014, es
-                 * scheint keine bekannten Zeitformat zu entsprechen.
-                 * TODO: Es sind mehr Daten von anderen CPUs notwendig um ein paar Vergleichswerte zu bekommen.
+                /* Newer versions of 1500 if subscrccnt ==0:
+                 * After a byte where only 0x04 or 0x05 was seen yet, a 6 byte long time-tick on microsecond basis follows.
+                 * Testresults: The counter value keeps the value on PLC Run-Stop and also on power loss.
+                 * Recalculating the startpoint results in a starting point in 2014, thus it seems not
+                 * to be a common absolute time format (timetick from production / first power-up date?).
+                 * TODO: This needs more data from different CPUs to get some values to compare.
                  */
                 proto_tree_add_item(tree, hf_s7commp_notification_unknown5, tvb, offset, 1, ENC_BIG_ENDIAN);
                 offset += 1;
@@ -7752,9 +9831,8 @@ s7commp_decode_notification(tvbuff_t *tvb,
         if (offset - list_start_offset > 1) {
             add_data_info_column = TRUE;
         }
-
-        /* Noch ein spezial Datensatz, mit ein paar unbekannten Werten davor und einer Standard Objekt-Datenstruktur.
-         * Dieses wird z.B. zur Uebertragung von ProgramAlarm Ereignissen verwendet.
+        /* More data with some unknown values and a standard value list.
+         * This is used for example in ProgramAlarm events.
          */
         if (tvb_get_guint8(tvb, offset) != 0) {
             subscr_object_id2 = tvb_get_ntohl(tvb, offset);
@@ -7768,9 +9846,13 @@ s7commp_decode_notification(tvbuff_t *tvb,
                 list_start_offset = offset;
                 offset = s7commp_decode_notification_value_list(tvb, pinfo, list_item_tree, offset, TRUE);
                 proto_item_set_len(list_item_tree, offset - list_start_offset);
+                add_data_info_column = TRUE;
             }
         }
         if (add_data_info_column) {
+            /* On change driven events most Notifications are empty if nothing has changed.
+             * Indicate when there are values, so the user can see where to look at.
+             */
             col_append_str(pinfo->cinfo, COL_INFO, " <Contains values>");
         }
     }
@@ -7791,21 +9873,21 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
     guint32 subscr_object_id;
     guint32 list_start_offset;
 
-    /* 4 Bytes Subscription Object Id -> scheint hier nicht der Fall zu sein? */
+    /* 4 Bytes Subscription Object Id -> is this correct in v1? */
     subscr_object_id = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(tree, hf_s7commp_notification_subscrobjectid, tvb, offset, 4, subscr_object_id);
     s7commp_pinfo_append_idname(pinfo, subscr_object_id, " ObjId=");
     offset += 4;
 
-    proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 2: 0x%08x", tvb_get_ntohl(tvb, offset));
+    proto_tree_add_item(tree, hf_s7commp_notification_v1_unknown2, tvb, offset, 4, ENC_BIG_ENDIAN);
     offset += 4;
-    /* Alle folgenden Werte sind nur vorhanden, wenn hier keine 4 Null-Bytes folgen.
-     * Der Wert an dieser Stelle ist meistens um 2 oder 3 hoeher als die obige Object Id.
+    /* The next values are only present if the 4 bytes aren't zero (end of telegram before trailer?)
+     * The value here is often 2 or 3 above the object-id above.
      */
     if (tvb_get_ntohl(tvb, offset) != 0) {
-        proto_tree_add_text(tree, tvb, offset, 4, "Notification v1, Unknown 3: 0x%08x", tvb_get_ntohl(tvb, offset));
+        proto_tree_add_item(tree, hf_s7commp_notification_v1_unknown3, tvb, offset, 4, ENC_BIG_ENDIAN);
         offset += 4;
-        proto_tree_add_text(tree, tvb, offset, 2, "Notification v1, Unknown 4: 0x%04x", tvb_get_ntohs(tvb, offset));
+        proto_tree_add_item(tree, hf_s7commp_notification_v1_unknown4, tvb, offset, 2, ENC_BIG_ENDIAN);
         offset += 2;
         list_start_offset = offset;
         offset = s7commp_decode_notification_value_list(tvb, pinfo, tree, offset, TRUE);
@@ -7820,11 +9902,9 @@ s7commp_decode_notification_v1(tvbuff_t *tvb,
  *
  * Extended decoding of attribute with id SubscriptionReferenceList
  *
- * Der komplette "Item-Value" Zweig wurde vorher schon mit der Standard-Funktion zerlegt
- * und auch im Baum angezeigt.
- * Diese Funktion dekodiert die Werte weiter in die Adressen, weil diese fuer eine Analyse
- * welche Werte abbonniert werden interessanter sind.
- * Wenn Datentyp und flags nicht zum Standard passen, wird abgebrochen.
+ * The reference list is transmitted as an addressarray of UDInt.
+ * This function decodes this array further to get the addresses of the variables
+ * which are subscribed, as they are of interest for analysis.
  *
  *******************************************************************************************************/
 static guint32
@@ -7845,15 +9925,15 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     guint32 list_start_offset;
     guint32 sub_list_start_offset;
 
-    /* Datatype flags: 0x20 fuer Adressarray sein
-     * Datatype: sollte 0x04 fuer UDInt sein
+    /* Datatype flags: should be 0x20 for Addressarray
+     * Datatype      : should be 0x04 for UDInt
      */
     if ((tvb_get_guint8(tvb, offset) != 0x20) || (tvb_get_guint8(tvb, offset+1) != S7COMMP_ITEM_DATATYPE_UDINT)) {
         return offset;
     }
     offset += 2;
 
-    /* Array size: wird nicht weiter benoetigt, muss fuer die Berechnung des offsets aber nochmal ausgelesen werden */
+    /* Array size: is only neccessary to recalculate the offset */
     tvb_get_varuint32(tvb, &octet_count, offset);
     offset += octet_count;
 
@@ -7861,11 +9941,11 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     list_item = proto_tree_add_item(tree, hf_s7commp_subscrreflist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_subscrreflist);
 
-    /* Header mit insgesamt 3 Werten
-     * 1. Wert:
-     * Bei Request Create Object: 0x80010000
-     * Bei Request SetMultiVariables: 0x00020000, 0x00030000, 0x00040000, 0x00050000, 0x00060000
-     *   Bearbeitet die Liste?
+    /* Header with three values:
+     * 1st value:
+     * On Request Create Object:     0x80010000
+     * On Request SetMultiVariables: 0x00020000, 0x00030000, 0x00040000, 0x00050000, 0x00060000
+     *                               Modifies the list?
      */
     proto_tree_add_varuint32(list_item_tree, hf_s7commp_subscrreflist_unknown1, tvb, offset, &octet_count);
     offset += octet_count;
@@ -7903,7 +9983,7 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     }
 
     proto_item_set_len(list_item_tree, offset - list_start_offset);
-    /* Kennzeichnen dass diese Liste vorher schon verarbeitet wurde */
+    /* The list values were processed before. Indicate that this is done again. */
     PROTO_ITEM_SET_GENERATED(list_item_tree);
     return offset;
 }
@@ -7938,11 +10018,11 @@ s7commp_decode_request_setvariable(tvbuff_t *tvb,
     list_start_offset = offset;
     list_item = proto_tree_add_item(tree, hf_s7commp_addresslist, tvb, offset, -1, FALSE);
     list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
-    /* Wenn count == 1 dann folgt nur eine ID. Wenn z.B. count == 4, dann folgen 2 IDs, eine Null
-     * und dann eine Laengenangabe die mit der Roh-Laenge im folgenden Value-Teil identisch ist.
-     * Warum diese Redundanz ist nicht klar. Vermutetes Schema was zumindest bei den bisherigen
-     * Aufzeichnungen funktioniert:
-     * Wenn innerhalb Schleife ein Nullwert auftritt, dann folgt danach noch eine Laenge.
+    /* If count == 1 then next comes only one id: If e.g. count == 4 then 2 IDs, one zero and
+     * a length corresponding to the raw-length in the next value part.
+     * Why this redundancy is not known.
+     * The guessed at least working scheme on all present captures:
+     * If inside the loop a null-value occurs, then follows the length.
      */
     for (i = 1; i <= item_address_count; i++) {
         proto_tree_add_ret_varuint32(list_item_tree, hf_s7commp_data_id_number, tvb, offset, &octet_count, &object_id);
@@ -8006,8 +10086,8 @@ s7commp_decode_request_getvariable(tvbuff_t *tvb,
     proto_tree_add_uint(tree, hf_s7commp_object_relid, tvb, offset, 4, relid);
     s7commp_pinfo_append_idname(pinfo, relid, NULL);
     offset += 4;
-    /* Ob es wirklich moeglich ist hier auch mehrere Variablen zu lesen ist
-     * nicht bekannt, denn dazu gibt es eigentlich eine eigene Funktion.
+    /* Don't know if it's really possible to read many variables with this function,
+     * as there is a separate function for reading multiple.
      */
     proto_tree_add_ret_varuint32(tree, hf_s7commp_getvar_itemcount, tvb, offset, &octet_count, &item_count);
     offset += octet_count;
@@ -8063,6 +10143,7 @@ s7commp_decode_request_getvarsubstr(tvbuff_t *tvb,
 {
     proto_item *data_item = NULL;
     proto_tree *data_item_tree = NULL;
+    proto_item *pi = NULL;
     guint32 id_number;
     guint32 start_offset;
     int struct_level = 0;
@@ -8070,8 +10151,10 @@ s7commp_decode_request_getvarsubstr(tvbuff_t *tvb,
     do {
         id_number = tvb_get_ntohl(tvb, offset);
         if (id_number == 0) {
+            /* TODO: Is this neccessary any more? */
             struct_level--;
-            proto_tree_add_text(tree, tvb, offset, 1, "Terminating Struct (Lvl:%d <- Lvl:%d)", struct_level, struct_level+1);
+            pi = proto_tree_add_item(tree, hf_s7commp_structitem_terminator, tvb, offset, 4, FALSE);
+            proto_item_append_text(pi, " (Lvl:%d <- Lvl:%d)", struct_level, struct_level+1);
             offset += 4;
         } else {
             start_offset = offset;
@@ -8106,7 +10189,8 @@ s7commp_decode_response_getvarsubstr(tvbuff_t *tvb,
     gboolean errorextension = FALSE;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
-    proto_tree_add_text(tree, tvb, offset, 1, "Response unknown 1: 0x%02x", tvb_get_guint8(tvb, offset));
+    /* 1 byte with unknown function */
+    proto_tree_add_item(tree, hf_s7commp_getvarsubstr_res_unknown1, tvb, offset, 1, ENC_BIG_ENDIAN);
     offset += 1;
     data_item = proto_tree_add_item(tree, hf_s7commp_data_item_value, tvb, offset, -1, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data_item);
@@ -8132,7 +10216,7 @@ s7commp_decode_request_setvarsubstr(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     guint32 offset)
 {
-    /* Gleicher Aufbau wie Request GetVarSubstreamed */
+    /* Identical to Request GetVarSubstreamed */
     offset = s7commp_decode_request_getvarsubstr(tvb, pinfo, tree, offset);
 
     return offset;
@@ -8176,7 +10260,8 @@ s7commp_decode_request_setvarsubstr_stream(tvbuff_t *tvb,
     streamdata_tree = proto_item_add_subtree(streamdata_item, ett_s7commp_streamdata);
 
     offset_save = offset;
-    proto_tree_add_text(streamdata_tree, tvb, offset, 2, "Request SetVarSubStreamed unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
+    /* Request SetVarSubStreamed unknown 2 Bytes */
+    proto_tree_add_item(streamdata_tree, hf_s7commp_setvarsubstr_req_unknown1, tvb, offset, 2, ENC_BIG_ENDIAN);
     offset += 2;
     offset = s7commp_decode_value(tvb, pinfo, streamdata_tree, offset, &struct_level, 0);
     *dlength -= (offset - offset_save);
@@ -8243,7 +10328,7 @@ s7commp_decode_request_getlink(tvbuff_t *tvb,
     guint8 octet_count = 0;
     guint32 item_number = 0;
 
-    /* Ein Datensatz wurde bisher nur mit 12 Bytes Laenge gesichtet. Minus 4 Null-Bytes am Ende bleiben 8 Bytes
+    /* Only a a dataset of 12 byte length (minus 4 bytes zero at the end) was seen yet.
      * - 4 Bytes fix
      * - 1 VLQ
      * - 2 Nullbytes?
@@ -8284,7 +10369,7 @@ s7commp_decode_response_getlink(tvbuff_t *tvb,
     offset += 1;
 
     for (i = 1; i <= number_of_items; i++) {
-        /* Es scheint eine Link-Id zu sein, die im folgenden verwendet werden kann (z.B. Vartab als Start-Id fuer getmultivar */
+        /* Seems to be a Link-Id which can be used later in e.g. in a Vartab as Start-Id for getmultivar */
         linkid = tvb_get_ntohl(tvb, offset);
         proto_tree_add_uint_format(tree, hf_s7commp_getlink_linkid, tvb, offset, 4, linkid,
             "Link-Id [%d]: 0x%08x", i, linkid);
@@ -8317,12 +10402,12 @@ s7commp_decode_request_beginsequence(tvbuff_t *tvb,
         proto_tree_add_item(tree, hf_s7commp_beginseq_valtype, tvb, offset, 2, ENC_BIG_ENDIAN);
         offset += 2;
 
-        /* Ob ein Objekt oder anderer weiterer Wert folgt, scheint abhaengig vom 2./3. Byte zu sein.
-         * Wenn 1 dann Objekt, wenn 18 dann ID. Andere Werte als 1 und 18 bisher noch nicht gesichtet.
+        /* Whether an object or other additional value follows, seems to be depend on 2nd / 3rd byte.
+         * If 1 then object, if 18 then ID. I've only seen values of 1 and 18 here.
          */
         if (valtype == 1) {
-            /* Die 1200 mit V2 laesst hier gelegentlich 1 Byte aus. Die Antwort zeigt aber keine
-             * Fehlermeldung, d.h. dies scheint toleriert zu werden.
+            /* A 1200 with firmware 2 occasionally omits 1 byte here.
+             * The response doesn't show any error message, this seems to be tolerated.
              */
             if (tvb_get_guint8(tvb, offset + 1) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
                 proto_tree_add_item(tree, hf_s7commp_beginseq_requnknown3, tvb, offset, 1, ENC_BIG_ENDIAN);
@@ -8437,9 +10522,9 @@ s7commp_decode_response_invoke(tvbuff_t *tvb,
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
-    /* Die Itemnummer in der folgenden ValueList beginnt was bisher gesehen wurde immer mit 1.
-     * Ist hier ein anderer Wert vorhanden, dann folgt ein weiterer 64 Bit VLQ der soweit keine
-     * weiteren Informationen vorliegen als weiterer Errorcode angezeigt wird.
+    /* The itemnumber in the following ValueList starts (as far as known) always with a 1.
+     * If there is a value of not 1, then another 64 Bit VLQ is following.
+     * It's only a guess that this is another errorcode.
      */
     if (tvb_get_guint8(tvb, offset) != 1) {
         offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
@@ -8477,9 +10562,6 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
     s7commp_pinfo_append_idname(pinfo, id_number, " Area=");
     offset += 4;
 
-    /* 4 oder 5 weitere Bytes unbekannter Funktion
-     * wenn die ersten beiden Bytes zu Begin Null sind, dann werden Objekte gelesen.
-     */
     proto_tree_add_ret_varuint32(tree, hf_s7commp_explore_req_id, tvb, offset, &octet_count, &uint32value);
     if (uint32value > 0) {
         s7commp_proto_item_append_idname(tree, uint32value, " / ");
@@ -8555,14 +10637,15 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
     s7commp_pinfo_append_idname(pinfo, id_number, NULL);
     offset += 4;
 
-    /* Der folgende Wert berechnet sich so wie es aussieht aus (SequenceNumber + IntegrityId) des
-     * zugehoerigen Requests. Darum ist das Feld bei der alten 1200 ohne Integritaetsteil auch nicht
-     * vorhanden. Ist in der Response keine Integritaets-ID, dann war es das auch nicht beim Request.
-     * Was dadurch geprueft werden kann/soll ist unklar.
-     * Leider gibt es bei der alten 1200 bei einem einzelnen Paket keine Moeglichkeit, BEVOR das ganze Paket
-     * verarbeitet wurde, festzustellen, ob es diese Integritaets-Id gibt oder nicht. Protokollversion
-     * V3 besitzt so wie es aussieht IMMER eine, V1 NIE, bei V2 nur bei der 1500.
-     * Die hier realisierte Pruefung funktioniert nur, falls nicht zufaellig der Wert von resseqinteg mit 0xa1 beginnt!
+    /* The next value is calculated by (SequenceNumber + IntegrityId) of the request.
+     * Therefore old 1200 which were without integrity this field is missing. If the response
+     * has no integrity-part, then the request also has none.
+     * Unfortunately on this protocol / plc variants it's not possible to detect if it has this
+     * field on a single packet, before the complete packet is processed to the end.
+     * Depending on the protocol version: V3 has as far as known always this field, V1 never, and
+     * V2 only at the 1500 series.
+     * The current provisionally check does only work if resseqinteg never
+     * starts with value 0xa1 (ELEMENTID_STARTOBJECT)
      */
     nextb = tvb_get_guint8(tvb, offset);
     if ( (protocolversion == S7COMMP_PROTOCOLVERSION_3) ||
@@ -8571,8 +10654,8 @@ s7commp_decode_response_explore(tvbuff_t *tvb,
         proto_tree_add_varuint32(tree, hf_s7commp_explore_resseqinteg, tvb, offset, &octet_count);
         offset += octet_count;
     }
-    /* Dann nur die Liste durchgehen, wenn auch ein Objekt folgt. Sonst wuerde ein Null-Byte
-     * zur Terminierung der Liste eingefuegt werden.
+    /* Only loop through the list when there is an object. Otherwise we would add only a Null-byte
+     * as list-terminator to the tree.
      */
     if (tvb_get_guint8(tvb, offset) == S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
         offset = s7commp_decode_object(tvb, pinfo, tree, offset, FALSE);
@@ -8595,7 +10678,7 @@ s7commp_decode_response_error(tvbuff_t *tvb,
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
 
-    // this opcode has no data after the error code
+    /* this opcode has no data after the error code */
 
     return offset;
 }
@@ -8641,25 +10724,23 @@ s7commp_decode_extkeepalive(tvbuff_t *tvb,
     const guint8 *str_name;
     guint32 confirmed_bytes;
 
-    /* Evtl. ist das hier eine Art erweiteres Keep Alive. Das habe ich erst mit V14 das erste mal gesehen.
-     * Die Telegramme werden dabei von der SPS oder einem Siemens Panel verschickt.
-     * Es gibt eine Version mit 16 Bytes und eine mit 22 Bytes.
-     * Bei der 22 Byte Version folgt noch ein String wie "LOGOUT", dieses aber nur
-     * nach einem DeleteObject.
+    /* These extended keep-alive telegrams came up with TIA V14, and are sent from the PLC or HMI.
+     * There is a version of 16 bytes length and another with 22 bytes length.
+     * The 22 byte version may contain a string like "LOGOUT", but this only after a DeleteObject.
      */
     data_item = proto_tree_add_item(tree, hf_s7commp_data, tvb, offset, dlength, FALSE);
     data_item_tree = proto_item_add_subtree(data_item, ett_s7commp_data);
 
-    /* 4 Bytes immer Null (bisher zumindest) */
+    /* 4 Bytes (all zero so far) */
     proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved1, tvb, offset, 4, FALSE);
     offset += 4;
-    /* Es folgt die Anzahl der Bytes die seit dem letzten Keep Alive oder seit Start empfangen wurden.
-     * Es werden dazu die Laengenangaben aus dem Header verwendet und aufsummiert.
+    /* It follows the number of bytes received since the last keep alive or since start.
+     * Seems to be that the length informations from the header are used and added up.
      */
     confirmed_bytes = tvb_get_ntohl(tvb, offset);
     proto_tree_add_uint(data_item_tree, hf_s7commp_extkeepalive_confirmedbytes, tvb, offset, 4, confirmed_bytes);
     offset += 4;
-    /* Insgesamt 2*4 Bytes die bisher immer Null waren */
+    /* 2*4 Bytes (all zero so far) */
     proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved2, tvb, offset, 4, FALSE);
     offset += 4;
     proto_tree_add_item(data_item_tree, hf_s7commp_extkeepalive_reserved3, tvb, offset, 4, FALSE);
@@ -8710,7 +10791,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         offset += 1;
         dlength -= 1;
 
-        /* Bei Protokollversion 1 gibt es nur bei der 1500 und Deleteobject eine ID, und auch da nicht immer! */
+        /* On protocol version 1 only with a 1500 and DeleteObject there is an ID, and not always! */
         if (protocolversion == S7COMMP_PROTOCOLVERSION_1) {
             has_integrity_id = FALSE;
         }
@@ -8732,7 +10813,6 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset += 2;
             dlength -= 2;
 
-            /* 4/5: Functioncode */
             functioncode = tvb_get_ntohs(tvb, offset);
             proto_tree_add_uint(tree, hf_s7commp_data_function, tvb, offset, 2, functioncode);
             offset += 2;
@@ -8742,7 +10822,6 @@ s7commp_decode_data(tvbuff_t *tvb,
             offset += 2;
             dlength -= 2;
 
-            /* 8/9: Sequence number */
             seqnum = tvb_get_ntohs(tvb, offset);
             proto_tree_add_uint(tree, hf_s7commp_data_seqnum, tvb, offset, 2, seqnum);
             offset += 2;
@@ -8877,10 +10956,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                 dlength = dlength - (offset - offset_save);
             }
         }
-        /* Nach Object Qualifier trailer suchen.
-         * Der Objectqualifier hat die ID 1256 = 0x04e8. Dieses Objekt hat 3 Member mit jeweils einer ID.
-         * Solange wir noch nicht immer direkt auf dieser ID landen, danach suchen.
-         */
+
         if (has_objectqualifier && dlength > 10) {
             offset_save = offset;
             offset = s7commp_decode_objectqualifier(tvb, pinfo, tree, offset);
@@ -8890,13 +10966,15 @@ s7commp_decode_data(tvbuff_t *tvb,
         /* Additional Data */
         if (opcode == S7COMMP_OPCODE_REQ) {
             if (functioncode == S7COMMP_FUNCTIONCODE_GETVARSUBSTR) {
-                proto_tree_add_text(tree, tvb, offset, 2, "Request GetVarSubStreamed unknown 2 Bytes: 0x%04x", tvb_get_ntohs(tvb, offset));
+                /* Request GetVarSubStreamed unknown 2 Bytes */
+                proto_tree_add_item(tree, hf_s7commp_getvarsubstr_req_unknown1, tvb, offset, 2, ENC_BIG_ENDIAN);
                 offset += 2;
                 dlength -= 2;
             } else if (functioncode == S7COMMP_FUNCTIONCODE_SETVARSUBSTR) {
                 offset = s7commp_decode_request_setvarsubstr_stream(tvb, pinfo, tree, &dlength, offset);
             } else if (functioncode == S7COMMP_FUNCTIONCODE_SETVARIABLE) {
-                proto_tree_add_text(tree, tvb, offset, 1, "Request SetVariable unknown Byte: 0x%02x", tvb_get_guint8(tvb, offset));
+                /* Request SetVariable unknown Byte */
+                proto_tree_add_item(tree, hf_s7commp_setvar_unknown2, tvb, offset, 1, ENC_BIG_ENDIAN);
                 offset += 1;
                 dlength -= 1;
             }
@@ -8976,9 +11054,8 @@ dissect_s7commp(tvbuff_t *tvb,
     col_clear(pinfo->cinfo, COL_INFO);
     col_append_sep_str(pinfo->cinfo, COL_INFO, " | ", "");
 
-    protocolversion = tvb_get_guint8(tvb, 1);                       /* Get the type byte */
+    protocolversion = tvb_get_guint8(tvb, 1);
 
-    /* display some infos in info-column of wireshark */
     if (pinfo->srcport == 102) {
         col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Ver:[%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport, val_to_str(protocolversion, protocolversion_names, "0x%02x"));
     } else {
@@ -8998,16 +11075,13 @@ dissect_s7commp(tvbuff_t *tvb,
     proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_protocolversion, tvb, offset, 1, protocolversion);
     offset += 1;
 
-    /* Typ FF Pakete scheinen eine Art Keep-Alive Telegramme zu sein, welche nur 4 Bytes lang sind.
-     * 1. Protocol-id, 2.PDU Typ und dann 3. eine Art Sequenz-Nummer, und das 4. Byte bisher immer 0.
-     */
     if (protocolversion == S7COMMP_PROTOCOLVERSION_255) {
         keepaliveseqnum = tvb_get_guint8(tvb, offset);
         proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_keepaliveseqnum, tvb, offset, 1, keepaliveseqnum);
         col_append_fstr(pinfo->cinfo, COL_INFO, " KeepAliveSeq=%d", keepaliveseqnum);
         offset += 1;
-        /* dann noch ein Byte, noch nicht klar wozu */
-        proto_tree_add_text(s7commp_header_tree, tvb, offset, 1, "Reserved? : 0x%02x", tvb_get_guint8(tvb, offset));
+        /* 1 byte unknown / reserved */
+        proto_tree_add_item(s7commp_header_tree, hf_s7commp_header_keepalive_res1, tvb, offset, 1, ENC_BIG_ENDIAN);
         offset += 1;
     } else if (protocolversion == S7COMMP_PROTOCOLVERSION_254) {
         dlength = tvb_get_ntohs(tvb, offset);
@@ -9015,21 +11089,21 @@ dissect_s7commp(tvbuff_t *tvb,
         offset += 2;
         offset = s7commp_decode_extkeepalive(tvb, pinfo, s7commp_tree, dlength, offset);
     } else {
-        /* 3/4: Data length */
         dlength = tvb_get_ntohs(tvb, offset);
         proto_tree_add_uint(s7commp_header_tree, hf_s7commp_header_datlg, tvb, offset, 2, dlength);
         offset += 2;
 
-        /* Paket hat einen Trailer, wenn nach der angegebenen Datenlaenge noch 4 Bytes uebrig bleiben */
+        /* The packet has a trailer if after the given length are more than 4 bytes left over */
         has_trailer = ((signed) packetlength) > (dlength + 4);
 
-        /* Bei einer 1500 mit Firmware Version >= V1.5 wurde der Integritaetsteil vom Ende des Datenteils an den Anfang verschoben.
-         * Bei fragmentierten Paketen hatte bisher nur das letzte Fragment einen Integritaetsteil.
-         * Bei FW >= V1.5 hat nun auch bei fragmentierten Paketen jedes Fragment einen Integritaetsteil. Der Integritaetsteil
-         * zaehlt aber von der Laengenangabe im Kopf zum Datenteil. Bei fragmentierten Paketen muss daher bei dieser Version
-         * der Integritaetsteil ausserhalb der eigentlichen Funktion zum Zerlegen des Datenteils platziert werden, da ansonsten
-         * dieser beim Reassemblieren innerhalb der Datenteile liegen wuerde.
-         * Leider wird damit der Zweig nicht unter dem Datenteil, sondern als eigener separater Zweig eingefuegt.
+        /* In a 1500 with firmware >= V1.5 they moved the integrity-part from the end of the data-part to the beginning.
+         * On fragmented packets had so far only the last fragments an integrity-part.
+         * With FW >= V1.5 every fragment comes with an integrity-part. From the length given in the header, the
+         * integrity-part counts into the data-part. In fragmented packets of these versions therefore the
+         * dissection of the integrity-part must be done outside the dissection of the complete data-part,
+         * otherwise on reassemble it would be inside the (fragmented/reassembled) data-parts.
+         * Unfortunately the tree is then not inserted in the data-tree where it would belong, instead it's
+         * added as a separate tree.
          */
         if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
             offset_save = offset;
@@ -9038,56 +11112,48 @@ dissect_s7commp(tvbuff_t *tvb,
         }
 
         /************************************************** START REASSEMBLING *************************************************************************/
-        if (s7commp_reassemble) {
-            /*
-             * Fragmentation check:
-             * Da es keine Kennzeichnungen ueber die Fragmentierung gibt, muss es in einer Zustandsmaschine abgefragt werden
+        if (s7commp_opt_reassemble) {
+            /* Fragmentation check:
+             * The protocol has no direct flag for the fragmentation. Thus it's checked in a state machine
              *
-             * Istzustand   Transition                                      Aktion                                Neuer Zustand
-             * state == 0:  Paket hat einen Trailer, keine Fragmentierung   dissect_data                          state = 0
-             * state == 0:  Paket hat keinen Trailer, Start Fragmentierung  push data                             state = 1
-             * state == 1:  Paket hat keinen Trailer, weiterhin Fragment    push data                             state = 1
-             * state == 1:  Paket hat einen trailer, Ende Fragmente         push data, pop, dissect_data          state = 0
+             * State        Transition                                      Action                                New State
+             * state == 0:  Packet has a Trailer, no fragmentation          dissect_data                          state = 0
+             * state == 0:  Packet has no Trailer, start fragmentation      push data                             state = 1
+             * state == 1:  Packet has no Trailer, inner fragment           push data                             state = 1
+             * state == 1:  Packet has a trailer, end fragmentation         push data, pop, dissect_data          state = 0
              *
-             * Die einzige Zugehoerigkeit die es gibt, ist die TCP Portnummer. Es muessen dabei BEIDE uebereinstimmen.
+             * For a conversation both port numbers must be equal, as there may be more than one conversation.
              *
-             * Dabei muss zusaetzlich beachtet werden, dass womoeglich ein capture inmitten einer solchen Serie gestartet wurde.
-             * Das kann aber nicht zuverlaessig abgefangen werden, wenn zufaellig in den ersten Bytes des Datenteils gueltige Daten stehen.
-             *
+             * If a capture was started in the middle of a fragmentation series, then it's possible that this
+             * is not correct reassembled when in the first bytes of a datapart valid data occurs.
              */
 
-            /* Zustandsdiagramm:
-                             NEIN                Konversation    JA
-             has_trailer ---------------------mit vorigem Frame-------- Inneres Fragment
-                  ?                              vorhanden?
+            /* State machine:
+                                 NO             Conversation        YES
+             has_trailer -------------------- with previous frame -------- Inner fragment
+                  |                               available?
                   |                                  |
-                  | JA                               | NEIN
+                  | YES                              | NO
                   |                                  |
-               Konversation     NEIN        Neue Konversation anlegen
-            mit vorigem Frame--------+               |
-                vorhanden?           |          Erstes Fragment
+             Conversation     NO             New conversation
+          with previous frame -------+               |
+              available?             |          First fragment
                   |                  |
-                  | JA        Nicht fragmentiert
+                  | YES        Not fragmented
                   |
-              Letztes Fragment
+             Last fragment
             */
 
             if (!pinfo->fd->visited) {        /* first pass */
-                /* Vorabcheck: opcode und function herausfinden
-                 * Da z.B. SetVarSubstreamed einen anderen Mechanismus verwendet!
+                /* Pre-Check opcode and function, because SetVarSubstreamed
+                 * uses a different fragmentation method.
                  */
                 reasm_opcode = tvb_get_guint8(tvb, offset);
                 reasm_function = tvb_get_ntohs(tvb, offset + 3);
 
-                #ifdef DEBUG_REASSEMBLING
-                printf("Reassembling pass 1: Frame=%3d HasTrailer=%d", pinfo->fd->num, has_trailer);
-                #endif
                 /* Conversation:
-                 * find_conversation() ist dazu gedacht eine Konversation in beiden Richtungen zu finden.
-                 * D.h. es wurde z.B. Port 2000->102 wie auch 102->2000 gefunden. Das ist an dieser Stelle jedoch
-                 * nicht gewuenscht, und kann auch durch den Parameter option nicht verhindert werden.
-                 * Aus dem Grund wird aus Quell- und Zielport eine eindeutige Portnummer generiert.
-                 * Destport/srcport sind vom Typ guint32, erlaubte Portnummern sind jedoch nur 0..65535.
+                 * Use a combination of destination- and sourceport, otherwise a conversation in both directions
+                 * (e.g 2000->102 as well as 102->2000) would be found, which we don't want here.
                  */
                 conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
                                                  (const endpoint_type) pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
@@ -9096,9 +11162,6 @@ dissect_s7commp(tvbuff_t *tvb,
                     conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
                                                     (const endpoint_type) pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
                                                     0, NO_PORT2);
-                    #ifdef DEBUG_REASSEMBLING
-                    printf(" NewConv" );
-                    #endif
                 }
                 conversation_state = (conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
                 if (conversation_state == NULL) {
@@ -9108,26 +11171,12 @@ dissect_s7commp(tvbuff_t *tvb,
                     conversation_state->start_opcode = 0;
                     conversation_state->start_function = 0;
                     conversation_add_proto_data(conversation, proto_s7commp, conversation_state);
-                    #ifdef DEBUG_REASSEMBLING
-                    printf(" NewConvState" );
-                    #endif
                 }
-                #ifdef DEBUG_REASSEMBLING
-                printf(" ConvState->state=%d", conversation_state->state);
-                #endif
 
                 if (has_trailer) {
                     if (conversation_state->state == CONV_STATE_NEW) {
-                        #ifdef DEBUG_REASSEMBLING
-                        printf(" no_fragment=1");
-                        #endif
                     } else {
                         last_fragment = TRUE;
-                        /* ruecksetzen */
-                        #ifdef DEBUG_REASSEMBLING
-                        col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG: A state=%d)", conversation_state->state);
-                        printf(" last_fragment=1, delete_proto_data");
-                        #endif
                         conversation_state->state = CONV_STATE_NOFRAG;
                         conversation_delete_proto_data(conversation, proto_s7commp);
                     }
@@ -9138,19 +11187,11 @@ dissect_s7commp(tvbuff_t *tvb,
                         conversation_state->start_frame = pinfo->fd->num;
                         conversation_state->start_opcode = reasm_opcode;
                         conversation_state->start_function = reasm_function;
-                        #ifdef DEBUG_REASSEMBLING
-                        printf(" first_fragment=1, set state=%d, start_frame=%d", conversation_state->state, conversation_state->start_frame);
-                        #endif
                     } else {
                         inner_fragment = TRUE;
                         conversation_state->state = CONV_STATE_INNER;
                     }
                 }
-                #ifdef DEBUG_REASSEMBLING
-                printf(" => Conv->state=%d", conversation_state->state);
-                printf(" => Conv->start_frame=%3d", conversation_state->start_frame);
-                printf("\n");
-                #endif
             }
 
             save_fragmented = pinfo->fragmented;
@@ -9165,9 +11206,6 @@ dissect_s7commp(tvbuff_t *tvb,
                 packet_state->start_frame = conversation_state->start_frame;
                 packet_state->start_opcode = conversation_state->start_opcode;
                 packet_state->start_function = conversation_state->start_function;
-                #ifdef DEBUG_REASSEMBLING
-                col_append_str(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: INIT-packet_state)");
-                #endif
             } else {
                 first_fragment = packet_state->first_fragment;
                 inner_fragment = packet_state->inner_fragment;
@@ -9185,21 +11223,15 @@ dissect_s7commp(tvbuff_t *tvb,
                 tvbuff_t* new_tvb = NULL;
                 fragment_head *fd_head;
                 guint32 frag_data_len;
-                /* guint32 frag_number; */
                 gboolean more_frags;
-                #ifdef DEBUG_REASSEMBLING
-                col_append_fstr(pinfo->cinfo, COL_INFO, " (DEBUG-REASM: F=%d I=%d L=%d N=%u)", first_fragment, inner_fragment, last_fragment, packet_state->start_frame);
-                #endif
 
                 frag_id       = packet_state->start_frame;
-                frag_data_len = tvb_reported_length_remaining(tvb, offset);     /* Dieses ist der reine Data-Teil, da offset hinter dem Header steht */
-                /* frag_number   = pinfo->fd->num; */
+                frag_data_len = tvb_reported_length_remaining(tvb, offset);     /* this is the raw data-part, as offset position is behind header */
                 more_frags    = !last_fragment;
 
                 pinfo->fragmented = TRUE;
-                /*
-                 * fragment_add_seq_next() geht davon aus, dass die Pakete in der richtigen Reihenfolge reinkommen.
-                 * Bei fragment_add_seq_check() muss eine Sequenznummer angegeben werden, die gibt es aber nicht im Protokoll.
+                /* fragment_add_seq_next() expects the packets to be received in the correct order.
+                 * fragment_add_seq_check() needs a sequence number, but we don't have such in our protocol.
                  */
                 fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
                                                  tvb, offset, pinfo,
@@ -9219,7 +11251,7 @@ dissect_s7commp(tvbuff_t *tvb,
                     next_tvb = tvb_new_subset_length_caplen(tvb, offset, -1, -1);
                     offset = 0;
                 }
-            } else {    /* nicht fragmentiert, oder nicht im Standardverfahren */
+            } else {    /* not fragmented, or at least not using standard fragmentation */
                 next_tvb = tvb;
             }
             pinfo->fragmented = save_fragmented;
@@ -9232,9 +11264,10 @@ dissect_s7commp(tvbuff_t *tvb,
         /******************************************************
          * Data
          ******************************************************/
-        /* Besondere Behandlung von SetVarSubstreamed, da hier ein voellig anderer!!! Fragmentierungsmechanismus
-         * verwendet wird. Im Ersten Paket gibt es als Datenteil einen Blob der auch abgeschlossen wird.
-         * Danach besitzt jedes Paket nochmal einen eigenen Laengenheader im Datenteil.
+        /* Special handling of SetVarSubstreamed:
+         * SetVarSubstreamed uses a completely different fragmentation method!
+         * The first packet comes with a data-part which contains a blob which is completely terminated.
+         * The next packets come with an additional length-header in the data-part,
          */
         if (packet_state &&
             packet_state->start_opcode == S7COMMP_OPCODE_REQ &&
@@ -9244,7 +11277,7 @@ dissect_s7commp(tvbuff_t *tvb,
             s7commp_data_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_data);
 
             if (first_fragment) {
-                /* Das erste Paket kann im Standardverfahren behandelt werden */
+                /* The first fragment needs no special handling */
                 offset = s7commp_decode_data(next_tvb, pinfo, s7commp_data_tree, dlength, offset, protocolversion);
             } else {
                 offset = s7commp_decode_request_setvarsubstr_stream_frag(next_tvb, pinfo, s7commp_data_tree, protocolversion, &dlength, offset, has_trailer);
@@ -9254,7 +11287,7 @@ dissect_s7commp(tvbuff_t *tvb,
         } else {
             if (last_fragment) {
                 /* when reassembled, instead of using the dlength from header, use the length of the
-                 * complete reassembled packet, minus the header length.
+                 * complete reassembled packet minus the header length.
                  */
                 dlength = tvb_reported_length_remaining(next_tvb, offset) - S7COMMP_HEADER_LEN;
             }

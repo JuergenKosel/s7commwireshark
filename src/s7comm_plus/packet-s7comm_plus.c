@@ -4930,9 +4930,19 @@ static gint hf_s7commp_itemval_struct = -1;
 static gint ett_s7commp_packedstruct = -1;
 static gint hf_s7commp_packedstruct = -1;
 static gint hf_s7commp_packedstruct_interfacetimestamp = -1;
-static gint hf_s7commp_packedstruct_transpsize = -1;
+static gint hf_s7commp_packedstruct_transpflags = -1;
+static gint hf_s7commp_packedstruct_transpflags_always_set = -1;
+static gint hf_s7commp_packedstruct_transpflags_count2_present = -1;
 static gint hf_s7commp_packedstruct_elementcount = -1;
+static gint hf_s7commp_packedstruct_elementcount2 = -1;
 static gint hf_s7commp_packedstruct_data = -1;
+static gint ett_s7commp_packedstruct_transpflags = -1;
+
+static int * const s7commp_packedstruct_transpflags_fields[] = {
+    &hf_s7commp_packedstruct_transpflags_always_set,
+    &hf_s7commp_packedstruct_transpflags_count2_present,
+    NULL
+};
 
 /* List elements */
 static gint hf_s7commp_listitem_terminator = -1;
@@ -5783,11 +5793,20 @@ proto_register_s7commp (void)
         { &hf_s7commp_packedstruct_interfacetimestamp,
           { "Interface timestamp", "s7comm-plus.item.packedstruct.interfacetimestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_packedstruct_transpsize,
-          { "Unknown (Transport size?)", "s7comm-plus.item.packedstruct.transpsize", FT_UINT8, BASE_DEC, NULL, 0x0,
+        { &hf_s7commp_packedstruct_transpflags,
+          { "Transport Flags", "s7comm-plus.item.packedstruct.transpflags", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
+        { &hf_s7commp_packedstruct_transpflags_always_set,
+          { "AlwaysSet", "s7comm-plus.item.packedstruct.transpflags.always_set", FT_BOOLEAN, 16, NULL, 0x02,
+            "Unknown meaning, always set?", HFILL }},
+        { &hf_s7commp_packedstruct_transpflags_count2_present,
+          { "Count2 Present", "s7comm-plus.item.packedstruct.transpflags.count2_present", FT_BOOLEAN, 16, NULL, 0x400,
+            "Element Count is repeated?", HFILL }},
         { &hf_s7commp_packedstruct_elementcount,
           { "Element count", "s7comm-plus.item.packedstruct.elementcount", FT_UINT32, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_packedstruct_elementcount2,
+          { "Element count (repeated?)", "s7comm-plus.item.packedstruct.elementcount2", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_packedstruct_data,
           { "Packed struct data", "s7comm-plus.item.packedstruct.data", FT_BYTES, BASE_NONE, NULL, 0x0,
@@ -6654,6 +6673,7 @@ proto_register_s7commp (void)
         &ett_s7commp_itemval_datatype_flags,
         &ett_s7commp_itemval_array,
         &ett_s7commp_packedstruct,
+        &ett_s7commp_packedstruct_transpflags,
         &ett_s7commp_tagdescr_attributeflags,
         &ett_s7commp_tagdescr_bitoffsetinfo,
         &ett_s7commp_tagdescr_offsetinfo,
@@ -7620,10 +7640,12 @@ s7commp_decode_packed_struct(tvbuff_t *tvb,
     guint32 start_offset = 0;
     guint64 uint64val = 0;
     guint32 element_count = 0;
+    guint32 transp_flags = 0;
     nstime_t tmptime;
     guint8 octet_count = 0;
     proto_item *value_item = NULL;
     proto_tree *value_item_tree = NULL;
+    proto_item *transpflags_item = NULL;
 
     start_offset = offset;
     value_item = proto_tree_add_item(tree, hf_s7commp_packedstruct, tvb, offset, -1, FALSE);
@@ -7634,15 +7656,19 @@ s7commp_decode_packed_struct(tvbuff_t *tvb,
     tmptime.nsecs = uint64val % 1000000000;
     proto_tree_add_time(value_item_tree, hf_s7commp_packedstruct_interfacetimestamp, tvb, offset, 8, &tmptime);
     offset += 8;
-    /* NOTE: So far here was always a 2, which could possibly stand for USInt.
-     * If this is kind of transportsize, the elementcount would have to be recalculated.
-     * But as far as no such packet was seen, keep it without recalculation.
-     */
-    proto_tree_add_item(value_item_tree, hf_s7commp_packedstruct_transpsize, tvb, offset, 1, ENC_BIG_ENDIAN);
-    offset += 1;
+
+    transp_flags = tvb_get_varuint32(tvb, &octet_count, offset);
+    transpflags_item = proto_tree_add_bitmask_value(value_item_tree, tvb, offset, hf_s7commp_packedstruct_transpflags, ett_s7commp_packedstruct_transpflags, s7commp_packedstruct_transpflags_fields, transp_flags);
+    proto_item_set_len(transpflags_item, octet_count);
+    offset += octet_count;
 
     proto_tree_add_ret_varuint32(value_item_tree, hf_s7commp_packedstruct_elementcount, tvb, offset, &octet_count, &element_count);
     offset += octet_count;
+
+    if (transp_flags & 0x400) {
+        proto_tree_add_ret_varuint32(value_item_tree, hf_s7commp_packedstruct_elementcount2, tvb, offset, &octet_count, &element_count);
+        offset += octet_count;
+    }
 
     proto_tree_add_item(value_item_tree, hf_s7commp_packedstruct_data, tvb, offset, element_count, ENC_NA);
     offset += element_count;

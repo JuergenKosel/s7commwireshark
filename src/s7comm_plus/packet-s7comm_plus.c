@@ -2538,6 +2538,10 @@ static const val64_string genericerrorcode_names[] = {
     { 80,       "MultiESIncompatibleOtherESVersion" },
     { 81,       "ConcurrentTransactionRunning" },
     { 82,       "SslError" },
+    { 83,       "RHPlcProxyTreeUnknown" },
+    { 84,       "RHPlcProxyTreeNonRedundant" },
+    { 85,       "ServiceNotAvailable" },
+    { 86,       "TLSError" },
     { 0,        NULL }
 };
 /*static value_string_ext genericerrorcode_names_ext = VALUE_STRING_EXT_INIT(genericerrorcode_names);*/

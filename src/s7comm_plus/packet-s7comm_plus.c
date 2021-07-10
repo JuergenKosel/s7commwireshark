@@ -42,6 +42,7 @@
 #include <epan/proto_data.h>
 #include <epan/expert.h>
 #include <wsutil/utf8_entities.h>
+#include <epan/dissectors/packet-tls-utils.h>
 
 #ifdef HAVE_ZLIB
 #define ZLIB_CONST
@@ -82,6 +83,7 @@ static int proto_s7commp = -1;
 
 /* Forward declaration */
 static gboolean dissect_s7commp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data);
+static gboolean dissect_s7commp_ssl(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data);
 
 /**************************************************************************
  * Protocol Version/type
@@ -145,6 +147,8 @@ static const value_string opcode_names_short[] = {
 #define S7COMMP_FUNCTIONCODE_GETVARSUBSTR       0x0586
 #define S7COMMP_FUNCTIONCODE_GETVARIABLESADDR   0x0590      /* not decoded yet */
 #define S7COMMP_FUNCTIONCODE_ABORT              0x059a      /* not decoded yet */
+#define S7COMMP_FUNCTIONCODE_ERROR_2            0x05a9
+#define S7COMMP_FUNCTIONCODE_INIT_SSL           0x05b3      /* since TIA 17, Firmware 2.9? */
 
 static const value_string data_functioncode_names[] = {
     { S7COMMP_FUNCTIONCODE_ERROR,               "Error" },
@@ -165,6 +169,8 @@ static const value_string data_functioncode_names[] = {
     { S7COMMP_FUNCTIONCODE_GETVARSUBSTR,        "GetVarSubStreamed" },
     { S7COMMP_FUNCTIONCODE_GETVARIABLESADDR,    "GetVariablesAddress" },
     { S7COMMP_FUNCTIONCODE_ABORT,               "Abort" },
+    { S7COMMP_FUNCTIONCODE_ERROR_2,             "Error 2" },
+    { S7COMMP_FUNCTIONCODE_INIT_SSL,            "InitSSL" },
     { 0,                                        NULL }
 };
 /**************************************************************************
@@ -5325,6 +5331,8 @@ static expert_field ei_s7commp_notification_returnvalue_unknown = EI_INIT;
 static expert_field ei_s7commp_data_opcode_unknown = EI_INIT;
 
 static dissector_handle_t xml_handle;
+static dissector_handle_t tls_handle;
+static dissector_handle_t s7commp_handle;
 
 static const fragment_items s7commp_frag_items = {
     /* Fragment subtrees */
@@ -5360,6 +5368,7 @@ typedef struct {
     guint32 start_frame;
     guint8 start_opcode;
     guint16 start_function;
+    int ssl_state;
 } frame_state_t;
 
 #define CONV_STATE_NEW         -1
@@ -5373,6 +5382,12 @@ typedef struct {
     guint8 start_opcode;
     guint16 start_function;
 } conv_state_t;
+
+#define SSL_CONV_STATE_NEW 0
+#define SSL_CONV_STATE_SSL 1
+typedef struct {
+    int ssl_state;
+} ssl_conv_state_t;
 
 /* Options */
 static gboolean s7commp_opt_reassemble = TRUE;
@@ -5399,7 +5414,8 @@ proto_reg_handoff_s7commp(void)
     static gboolean initialized = FALSE;
     if (!initialized) {
         xml_handle = find_dissector_add_dependency("xml", proto_s7commp);
-        heur_dissector_add("cotp", dissect_s7commp, "S7 Communication Plus over COTP", "s7comm_plus_cotp", proto_s7commp, HEURISTIC_ENABLE);
+        tls_handle = find_dissector_add_dependency("tls", proto_s7commp);
+        heur_dissector_add("cotp", dissect_s7commp_ssl, "S7 Communication Plus over COTP", "s7comm_plus_cotp", proto_s7commp, HEURISTIC_ENABLE);
         initialized = TRUE;
     }
 }
@@ -6710,6 +6726,7 @@ proto_register_s7commp (void)
         "S7COMM-PLUS",                      /* short name */
         "s7comm-plus"                       /* abbrev */
     );
+    s7commp_handle = register_dissector("s7comm-plus", dissect_s7commp, proto_s7commp);
 
     proto_register_field_array(proto_s7commp, hf, array_length (hf));
     proto_register_subtree_array(ett, array_length (ett));
@@ -10712,6 +10729,62 @@ s7commp_decode_response_error(tvbuff_t *tvb,
 }
 /*******************************************************************************************************
  *
+ * SSL Initialisation, request
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_request_init_ssl(tvbuff_t *tvb _U_,
+                                packet_info *pinfo _U_,
+                                proto_tree *tree _U_,
+                                guint32 offset _U_)
+{
+    /* this opcode has no data */
+    return offset;
+}
+/*******************************************************************************************************
+ *
+ * SSL Initialisation, response
+ *
+ *******************************************************************************************************/
+static guint32
+s7commp_decode_response_init_ssl(tvbuff_t *tvb,
+                                 packet_info *pinfo,
+                                 proto_tree *tree,
+                                 guint32 offset)
+{
+    gint16 errorcode = 0;
+    gboolean errorextension = FALSE;
+    conversation_t *conversation;
+    ssl_conv_state_t *ssl_conversation_state = NULL;
+
+    offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, &errorcode, &errorextension);
+
+    /* this opcode has no data after the error code */
+
+    if (errorcode == 0) {
+        /* is supported */
+        if (!pinfo->fd->visited) {        /* first pass */
+            conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
+                                            (const endpoint_type) pinfo->ptype, pinfo->destport,
+                                            pinfo->srcport, 0);
+            if (conversation == NULL) {
+                conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
+                                                (const endpoint_type) pinfo->ptype, pinfo->destport,
+                                                pinfo->srcport, 0);
+            }
+            ssl_conversation_state = (ssl_conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
+            if (ssl_conversation_state == NULL) {
+                ssl_conversation_state = wmem_new(wmem_file_scope(), ssl_conv_state_t);
+                conversation_add_proto_data(conversation, proto_s7commp, ssl_conversation_state);
+            }
+            ssl_conversation_state->ssl_state = SSL_CONV_STATE_SSL;
+        }
+    }
+
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decode the object qualifier
  *
  *******************************************************************************************************/
@@ -10923,6 +10996,9 @@ s7commp_decode_data(tvbuff_t *tvb,
                     case S7COMMP_FUNCTIONCODE_INVOKE:
                         offset = s7commp_decode_request_invoke(tvb, pinfo, item_tree, offset);
                         break;
+                    case S7COMMP_FUNCTIONCODE_INIT_SSL:
+                        offset = s7commp_decode_request_init_ssl(tvb, pinfo, item_tree, offset);
+                        break;
                 }
                 proto_item_set_len(item_tree, offset - offset_save);
                 dlength = dlength - (offset - offset_save);
@@ -10977,8 +11053,12 @@ s7commp_decode_data(tvbuff_t *tvb,
                         offset = s7commp_decode_response_invoke(tvb, pinfo, item_tree, offset);
                         break;
                     case S7COMMP_FUNCTIONCODE_ERROR:
+                    case S7COMMP_FUNCTIONCODE_ERROR_2:
                          offset = s7commp_decode_response_error(tvb, pinfo, item_tree, offset);
                          break;
+                    case S7COMMP_FUNCTIONCODE_INIT_SSL:
+                        offset = s7commp_decode_response_init_ssl(tvb, pinfo, item_tree, offset);
+                        break;
                 }
                 proto_item_set_len(item_tree, offset - offset_save);
                 dlength = dlength - (offset - offset_save);
@@ -11351,6 +11431,59 @@ dissect_s7commp(tvbuff_t *tvb,
     }
     col_set_fence(pinfo->cinfo, COL_INFO);
     return TRUE;
+}
+
+static gboolean
+dissect_s7commp_ssl(tvbuff_t *tvb,
+                    packet_info *pinfo,
+                    proto_tree *tree,
+                    void *data _U_)
+{
+    frame_state_t *packet_state = NULL;
+    conversation_t *conversation;
+    ssl_conv_state_t *ssl_conversation_state = NULL;
+
+    /* check of SSL protocol */
+    if (!pinfo->fd->visited) {        /* first pass */
+        conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
+                                        (const endpoint_type) pinfo->ptype, pinfo->destport,
+                                        pinfo->srcport, 0);
+        if (conversation == NULL) {
+            conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
+                                            (const endpoint_type) pinfo->ptype, pinfo->destport,
+                                            pinfo->srcport, 0);
+        }
+        ssl_conversation_state = (ssl_conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
+        if (ssl_conversation_state == NULL) {
+            ssl_conversation_state = wmem_new(wmem_file_scope(), ssl_conv_state_t);
+            ssl_conversation_state->ssl_state = SSL_CONV_STATE_NEW;
+            conversation_add_proto_data(conversation, proto_s7commp, ssl_conversation_state);
+        }
+        if (ssl_conversation_state->ssl_state == SSL_CONV_STATE_SSL) {
+            /* connection uses SSL */
+            packet_state = (frame_state_t *)p_get_proto_data(wmem_file_scope(), pinfo, proto_s7commp, (guint32)tvb_raw_offset(tvb));
+            if (!packet_state) {
+                packet_state = wmem_new(wmem_file_scope(), frame_state_t);
+                p_add_proto_data(wmem_file_scope(), pinfo, proto_s7commp, (guint32)tvb_raw_offset(tvb), packet_state);
+            }
+            packet_state->ssl_state = SSL_CONV_STATE_SSL;
+        } else {
+            packet_state = NULL;
+        }
+    } else {
+        packet_state = (frame_state_t *)p_get_proto_data(wmem_file_scope(), pinfo, proto_s7commp, (guint32)tvb_raw_offset(tvb));
+    }
+    if ((packet_state != NULL) && (packet_state->ssl_state == SSL_CONV_STATE_SSL)) {
+        gboolean dissected;
+        if (tls_handle != NULL) {
+            tls_set_appdata_dissector(tls_handle, pinfo, s7commp_handle);
+            dissected = call_dissector_only(tls_handle, tvb, pinfo, tree, NULL);
+        } else {
+            dissected = 0;
+        }
+        return dissected;
+    }
+    return dissect_s7commp(tvb, pinfo, tree, data);
 }
 
 /*

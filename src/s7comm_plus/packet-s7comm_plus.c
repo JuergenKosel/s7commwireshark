@@ -11303,11 +11303,11 @@ dissect_s7commp(tvbuff_t *tvb,
             }
 
             save_fragmented = pinfo->fragmented;
-            packet_state = (frame_state_t *)p_get_proto_data(wmem_file_scope(), pinfo, proto_s7commp, (guint32)tvb_raw_offset(tvb));
+            packet_state = (frame_state_t *)p_get_proto_data(wmem_file_scope(), pinfo, proto_s7commp, pinfo->curr_layer_num);
             if (!packet_state) {
                 /* First S7COMMP in frame*/
                 packet_state = wmem_new(wmem_file_scope(), frame_state_t);
-                p_add_proto_data(wmem_file_scope(), pinfo, proto_s7commp, (guint32)tvb_raw_offset(tvb), packet_state);
+                p_add_proto_data(wmem_file_scope(), pinfo, proto_s7commp, pinfo->curr_layer_num, packet_state);
                 packet_state->first_fragment = first_fragment;
                 packet_state->inner_fragment = inner_fragment;
                 packet_state->last_fragment = last_fragment;

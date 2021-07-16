@@ -6162,16 +6162,16 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         /* System Event */
         { &hf_s7commp_sysevent_reserved1,
-          { "Reseved 1", "s7comm-plus.sysevent.reserved1", FT_UINT32, BASE_HEX, NULL, 0x0,
+          { "Reserved 1", "s7comm-plus.sysevent.reserved1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
          { &hf_s7commp_sysevent_confirmedbytes,
           { "Confirmed bytes", "s7comm-plus.sysevent.confirmedbytes", FT_UINT32, BASE_DEC, NULL, 0x0,
             "Number of confirmed bytes, calculated from header length", HFILL }},
         { &hf_s7commp_sysevent_reserved2,
-          { "Reseved 2", "s7comm-plus.sysevent.reserved2", FT_UINT32, BASE_HEX, NULL, 0x0,
+          { "Reserved 2", "s7comm-plus.sysevent.reserved2", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_sysevent_reserved3,
-          { "Reseved 3", "s7comm-plus.sysevent.reserved3", FT_UINT32, BASE_HEX, NULL, 0x0,
+          { "Reserved 3", "s7comm-plus.sysevent.reserved3", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_sysevent_message,
           { "Message", "s7comm-plus.sysevent.message", FT_STRING, STR_ASCII, NULL, 0x0,
@@ -10922,7 +10922,6 @@ s7commp_decode_sys_event(tvbuff_t *tvb,
     gint str_len;
     const guint8 *str_name;
     guint32 confirmed_bytes;
-    guint32 start_offset;
     int struct_level;
 
     /* These extended keep-alive telegrams came up with TIA V14, and are sent from the PLC or HMI.
@@ -10955,13 +10954,11 @@ s7commp_decode_sys_event(tvbuff_t *tvb,
          * This seems to work like ordinary values, but without that VLQ encoding.
          * So a UDINT is always 4 bytes long.
          */
-        start_offset = offset;
         struct_level = 0;
         offset = s7commp_decode_value(tvb, pinfo, data_item_tree, offset, &struct_level, 0, TRUE);
         if (struct_level > 0) {
             offset = s7commp_decode_id_value_list(tvb, pinfo, data_item_tree, offset, TRUE, TRUE);
         }
-        proto_item_set_len(data_item_tree, offset - start_offset);
     } else if (str_len > 0) {
         /* maybe ASCII text */
         proto_tree_add_item_ret_string(data_item_tree, hf_s7commp_sysevent_message, tvb, offset, str_len, ENC_ASCII|ENC_NA, wmem_packet_scope(), &str_name);

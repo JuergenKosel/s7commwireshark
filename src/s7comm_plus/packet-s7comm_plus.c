@@ -7890,7 +7890,7 @@ s7commp_decode_value(tvbuff_t *tvb,
             ett_s7commp_itemval_datatype_flags, s7commp_itemval_datatype_flags_fields, datatype_flags);
         offset += 2;
 
-        datatype = tvb_get_ntohs(tvb, offset);
+        datatype = (guint8) (tvb_get_ntohs(tvb, offset) & 0x0FF);
         proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 2, datatype);
         offset += 2;
     } else {

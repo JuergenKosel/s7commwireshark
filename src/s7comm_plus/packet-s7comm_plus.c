@@ -45,7 +45,6 @@
 #include <epan/dissectors/packet-tls-utils.h>
 
 #ifdef HAVE_ZLIB
-#define ZLIB_CONST
 #include <zlib.h>
 #endif
 
@@ -5808,7 +5807,7 @@ proto_register_s7commp (void)
           { "Value", "s7comm-plus.value.blob", FT_BYTES, BASE_NONE, NULL, 0x0,
             "Value (Blob)", HFILL }},
         { &hf_s7commp_itemval_wstring,
-          { "Value", "s7comm-plus.value.wstring", FT_STRING, STR_UNICODE, NULL, 0x0,
+          { "Value", "s7comm-plus.value.wstring", FT_STRING, BASE_NONE, NULL, 0x0,
             "Value (WString)", HFILL }},
         { &hf_s7commp_itemval_variant,
           { "Value", "s7comm-plus.value.variant", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -5887,7 +5886,7 @@ proto_register_s7commp (void)
           { "Length of name", "s7comm-plus.tagdescr.namelength", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_name,
-          { "Name", "s7comm-plus.tagdescr.name", FT_STRING, STR_UNICODE, NULL, 0x0,
+          { "Name", "s7comm-plus.tagdescr.name", FT_STRING, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_unknown2,
           { "Unknown 2", "s7comm-plus.tagdescr.unknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -6174,7 +6173,7 @@ proto_register_s7commp (void)
           { "Reserved 3", "s7comm-plus.sysevent.reserved3", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_sysevent_message,
-          { "Message", "s7comm-plus.sysevent.message", FT_STRING, STR_ASCII, NULL, 0x0,
+          { "Message", "s7comm-plus.sysevent.message", FT_STRING, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
         /* Object */
         { &hf_s7commp_object_relid,

@@ -45,7 +45,6 @@
 #include <epan/dissectors/packet-tls-utils.h>
 
 #ifdef HAVE_ZLIB
-#define ZLIB_CONST
 #include <zlib.h>
 #endif
 
@@ -5736,7 +5735,7 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_itemval_blobtype,
           { "Blob type", "s7comm-plus.item.val.blobtype", FT_UINT8, BASE_HEX, NULL, 0x0,
-            "Blob type: 0x00=ID-Value-List, 0x03=RawBlock", HFILL }},
+            "Blob type: 0x00=ID-Value-List, 0x02/0x03=RawBlock", HFILL }},
         { &hf_s7commp_itemval_datatype,
           { "Datatype", "s7comm-plus.item.val.datatype", FT_UINT8, BASE_HEX, VALS(item_datatype_names), 0x0,
             "Type of data following", HFILL }},
@@ -5808,7 +5807,7 @@ proto_register_s7commp (void)
           { "Value", "s7comm-plus.value.blob", FT_BYTES, BASE_NONE, NULL, 0x0,
             "Value (Blob)", HFILL }},
         { &hf_s7commp_itemval_wstring,
-          { "Value", "s7comm-plus.value.wstring", FT_STRING, STR_UNICODE, NULL, 0x0,
+          { "Value", "s7comm-plus.value.wstring", FT_STRING, BASE_NONE, NULL, 0x0,
             "Value (WString)", HFILL }},
         { &hf_s7commp_itemval_variant,
           { "Value", "s7comm-plus.value.variant", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -5887,7 +5886,7 @@ proto_register_s7commp (void)
           { "Length of name", "s7comm-plus.tagdescr.namelength", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_name,
-          { "Name", "s7comm-plus.tagdescr.name", FT_STRING, STR_UNICODE, NULL, 0x0,
+          { "Name", "s7comm-plus.tagdescr.name", FT_STRING, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_unknown2,
           { "Unknown 2", "s7comm-plus.tagdescr.unknown2", FT_UINT8, BASE_HEX, NULL, 0x0,
@@ -6174,7 +6173,7 @@ proto_register_s7commp (void)
           { "Reserved 3", "s7comm-plus.sysevent.reserved3", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_sysevent_message,
-          { "Message", "s7comm-plus.sysevent.message", FT_STRING, STR_ASCII, NULL, 0x0,
+          { "Message", "s7comm-plus.sysevent.message", FT_STRING, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
         /* Object */
         { &hf_s7commp_object_relid,
@@ -8199,7 +8198,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 if (uint32val > 1) {
                     proto_tree_add_item(current_tree, hf_s7commp_itemval_blob_unknown1, tvb, offset, 8, ENC_NA);
                     offset += 8;
-                    /* - If next value == 0x03, then follows a length specification and the number of bytes.
+                    /* - If next value == 0x02 or 0x03, then follows a length specification and the number of bytes.
                      *   This is used in alarms and the associated values inside the blob-array.
                      * - If next value == 0x00, then follows a n ID/value list
                      *   This is used in program transfer.
@@ -8208,7 +8207,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                     offset += 1;
                     if (blobtype == 0x00) {
                         offset = s7commp_decode_id_value_list(tvb, pinfo, current_tree, offset, TRUE, disable_vlq);
-                    } else if (blobtype == 0x03) {
+                    } else if (blobtype == 0x02 || blobtype == 0x03) {
                         proto_tree_add_ret_varuint32(current_tree, hf_s7commp_itemval_blobsize, tvb, offset, &octet_count, &length_of_value);
                         offset += octet_count;
                         value_start_offset = offset;

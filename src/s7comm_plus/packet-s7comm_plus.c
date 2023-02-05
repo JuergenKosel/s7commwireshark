@@ -5375,6 +5375,8 @@ typedef struct {
     guint8 start_opcode;
     guint16 start_function;
     int ssl_state;
+    int ssl_reasm_state;
+    guint32 ssl_start_frame;
 } frame_state_t;
 
 #define CONV_STATE_NEW         -1
@@ -5391,8 +5393,14 @@ typedef struct {
 
 #define SSL_CONV_STATE_NEW 0
 #define SSL_CONV_STATE_SSL 1
+#define SSL_CONV_STATE_NOFRAG   0
+#define SSL_CONV_STATE_FRAG     1
+#define SSL_CONV_STATE_LASTFRAG 2
 typedef struct {
     int ssl_state;
+    int reasm_state;
+    guint32 start_frame;
+    gint remaining_len;
 } ssl_conv_state_t;
 
 /* Options */
@@ -11566,6 +11574,9 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
         if (ssl_conversation_state == NULL) {
             ssl_conversation_state = wmem_new(wmem_file_scope(), ssl_conv_state_t);
             ssl_conversation_state->ssl_state = SSL_CONV_STATE_NEW;
+            ssl_conversation_state->reasm_state = SSL_CONV_STATE_NOFRAG;
+            ssl_conversation_state->start_frame = 0;
+            ssl_conversation_state->remaining_len = 0;
             conversation_add_proto_data(conversation, proto_s7commp, ssl_conversation_state);
         }
         if (ssl_conversation_state->ssl_state == SSL_CONV_STATE_SSL) {
@@ -11576,6 +11587,8 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
                 p_add_proto_data(wmem_file_scope(), pinfo, proto_s7commp, (guint32)tvb_raw_offset(tvb), packet_state);
             }
             packet_state->ssl_state = SSL_CONV_STATE_SSL;
+            packet_state->ssl_reasm_state = SSL_CONV_STATE_NOFRAG;
+            packet_state->ssl_start_frame = 0;
         } else {
             packet_state = NULL;
         }
@@ -11584,9 +11597,82 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
     }
     if ((packet_state != NULL) && (packet_state->ssl_state == SSL_CONV_STATE_SSL)) {
         gboolean dissected;
+        if (!pinfo->fd->visited) {        /* first pass */
+            packet_state->ssl_start_frame = ssl_conversation_state->start_frame;
+            if (ssl_conversation_state->reasm_state == SSL_CONV_STATE_FRAG) {
+                if (ssl_conversation_state->remaining_len != DESEGMENT_ONE_MORE_SEGMENT) {
+                    if (tvb_reported_length_remaining(tvb, 0) >= ssl_conversation_state->remaining_len) {
+                        packet_state->ssl_reasm_state = SSL_CONV_STATE_LASTFRAG;
+                    } else {
+                        packet_state->ssl_reasm_state = ssl_conversation_state->reasm_state;
+                        ssl_conversation_state->remaining_len -= tvb_reported_length_remaining(tvb, 0);
+                    }
+                } else {
+                    packet_state->ssl_reasm_state = ssl_conversation_state->reasm_state;
+                }
+            } else {
+                packet_state->ssl_reasm_state = ssl_conversation_state->reasm_state;
+            }
+        }
         if (tls_handle != NULL) {
-            tls_set_appdata_dissector(tls_handle, pinfo, s7commp_handle);
-            dissected = call_dissector_only(tls_handle, tvb, pinfo, tree, NULL);
+            tvbuff_t* next_tvb;
+            fragment_head* fd_head;
+            int save_desegment_offset = pinfo->desegment_offset;
+            guint32 save_desegment_len = pinfo->desegment_len;
+            guint16 save_can_desegment = pinfo->can_desegment;
+            gboolean save_fragmented = pinfo->fragmented;
+            pinfo->desegment_offset = 0;
+            pinfo->desegment_len = 0;
+            pinfo->can_desegment = 2;
+            pinfo->fragmented = FALSE;
+            if (packet_state->ssl_reasm_state != SSL_CONV_STATE_NOFRAG) {
+                pinfo->fragmented = TRUE;
+                fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
+                                                tvb, 0, pinfo,
+                                                packet_state->ssl_start_frame,
+                                                NULL,
+                                                tvb_reported_length_remaining(tvb, 0),
+                                                packet_state->ssl_reasm_state != SSL_CONV_STATE_LASTFRAG);
+                next_tvb = process_reassembled_data(tvb, 0, pinfo,
+                                                    "Reassembled TLS", fd_head, &s7commp_frag_items,
+                                                    NULL, tree);
+            } else {
+                next_tvb = tvb;
+            }
+            if (next_tvb) {
+                tls_set_appdata_dissector(tls_handle, pinfo, s7commp_handle);
+                dissected = call_dissector_only(tls_handle, next_tvb, pinfo, tree, NULL);
+            } else {
+                dissected = 1;
+            }
+            if (pinfo->desegment_len != 0) {
+                if (!pinfo->fd->visited) {        /* first pass */
+                    if (ssl_conversation_state->reasm_state == SSL_CONV_STATE_NOFRAG) {
+                        ssl_conversation_state->reasm_state = SSL_CONV_STATE_FRAG;
+                        ssl_conversation_state->start_frame = pinfo->fd->num;
+                        ssl_conversation_state->remaining_len = pinfo->desegment_len;
+                        fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
+                                                        tvb, pinfo->desegment_offset, pinfo,
+                                                        pinfo->fd->num,
+                                                        NULL,
+                                                        tvb_reported_length_remaining(tvb, pinfo->desegment_offset),
+                                                        1);
+                    } else if (ssl_conversation_state->remaining_len == DESEGMENT_ONE_MORE_SEGMENT && pinfo->desegment_len != DESEGMENT_ONE_MORE_SEGMENT) {
+                        ssl_conversation_state->remaining_len = pinfo->desegment_len;
+                    }
+                }
+            } else {
+                if (!pinfo->fd->visited) {        /* first pass */
+                    ssl_conversation_state->reasm_state = SSL_CONV_STATE_NOFRAG;
+                    if (packet_state->ssl_reasm_state == SSL_CONV_STATE_FRAG) {
+                        packet_state->ssl_reasm_state = SSL_CONV_STATE_LASTFRAG;
+                    }
+                }
+            }
+            pinfo->desegment_offset = save_desegment_offset;
+            pinfo->desegment_len = save_desegment_len;
+            pinfo->can_desegment = save_can_desegment;
+            pinfo->fragmented = save_fragmented;
         } else {
             dissected = 0;
         }

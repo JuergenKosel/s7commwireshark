@@ -7907,7 +7907,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         offset += 1;
 
         datatype = tvb_get_guint8(tvb, offset);
-        proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 2, datatype);
+        proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
         offset += 1;
     }
 

@@ -5170,7 +5170,6 @@ static gint hf_s7commp_notification_v1_unknown4 = -1;
 static gint hf_s7commp_notification_unknown2 = -1;
 static gint hf_s7commp_notification_unknown3 = -1;
 static gint hf_s7commp_notification_unknown4 = -1;
-static gint hf_s7commp_notification_unknown5 = -1;
 static gint hf_s7commp_notification_credittick = -1;
 static gint hf_s7commp_notification_seqnum_vlq = -1;
 static gint hf_s7commp_notification_seqnum_uint8 = -1;
@@ -5178,7 +5177,7 @@ static gint hf_s7commp_notification_subscrccnt = -1;
 static gint hf_s7commp_notification_subscrccnt2 = -1;
 static gint hf_s7commp_notification_p2_subscrobjectid = -1;
 static gint hf_s7commp_notification_p2_unknown1 = -1;
-static gint hf_s7commp_notification_timetick = -1;
+static gint hf_s7commp_notification_timestamp = -1;
 
 /* SubscriptionReferenceList */
 static gint hf_s7commp_subscrreflist = -1;
@@ -6417,14 +6416,11 @@ proto_register_s7commp (void)
         { &hf_s7commp_notification_subscrccnt,
           { "Subscription change counter", "s7comm-plus.notification.subscriptionchangecnt", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_notification_unknown5,
-          { "Add-1 Notification unknown", "s7comm-plus.notification.unknown5", FT_UINT8, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
         { &hf_s7commp_notification_subscrccnt2,
           { "Add-1 Notification subscription change counter", "s7comm-plus.notification.subscriptionchangecnt2", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_notification_timetick,
-          { "Add-1 Notification timetick", "s7comm-plus.notification.timetick", FT_RELATIVE_TIME, BASE_NONE, NULL, 0x0,
+        { &hf_s7commp_notification_timestamp,
+          { "Add-1 Notification timestamp", "s7comm-plus.notification.timestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_notification_p2_subscrobjectid,
           { "Part 2 - Subscription Object Id", "s7comm-plus.notification.p2.subscrobjectid", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -9890,7 +9886,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
     guint32 subscr_object_id, subscr_object_id2;
     guint8 credit_tick;
     guint8 subscrccnt;
-    guint64 timetck;
+    guint64 timeval_us;
     nstime_t tmptime;
     guint32 seqnum;
     proto_item *list_item = NULL;
@@ -9949,23 +9945,19 @@ s7commp_decode_notification(tvbuff_t *tvb,
             proto_tree_add_ret_varuint32(tree, hf_s7commp_notification_seqnum_vlq, tvb, offset, &octet_count, &seqnum);
             offset += octet_count;
             subscrccnt = tvb_get_guint8(tvb, offset);
-            proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
-            offset += 1;
-            if (subscrccnt == 0) {
-                /* Newer versions of 1500 if subscrccnt ==0:
-                 * After a byte where only 0x04 or 0x05 was seen yet, a 6 byte long time-tick on microsecond basis follows.
-                 * Testresults: The counter value keeps the value on PLC Run-Stop and also on power loss.
-                 * Recalculating the startpoint results in a starting point in 2014, thus it seems not
-                 * to be a common absolute time format (timetick from production / first power-up date?).
-                 * TODO: This needs more data from different CPUs to get some values to compare.
-                 */
-                proto_tree_add_item(tree, hf_s7commp_notification_unknown5, tvb, offset, 1, ENC_BIG_ENDIAN);
+            if (subscrccnt > 0) {
+                proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
                 offset += 1;
-                timetck = tvb_get_ntoh48(tvb, offset);
-                tmptime.secs = (time_t)(timetck / 1000000);
-                tmptime.nsecs = (timetck % 1000000) * 1000;
-                proto_tree_add_time(tree, hf_s7commp_notification_timetick, tvb, offset, 6, &tmptime);
-                offset += 6;
+            } else {
+                /* Newer versions of 1500 if subscrccnt ==0:
+                 * If this is zero, then an 8 byte UTC Timestamp on microsecond basis follows,
+                 * where the first byte should be always zero (in the 'near' future).
+                 */
+                timeval_us = tvb_get_ntoh64(tvb, offset);
+                tmptime.secs = (time_t)(timeval_us / 1000000);
+                tmptime.nsecs = (timeval_us % 1000000) * 1000;
+                proto_tree_add_time(tree, hf_s7commp_notification_timestamp, tvb, offset, 8, &tmptime);
+                offset += 8;
                 subscrccnt = tvb_get_guint8(tvb, offset);
                 proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt2, tvb, offset, 1, subscrccnt);
                 offset += 1;

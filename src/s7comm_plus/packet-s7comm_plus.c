@@ -5170,7 +5170,6 @@ static gint hf_s7commp_notification_v1_unknown4 = -1;
 static gint hf_s7commp_notification_unknown2 = -1;
 static gint hf_s7commp_notification_unknown3 = -1;
 static gint hf_s7commp_notification_unknown4 = -1;
-static gint hf_s7commp_notification_unknown5 = -1;
 static gint hf_s7commp_notification_credittick = -1;
 static gint hf_s7commp_notification_seqnum_vlq = -1;
 static gint hf_s7commp_notification_seqnum_uint8 = -1;
@@ -5178,7 +5177,7 @@ static gint hf_s7commp_notification_subscrccnt = -1;
 static gint hf_s7commp_notification_subscrccnt2 = -1;
 static gint hf_s7commp_notification_p2_subscrobjectid = -1;
 static gint hf_s7commp_notification_p2_unknown1 = -1;
-static gint hf_s7commp_notification_timetick = -1;
+static gint hf_s7commp_notification_timestamp = -1;
 
 /* SubscriptionReferenceList */
 static gint hf_s7commp_subscrreflist = -1;
@@ -5375,6 +5374,8 @@ typedef struct {
     guint8 start_opcode;
     guint16 start_function;
     int ssl_state;
+    int ssl_reasm_state;
+    guint32 ssl_start_frame;
 } frame_state_t;
 
 #define CONV_STATE_NEW         -1
@@ -5391,8 +5392,14 @@ typedef struct {
 
 #define SSL_CONV_STATE_NEW 0
 #define SSL_CONV_STATE_SSL 1
+#define SSL_CONV_STATE_NOFRAG   0
+#define SSL_CONV_STATE_FRAG     1
+#define SSL_CONV_STATE_LASTFRAG 2
 typedef struct {
     int ssl_state;
+    int reasm_state;
+    guint32 start_frame;
+    gint remaining_len;
 } ssl_conv_state_t;
 
 /* Options */
@@ -6409,14 +6416,11 @@ proto_register_s7commp (void)
         { &hf_s7commp_notification_subscrccnt,
           { "Subscription change counter", "s7comm-plus.notification.subscriptionchangecnt", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_notification_unknown5,
-          { "Add-1 Notification unknown", "s7comm-plus.notification.unknown5", FT_UINT8, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
         { &hf_s7commp_notification_subscrccnt2,
           { "Add-1 Notification subscription change counter", "s7comm-plus.notification.subscriptionchangecnt2", FT_UINT8, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_notification_timetick,
-          { "Add-1 Notification timetick", "s7comm-plus.notification.timetick", FT_RELATIVE_TIME, BASE_NONE, NULL, 0x0,
+        { &hf_s7commp_notification_timestamp,
+          { "Add-1 Notification timestamp", "s7comm-plus.notification.timestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_notification_p2_subscrobjectid,
           { "Part 2 - Subscription Object Id", "s7comm-plus.notification.p2.subscrobjectid", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -7899,7 +7903,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         offset += 1;
 
         datatype = tvb_get_guint8(tvb, offset);
-        proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 2, datatype);
+        proto_tree_add_uint(data_item_tree, hf_s7commp_itemval_datatype, tvb, offset, 1, datatype);
         offset += 1;
     }
 
@@ -9882,7 +9886,7 @@ s7commp_decode_notification(tvbuff_t *tvb,
     guint32 subscr_object_id, subscr_object_id2;
     guint8 credit_tick;
     guint8 subscrccnt;
-    guint64 timetck;
+    guint64 timeval_us;
     nstime_t tmptime;
     guint32 seqnum;
     proto_item *list_item = NULL;
@@ -9941,23 +9945,19 @@ s7commp_decode_notification(tvbuff_t *tvb,
             proto_tree_add_ret_varuint32(tree, hf_s7commp_notification_seqnum_vlq, tvb, offset, &octet_count, &seqnum);
             offset += octet_count;
             subscrccnt = tvb_get_guint8(tvb, offset);
-            proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
-            offset += 1;
-            if (subscrccnt == 0) {
-                /* Newer versions of 1500 if subscrccnt ==0:
-                 * After a byte where only 0x04 or 0x05 was seen yet, a 6 byte long time-tick on microsecond basis follows.
-                 * Testresults: The counter value keeps the value on PLC Run-Stop and also on power loss.
-                 * Recalculating the startpoint results in a starting point in 2014, thus it seems not
-                 * to be a common absolute time format (timetick from production / first power-up date?).
-                 * TODO: This needs more data from different CPUs to get some values to compare.
-                 */
-                proto_tree_add_item(tree, hf_s7commp_notification_unknown5, tvb, offset, 1, ENC_BIG_ENDIAN);
+            if (subscrccnt > 0) {
+                proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt, tvb, offset, 1, subscrccnt);
                 offset += 1;
-                timetck = tvb_get_ntoh48(tvb, offset);
-                tmptime.secs = (time_t)(timetck / 1000000);
-                tmptime.nsecs = (timetck % 1000000) * 1000;
-                proto_tree_add_time(tree, hf_s7commp_notification_timetick, tvb, offset, 6, &tmptime);
-                offset += 6;
+            } else {
+                /* Newer versions of 1500 if subscrccnt ==0:
+                 * If this is zero, then an 8 byte UTC Timestamp on microsecond basis follows,
+                 * where the first byte should be always zero (in the 'near' future).
+                 */
+                timeval_us = tvb_get_ntoh64(tvb, offset);
+                tmptime.secs = (time_t)(timeval_us / 1000000);
+                tmptime.nsecs = (timeval_us % 1000000) * 1000;
+                proto_tree_add_time(tree, hf_s7commp_notification_timestamp, tvb, offset, 8, &tmptime);
+                offset += 8;
                 subscrccnt = tvb_get_guint8(tvb, offset);
                 proto_tree_add_uint(tree, hf_s7commp_notification_subscrccnt2, tvb, offset, 1, subscrccnt);
                 offset += 1;
@@ -11566,6 +11566,9 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
         if (ssl_conversation_state == NULL) {
             ssl_conversation_state = wmem_new(wmem_file_scope(), ssl_conv_state_t);
             ssl_conversation_state->ssl_state = SSL_CONV_STATE_NEW;
+            ssl_conversation_state->reasm_state = SSL_CONV_STATE_NOFRAG;
+            ssl_conversation_state->start_frame = 0;
+            ssl_conversation_state->remaining_len = 0;
             conversation_add_proto_data(conversation, proto_s7commp, ssl_conversation_state);
         }
         if (ssl_conversation_state->ssl_state == SSL_CONV_STATE_SSL) {
@@ -11576,6 +11579,8 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
                 p_add_proto_data(wmem_file_scope(), pinfo, proto_s7commp, (guint32)tvb_raw_offset(tvb), packet_state);
             }
             packet_state->ssl_state = SSL_CONV_STATE_SSL;
+            packet_state->ssl_reasm_state = SSL_CONV_STATE_NOFRAG;
+            packet_state->ssl_start_frame = 0;
         } else {
             packet_state = NULL;
         }
@@ -11584,9 +11589,82 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
     }
     if ((packet_state != NULL) && (packet_state->ssl_state == SSL_CONV_STATE_SSL)) {
         gboolean dissected;
+        if (!pinfo->fd->visited) {        /* first pass */
+            packet_state->ssl_start_frame = ssl_conversation_state->start_frame;
+            if (ssl_conversation_state->reasm_state == SSL_CONV_STATE_FRAG) {
+                if (ssl_conversation_state->remaining_len != DESEGMENT_ONE_MORE_SEGMENT) {
+                    if (tvb_reported_length_remaining(tvb, 0) >= ssl_conversation_state->remaining_len) {
+                        packet_state->ssl_reasm_state = SSL_CONV_STATE_LASTFRAG;
+                    } else {
+                        packet_state->ssl_reasm_state = ssl_conversation_state->reasm_state;
+                        ssl_conversation_state->remaining_len -= tvb_reported_length_remaining(tvb, 0);
+                    }
+                } else {
+                    packet_state->ssl_reasm_state = ssl_conversation_state->reasm_state;
+                }
+            } else {
+                packet_state->ssl_reasm_state = ssl_conversation_state->reasm_state;
+            }
+        }
         if (tls_handle != NULL) {
-            tls_set_appdata_dissector(tls_handle, pinfo, s7commp_handle);
-            dissected = call_dissector_only(tls_handle, tvb, pinfo, tree, NULL);
+            tvbuff_t* next_tvb;
+            fragment_head* fd_head;
+            int save_desegment_offset = pinfo->desegment_offset;
+            guint32 save_desegment_len = pinfo->desegment_len;
+            guint16 save_can_desegment = pinfo->can_desegment;
+            gboolean save_fragmented = pinfo->fragmented;
+            pinfo->desegment_offset = 0;
+            pinfo->desegment_len = 0;
+            pinfo->can_desegment = 2;
+            pinfo->fragmented = FALSE;
+            if (packet_state->ssl_reasm_state != SSL_CONV_STATE_NOFRAG) {
+                pinfo->fragmented = TRUE;
+                fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
+                                                tvb, 0, pinfo,
+                                                packet_state->ssl_start_frame,
+                                                NULL,
+                                                tvb_reported_length_remaining(tvb, 0),
+                                                packet_state->ssl_reasm_state != SSL_CONV_STATE_LASTFRAG);
+                next_tvb = process_reassembled_data(tvb, 0, pinfo,
+                                                    "Reassembled TLS", fd_head, &s7commp_frag_items,
+                                                    NULL, tree);
+            } else {
+                next_tvb = tvb;
+            }
+            if (next_tvb) {
+                tls_set_appdata_dissector(tls_handle, pinfo, s7commp_handle);
+                dissected = call_dissector_only(tls_handle, next_tvb, pinfo, tree, NULL);
+            } else {
+                dissected = 1;
+            }
+            if (pinfo->desegment_len != 0) {
+                if (!pinfo->fd->visited) {        /* first pass */
+                    if (ssl_conversation_state->reasm_state == SSL_CONV_STATE_NOFRAG) {
+                        ssl_conversation_state->reasm_state = SSL_CONV_STATE_FRAG;
+                        ssl_conversation_state->start_frame = pinfo->fd->num;
+                        ssl_conversation_state->remaining_len = pinfo->desegment_len;
+                        fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
+                                                        tvb, pinfo->desegment_offset, pinfo,
+                                                        pinfo->fd->num,
+                                                        NULL,
+                                                        tvb_reported_length_remaining(tvb, pinfo->desegment_offset),
+                                                        1);
+                    } else if (ssl_conversation_state->remaining_len == DESEGMENT_ONE_MORE_SEGMENT && pinfo->desegment_len != DESEGMENT_ONE_MORE_SEGMENT) {
+                        ssl_conversation_state->remaining_len = pinfo->desegment_len;
+                    }
+                }
+            } else {
+                if (!pinfo->fd->visited) {        /* first pass */
+                    ssl_conversation_state->reasm_state = SSL_CONV_STATE_NOFRAG;
+                    if (packet_state->ssl_reasm_state == SSL_CONV_STATE_FRAG) {
+                        packet_state->ssl_reasm_state = SSL_CONV_STATE_LASTFRAG;
+                    }
+                }
+            }
+            pinfo->desegment_offset = save_desegment_offset;
+            pinfo->desegment_len = save_desegment_len;
+            pinfo->can_desegment = save_can_desegment;
+            pinfo->fragmented = save_fragmented;
         } else {
             dissected = 0;
         }

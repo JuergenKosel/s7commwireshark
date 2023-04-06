@@ -2719,7 +2719,7 @@ static int * const s7commp_object_classflags_fields[] = {
 /* flags in tag description for 1500 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_OFFSETINFOTYPE      0xf000      /* Bits 13..16 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_HMIVISIBLE          0x0800      /* Bit 12 */
-#define S7COMMP_TAGDESCR_ATTRIBUTE2_BIT11               0x0400      /* Bit 11 HMIREADONLY */
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_HMIREADONLY         0x0400      /* Bit 11 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_HMIACCESSIBLE       0x0200      /* Bit 10 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_BIT09               0x0100      /* Bit 09 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_OPTIMIZEDACCESS     0x0080      /* Bit 08 */
@@ -5040,7 +5040,7 @@ static int * const s7commp_tagdescr_attributeflags_fields[] = {
 static gint hf_s7commp_tagdescr_attributeflags2 = -1;
 static gint hf_s7commp_tagdescr_attributeflags2_offsetinfotype = -1; /* 4 Bits, mask 0xf000 */
 static gint hf_s7commp_tagdescr_attributeflags2_hmivisible = -1;
-static gint hf_s7commp_tagdescr_attributeflags2_bit11 = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_hmireadonly = -1;
 static gint hf_s7commp_tagdescr_attributeflags2_hmiaccessible = -1;
 static gint hf_s7commp_tagdescr_attributeflags2_bit09 = -1;
 static gint hf_s7commp_tagdescr_attributeflags2_optimizedaccess = -1;
@@ -5051,7 +5051,7 @@ static gint hf_s7commp_tagdescr_attributeflags2_bitoffset = -1;     /* 3 Bits, m
 static int * const s7commp_tagdescr_attributeflags2_fields[] = {
     &hf_s7commp_tagdescr_attributeflags2_offsetinfotype,
     &hf_s7commp_tagdescr_attributeflags2_hmivisible,
-    &hf_s7commp_tagdescr_attributeflags2_bit11,
+    &hf_s7commp_tagdescr_attributeflags2_hmireadonly,
     &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
     &hf_s7commp_tagdescr_attributeflags2_bit09,
     &hf_s7commp_tagdescr_attributeflags2_optimizedaccess,
@@ -5982,9 +5982,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_attributeflags2_hmivisible,
           { "HMI-Visible", "s7comm-plus.tagdescr.attributeflags.hmivisible", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMIVISIBLE,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_attributeflags2_bit11,
-          { "Bit11", "s7comm-plus.tagdescr.attributeflags.bit11", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_BIT11,
-            "Bit11: hmireadonly?", HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_hmireadonly,
+          { "HMI-Readonly", "s7comm-plus.tagdescr.attributeflags.hmireadonly", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMIREADONLY,
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
           { "HMI-Accessible", "s7comm-plus.tagdescr.attributeflags.hmiaccessible", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMIACCESSIBLE,
             NULL, HFILL }},

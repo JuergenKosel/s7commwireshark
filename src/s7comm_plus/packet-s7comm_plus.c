@@ -2719,7 +2719,7 @@ static int * const s7commp_object_classflags_fields[] = {
 /* flags in tag description for 1500 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_OFFSETINFOTYPE      0xf000      /* Bits 13..16 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_HMIVISIBLE          0x0800      /* Bit 12 */
-#define S7COMMP_TAGDESCR_ATTRIBUTE2_BIT11               0x0400      /* Bit 11 HMIREADONLY */
+#define S7COMMP_TAGDESCR_ATTRIBUTE2_HMIREADONLY         0x0400      /* Bit 11 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_HMIACCESSIBLE       0x0200      /* Bit 10 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_BIT09               0x0100      /* Bit 09 */
 #define S7COMMP_TAGDESCR_ATTRIBUTE2_OPTIMIZEDACCESS     0x0080      /* Bit 08 */
@@ -2879,13 +2879,13 @@ static const value_string tagdescr_section_names[] = {
 #define S7COMMP_SOFTDATATYPE_LDT                66
 #define S7COMMP_SOFTDATATYPE_DTL                67
 #define S7COMMP_SOFTDATATYPE_IECLTIMER          68
-#define S7COMMP_SOFTDATATYPE_SCOUNTER           69
-#define S7COMMP_SOFTDATATYPE_DCOUNTER           70
-#define S7COMMP_SOFTDATATYPE_LCOUNTER           71
-#define S7COMMP_SOFTDATATYPE_UCOUNTER           72
-#define S7COMMP_SOFTDATATYPE_USCOUNTER          73
-#define S7COMMP_SOFTDATATYPE_UDCOUNTER          74
-#define S7COMMP_SOFTDATATYPE_ULCOUNTER          75
+#define S7COMMP_SOFTDATATYPE_IECSCOUNTER        69
+#define S7COMMP_SOFTDATATYPE_IECDCOUNTER        70
+#define S7COMMP_SOFTDATATYPE_IECLCOUNTER        71
+#define S7COMMP_SOFTDATATYPE_IECUCOUNTER        72
+#define S7COMMP_SOFTDATATYPE_IECUSCOUNTER       73
+#define S7COMMP_SOFTDATATYPE_IECUDCOUNTER       74
+#define S7COMMP_SOFTDATATYPE_IECULCOUNTER       75
 #define S7COMMP_SOFTDATATYPE_REMOTE             96
 #define S7COMMP_SOFTDATATYPE_ERRORSTRUCT        97
 #define S7COMMP_SOFTDATATYPE_NREF               98
@@ -2912,6 +2912,7 @@ static const value_string tagdescr_section_names[] = {
 #define S7COMMP_SOFTDATATYPE_HWPWM              153
 #define S7COMMP_SOFTDATATYPE_HWPTO              154
 #define S7COMMP_SOFTDATATYPE_HWINTERFACE        155
+#define S7COMMP_SOFTDATATYPE_HWIEPORT           156
 #define S7COMMP_SOFTDATATYPE_OBANY              160
 #define S7COMMP_SOFTDATATYPE_OBDELAY            161
 #define S7COMMP_SOFTDATATYPE_OBTOD              162
@@ -2920,9 +2921,11 @@ static const value_string tagdescr_section_names[] = {
 #define S7COMMP_SOFTDATATYPE_CONNANY            168
 #define S7COMMP_SOFTDATATYPE_CONNPRG            169
 #define S7COMMP_SOFTDATATYPE_CONNOUC            170
+#define S7COMMP_SOFTDATATYPE_CONNRID            171
 #define S7COMMP_SOFTDATATYPE_HWNR               172
 #define S7COMMP_SOFTDATATYPE_PORT               173
 #define S7COMMP_SOFTDATATYPE_RTM                174
+#define S7COMMP_SOFTDATATYPE_PIP                175
 #define S7COMMP_SOFTDATATYPE_CALARM             176
 #define S7COMMP_SOFTDATATYPE_CALARMS            177
 #define S7COMMP_SOFTDATATYPE_CALARM8            178
@@ -2937,6 +2940,11 @@ static const value_string tagdescr_section_names[] = {
 #define S7COMMP_SOFTDATATYPE_OBDIAG             195
 #define S7COMMP_SOFTDATATYPE_OBTIMEERROR        196
 #define S7COMMP_SOFTDATATYPE_OBSTARTUP          197
+#define S7COMMP_SOFTDATATYPE_OPCUALOCTXTENCM    200
+#define S7COMMP_SOFTDATATYPE_OPCUASTRACTLEN     201
+#define S7COMMP_SOFTDATATYPE_DBANY              208
+#define S7COMMP_SOFTDATATYPE_DBWWW              209
+#define S7COMMP_SOFTDATATYPE_DBDYN              210
 #define S7COMMP_SOFTDATATYPE_PARA               253
 #define S7COMMP_SOFTDATATYPE_LABEL              254
 #define S7COMMP_SOFTDATATYPE_UDEFINED           255
@@ -2973,8 +2981,8 @@ static const value_string tagdescr_softdatatype_names[] = {
     { S7COMMP_SOFTDATATYPE_MULTISFB,            "Multi_SFB" },
     { S7COMMP_SOFTDATATYPE_COUNTER,             "Counter" },
     { S7COMMP_SOFTDATATYPE_TIMER,               "Timer" },
-    { S7COMMP_SOFTDATATYPE_IECCOUNTER,          "IEC_Counter" },
-    { S7COMMP_SOFTDATATYPE_IECTIMER,            "IEC_Timer" },
+    { S7COMMP_SOFTDATATYPE_IECCOUNTER,          "IEC_COUNTER" },
+    { S7COMMP_SOFTDATATYPE_IECTIMER,            "IEC_TIMER" },
     { S7COMMP_SOFTDATATYPE_BLOCKSFB,            "Block_SFB" },
     { S7COMMP_SOFTDATATYPE_BLOCKSFC,            "Block_SFC" },
     { S7COMMP_SOFTDATATYPE_BLOCKCB,             "Block_CB" },
@@ -3005,14 +3013,14 @@ static const value_string tagdescr_softdatatype_names[] = {
     { S7COMMP_SOFTDATATYPE_LTOD,                "LTOD" },
     { S7COMMP_SOFTDATATYPE_LDT,                 "LDT" },
     { S7COMMP_SOFTDATATYPE_DTL,                 "DTL" },
-    { S7COMMP_SOFTDATATYPE_IECLTIMER,           "IEC_LTimer" },
-    { S7COMMP_SOFTDATATYPE_SCOUNTER,            "SCounter" },
-    { S7COMMP_SOFTDATATYPE_DCOUNTER,            "DCounter" },
-    { S7COMMP_SOFTDATATYPE_LCOUNTER,            "LCounter" },
-    { S7COMMP_SOFTDATATYPE_UCOUNTER,            "UCounter" },
-    { S7COMMP_SOFTDATATYPE_USCOUNTER,           "USCounter" },
-    { S7COMMP_SOFTDATATYPE_UDCOUNTER,           "UDCounter" },
-    { S7COMMP_SOFTDATATYPE_ULCOUNTER,           "ULCounter" },
+    { S7COMMP_SOFTDATATYPE_IECLTIMER,           "IEC_LTIMER" },
+    { S7COMMP_SOFTDATATYPE_IECSCOUNTER,         "IEC_SCOUNTER" },
+    { S7COMMP_SOFTDATATYPE_IECDCOUNTER,         "IEC_DCOUNTER" },
+    { S7COMMP_SOFTDATATYPE_IECLCOUNTER,         "IEC_LCOUNTER" },
+    { S7COMMP_SOFTDATATYPE_IECUCOUNTER,         "IEC_UCOUNTER" },
+    { S7COMMP_SOFTDATATYPE_IECUSCOUNTER,        "IEC_USCOUNTER" },
+    { S7COMMP_SOFTDATATYPE_IECUDCOUNTER,        "IEC_UDCOUNTER" },
+    { S7COMMP_SOFTDATATYPE_IECULCOUNTER,        "IEC_ULCOUNTER" },
     { S7COMMP_SOFTDATATYPE_REMOTE,              "REMOTE" },
     { S7COMMP_SOFTDATATYPE_ERRORSTRUCT,         "Error_Struct" },
     { S7COMMP_SOFTDATATYPE_NREF,                "NREF" },
@@ -3039,6 +3047,7 @@ static const value_string tagdescr_softdatatype_names[] = {
     { S7COMMP_SOFTDATATYPE_HWPWM,               "HW_PWM" },
     { S7COMMP_SOFTDATATYPE_HWPTO,               "HW_PTO" },
     { S7COMMP_SOFTDATATYPE_HWINTERFACE,         "HW_INTERFACE" },
+    { S7COMMP_SOFTDATATYPE_HWIEPORT,            "HW_IEPORT" },
     { S7COMMP_SOFTDATATYPE_OBANY,               "OB_ANY" },
     { S7COMMP_SOFTDATATYPE_OBDELAY,             "OB_DELAY" },
     { S7COMMP_SOFTDATATYPE_OBTOD,               "OB_TOD" },
@@ -3047,9 +3056,11 @@ static const value_string tagdescr_softdatatype_names[] = {
     { S7COMMP_SOFTDATATYPE_CONNANY,             "CONN_ANY" },
     { S7COMMP_SOFTDATATYPE_CONNPRG,             "CONN_PRG" },
     { S7COMMP_SOFTDATATYPE_CONNOUC,             "CONN_OUC" },
+    { S7COMMP_SOFTDATATYPE_CONNRID,             "CONN_R_ID" },
     { S7COMMP_SOFTDATATYPE_HWNR,                "HW_NR" },
     { S7COMMP_SOFTDATATYPE_PORT,                "PORT" },
     { S7COMMP_SOFTDATATYPE_RTM,                 "RTM" },
+    { S7COMMP_SOFTDATATYPE_PIP,                 "PIP" },
     { S7COMMP_SOFTDATATYPE_CALARM,              "C_ALARM" },
     { S7COMMP_SOFTDATATYPE_CALARMS,             "C_ALARM_S" },
     { S7COMMP_SOFTDATATYPE_CALARM8,             "C_ALARM_8" },
@@ -3064,6 +3075,11 @@ static const value_string tagdescr_softdatatype_names[] = {
     { S7COMMP_SOFTDATATYPE_OBDIAG,              "OB_DIAG" },
     { S7COMMP_SOFTDATATYPE_OBTIMEERROR,         "OB_TIMEERROR" },
     { S7COMMP_SOFTDATATYPE_OBSTARTUP,           "OB_STARTUP" },
+    { S7COMMP_SOFTDATATYPE_OPCUALOCTXTENCM,     "OPC_UA_LocalizedTextEncodingMask" },
+    { S7COMMP_SOFTDATATYPE_OPCUASTRACTLEN,      "OPC_UA_ByteStringActualLength" },
+    { S7COMMP_SOFTDATATYPE_DBANY,               "DB_ANY" },
+    { S7COMMP_SOFTDATATYPE_DBWWW,               "DB_WWW" },
+    { S7COMMP_SOFTDATATYPE_DBDYN,               "DB_DYN" },
     { S7COMMP_SOFTDATATYPE_PARA,                "Para" },
     { S7COMMP_SOFTDATATYPE_LABEL,               "Label" },
     { S7COMMP_SOFTDATATYPE_UDEFINED,            "Undefined" },
@@ -5040,7 +5056,7 @@ static int * const s7commp_tagdescr_attributeflags_fields[] = {
 static gint hf_s7commp_tagdescr_attributeflags2 = -1;
 static gint hf_s7commp_tagdescr_attributeflags2_offsetinfotype = -1; /* 4 Bits, mask 0xf000 */
 static gint hf_s7commp_tagdescr_attributeflags2_hmivisible = -1;
-static gint hf_s7commp_tagdescr_attributeflags2_bit11 = -1;
+static gint hf_s7commp_tagdescr_attributeflags2_hmireadonly = -1;
 static gint hf_s7commp_tagdescr_attributeflags2_hmiaccessible = -1;
 static gint hf_s7commp_tagdescr_attributeflags2_bit09 = -1;
 static gint hf_s7commp_tagdescr_attributeflags2_optimizedaccess = -1;
@@ -5051,7 +5067,7 @@ static gint hf_s7commp_tagdescr_attributeflags2_bitoffset = -1;     /* 3 Bits, m
 static int * const s7commp_tagdescr_attributeflags2_fields[] = {
     &hf_s7commp_tagdescr_attributeflags2_offsetinfotype,
     &hf_s7commp_tagdescr_attributeflags2_hmivisible,
-    &hf_s7commp_tagdescr_attributeflags2_bit11,
+    &hf_s7commp_tagdescr_attributeflags2_hmireadonly,
     &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
     &hf_s7commp_tagdescr_attributeflags2_bit09,
     &hf_s7commp_tagdescr_attributeflags2_optimizedaccess,
@@ -5982,9 +5998,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_attributeflags2_hmivisible,
           { "HMI-Visible", "s7comm-plus.tagdescr.attributeflags.hmivisible", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMIVISIBLE,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_attributeflags2_bit11,
-          { "Bit11", "s7comm-plus.tagdescr.attributeflags.bit11", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_BIT11,
-            "Bit11: hmireadonly?", HFILL }},
+        { &hf_s7commp_tagdescr_attributeflags2_hmireadonly,
+          { "HMI-Readonly", "s7comm-plus.tagdescr.attributeflags.hmireadonly", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMIREADONLY,
+            NULL, HFILL }},
         { &hf_s7commp_tagdescr_attributeflags2_hmiaccessible,
           { "HMI-Accessible", "s7comm-plus.tagdescr.attributeflags.hmiaccessible", FT_BOOLEAN, 16, NULL, S7COMMP_TAGDESCR_ATTRIBUTE2_HMIACCESSIBLE,
             NULL, HFILL }},
@@ -9428,7 +9444,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                 } else {
                     proto_item_append_text(tree, "%u.", value);
                 }
-                str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".%u", value);
+                str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".%X", value);
                 offset += octet_count;
                 *number_of_fields += 1;
             }
@@ -9439,11 +9455,11 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                 value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(tree, hf_s7commp_itemaddr_lid_value, tvb, offset, octet_count, value);
                 if (lid_cnt == lid_nest_depth) {
-                    proto_item_append_text(tree, "%u", value);
+                    proto_item_append_text(tree, "%X", value);
                 } else {
-                    proto_item_append_text(tree, "%u.", value);
+                    proto_item_append_text(tree, "%X.", value);
                 }
-                str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".%u", value);
+                str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".%X", value);
                 offset += octet_count;
                 *number_of_fields += 1;
             }

@@ -5145,7 +5145,6 @@ static gint hf_s7commp_object_blocklength = -1;
 static gint hf_s7commp_object_createobjidcount = -1;
 static gint hf_s7commp_object_createobjid = -1;
 static gint hf_s7commp_object_createobjrequnknown1 = -1;
-static gint hf_s7commp_object_createobjrequnknown2 = -1;
 static gint hf_s7commp_object_deleteobjid = -1;
 static gint hf_s7commp_object_deleteobj_fill = -1;
 
@@ -6324,9 +6323,6 @@ proto_register_s7commp (void)
             NULL, HFILL }},
         { &hf_s7commp_object_createobjrequnknown1,
           { "Unknown value 1", "s7comm-plus.object.createobjrequnknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
-            NULL, HFILL }},
-        { &hf_s7commp_object_createobjrequnknown2,
-          { "Unknown value 2", "s7comm-plus.object.createobjrequnknown2", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_object_deleteobjid,
           { "Delete Object Id", "s7comm-plus.object.deleteobjid", FT_UINT32, BASE_HEX, NULL, 0x0,
@@ -9172,7 +9168,7 @@ s7commp_decode_request_createobject(tvbuff_t *tvb,
      */
     next_byte = tvb_get_guint8(tvb, offset);
     if (((protocolversion == S7COMMP_PROTOCOLVERSION_2) || (protocolversion == S7COMMP_PROTOCOLVERSION_3)) && next_byte != S7COMMP_ITEMVAL_ELEMENTID_STARTOBJECT) {
-        proto_tree_add_varuint32(tree, hf_s7commp_object_createobjrequnknown2, tvb, offset, &octet_count);
+        proto_tree_add_varuint32(tree, hf_s7commp_integrity_id, tvb, offset, &octet_count);
         offset += octet_count;
     }
     return s7commp_decode_object(tvb, pinfo, tree, offset, TRUE);
@@ -11567,6 +11563,7 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
     frame_state_t *packet_state = NULL;
     conversation_t *conversation;
     ssl_conv_state_t *ssl_conversation_state = NULL;
+    gboolean more_frags;
 
     /* check of SSL protocol */
     if (!pinfo->fd->visited) {        /* first pass */
@@ -11635,12 +11632,16 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
             pinfo->fragmented = FALSE;
             if (packet_state->ssl_reasm_state != SSL_CONV_STATE_NOFRAG) {
                 pinfo->fragmented = TRUE;
+                more_frags = packet_state->ssl_reasm_state != SSL_CONV_STATE_LASTFRAG;
+                if (!pinfo->fd->visited) {        /* first pass */
+                    more_frags &= (ssl_conversation_state->remaining_len != DESEGMENT_ONE_MORE_SEGMENT);
+                }
                 fd_head = fragment_add_seq_next(&s7commp_reassembly_table,
                                                 tvb, 0, pinfo,
                                                 packet_state->ssl_start_frame,
                                                 NULL,
                                                 tvb_reported_length_remaining(tvb, 0),
-                                                packet_state->ssl_reasm_state != SSL_CONV_STATE_LASTFRAG);
+                                                more_frags);
                 next_tvb = process_reassembled_data(tvb, 0, pinfo,
                                                     "Reassembled TLS", fd_head, &s7commp_frag_items,
                                                     NULL, tree);

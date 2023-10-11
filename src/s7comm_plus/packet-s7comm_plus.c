@@ -5393,6 +5393,11 @@ typedef struct {
     guint32 ssl_start_frame;
 } frame_state_t;
 
+/* Conversation:
+ * Use a combination of destination- and sourceport, otherwise a conversation in both directions
+ * (e.g 2000->102 as well as 102->2000) would be found, which we don't want here.
+ */
+#define CONV_PORT(port_a, port_b) (port_a + (port_b * 65536))
 #define CONV_STATE_NEW         -1
 #define CONV_STATE_NOFRAG      0
 #define CONV_STATE_FIRST       1
@@ -5405,6 +5410,11 @@ typedef struct {
     guint16 start_function;
 } conv_state_t;
 
+/* Conversation:
+ * Use a combination of destination- and sourceport, otherwise a conversation in both directions
+ * (e.g 2000->102 as well as 102->2000) would be found, which we don't want here.
+ */
+#define SSL_CONV_PORT(port_a, port_b) (port_a + (port_b * 65536) + 1)
 #define SSL_CONV_STATE_NEW 0
 #define SSL_CONV_STATE_SSL 1
 #define SSL_CONV_STATE_NOFRAG   0
@@ -10874,12 +10884,27 @@ s7commp_decode_response_init_ssl(tvbuff_t *tvb,
         /* is supported */
         if (!pinfo->fd->visited) {        /* first pass */
             conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                            (const endpoint_type) pinfo->ptype, pinfo->destport,
-                                            pinfo->srcport, 0);
+                                            (const endpoint_type) pinfo->ptype, SSL_CONV_PORT(pinfo->srcport, pinfo->destport),
+                                            0, NO_PORT_B);
             if (conversation == NULL) {
                 conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                (const endpoint_type) pinfo->ptype, pinfo->destport,
-                                                pinfo->srcport, 0);
+                                                (const endpoint_type) pinfo->ptype, SSL_CONV_PORT(pinfo->srcport, pinfo->destport),
+                                                0, NO_PORT2);
+            }
+            ssl_conversation_state = (ssl_conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
+            if (ssl_conversation_state == NULL) {
+                ssl_conversation_state = wmem_new(wmem_file_scope(), ssl_conv_state_t);
+                conversation_add_proto_data(conversation, proto_s7commp, ssl_conversation_state);
+            }
+            ssl_conversation_state->ssl_state = SSL_CONV_STATE_SSL;
+
+            conversation = find_conversation(pinfo->fd->num, &pinfo->src, &pinfo->dst,
+                                            (const endpoint_type) pinfo->ptype, SSL_CONV_PORT(pinfo->destport, pinfo->srcport),
+                                            0, NO_PORT_B);
+            if (conversation == NULL) {
+                conversation = conversation_new(pinfo->fd->num, &pinfo->src, &pinfo->dst,
+                                                (const endpoint_type) pinfo->ptype, SSL_CONV_PORT(pinfo->destport, pinfo->srcport),
+                                                0, NO_PORT2);
             }
             ssl_conversation_state = (ssl_conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
             if (ssl_conversation_state == NULL) {
@@ -11380,16 +11405,12 @@ dissect_s7commp(tvbuff_t *tvb,
                 reasm_opcode = tvb_get_guint8(tvb, offset);
                 reasm_function = tvb_get_ntohs(tvb, offset + 3);
 
-                /* Conversation:
-                 * Use a combination of destination- and sourceport, otherwise a conversation in both directions
-                 * (e.g 2000->102 as well as 102->2000) would be found, which we don't want here.
-                 */
                 conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                 (const endpoint_type) pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
+                                                 (const endpoint_type) pinfo->ptype, CONV_PORT(pinfo->srcport, pinfo->destport),
                                                  0, NO_PORT_B);
                 if (conversation == NULL) {
                     conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                                    (const endpoint_type) pinfo->ptype, pinfo->destport + (pinfo->srcport * 65536),
+                                                    (const endpoint_type) pinfo->ptype, CONV_PORT(pinfo->srcport, pinfo->destport),
                                                     0, NO_PORT2);
                 }
                 conversation_state = (conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
@@ -11568,12 +11589,12 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
     /* check of SSL protocol */
     if (!pinfo->fd->visited) {        /* first pass */
         conversation = find_conversation(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                        (const endpoint_type) pinfo->ptype, pinfo->destport,
-                                        pinfo->srcport, 0);
+                                        (const endpoint_type) pinfo->ptype, SSL_CONV_PORT(pinfo->srcport, pinfo->destport),
+                                        0, NO_PORT_B);
         if (conversation == NULL) {
             conversation = conversation_new(pinfo->fd->num, &pinfo->dst, &pinfo->src,
-                                            (const endpoint_type) pinfo->ptype, pinfo->destport,
-                                            pinfo->srcport, 0);
+                                            (const endpoint_type) pinfo->ptype, SSL_CONV_PORT(pinfo->srcport, pinfo->destport),
+                                            0, NO_PORT2);
         }
         ssl_conversation_state = (ssl_conv_state_t *)conversation_get_proto_data(conversation, proto_s7commp);
         if (ssl_conversation_state == NULL) {

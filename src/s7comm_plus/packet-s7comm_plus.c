@@ -7032,6 +7032,7 @@ s7commp_get_timespan_from_int64(gint64 timespan, char *str, gint max)
     gchar *vfmt[] = { "%dd", "%02dh", "%02dm", "%02ds", "%03dms", "%03dus", "%03dns"};
     gint64 val;
     int i;
+    gboolean time_negative = false;
 
     if (timespan == 0) {
         g_strlcpy(str, "LT#000ns", max);
@@ -7040,7 +7041,10 @@ s7commp_get_timespan_from_int64(gint64 timespan, char *str, gint max)
 
     if (timespan < 0) {
         g_strlcpy(str, "LT#-", max);
-        timespan *= -1;
+        time_negative = true;
+        for (i = 0; i < 7; i++) {
+            divs[i] = - divs[i];
+        }
     } else {
         g_strlcpy(str, "LT#", max);
     }
@@ -7051,7 +7055,7 @@ s7commp_get_timespan_from_int64(gint64 timespan, char *str, gint max)
         if (val > 0) {
             g_snprintf(sval, 8, vfmt[i], (gint32)val);
             g_strlcat(str, sval, max);
-            if (timespan > 0) {
+            if ((!time_negative && timespan > 0) || (time_negative && timespan < 0)) {
                 g_strlcat(str, "_", max);
             }
         }

@@ -2743,7 +2743,7 @@ static int * const s7commp_object_classflags_fields[] = {
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT                     12
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM                 13
 #define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM                 14
-#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM               15
+#define S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FBSFB                      15
 
 static const value_string tagdescr_offsetinfotype2_names[] = {
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY,                    "FB_Array" },
@@ -2761,7 +2761,7 @@ static const value_string tagdescr_offsetinfotype2_names[] = {
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT,                      "Struct" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCT1DIM,                  "StructArray1Dim" },
     { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_STRUCTMDIM,                  "StructArrayMDim" },
-    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM,                "FB/ProgramAlarm" },
+    { S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FBSFB,                       "FB/SFB" },
     { 0,                                                            NULL }
 };
 
@@ -5115,13 +5115,13 @@ static gint hf_s7commp_tagdescr_nonoptimized_addr_16 = -1;
 static gint hf_s7commp_tagdescr_optimized_addr_16 = -1;
 static gint hf_s7commp_tagdescr_nonoptimized_struct_size = -1;
 static gint hf_s7commp_tagdescr_optimized_struct_size = -1;
-static gint hf_s7commp_tagdescr_fb_pa_relid = -1;
-static gint hf_s7commp_tagdescr_fb_pa_info4 = -1;
-static gint hf_s7commp_tagdescr_fb_pa_info5 = -1;
-static gint hf_s7commp_tagdescr_fb_pa_info6 = -1;
-static gint hf_s7commp_tagdescr_fb_pa_info7 = -1;
-static gint hf_s7commp_tagdescr_fb_pa_retainoffset = -1;
-static gint hf_s7commp_tagdescr_fb_pa_volatileoffset = -1;
+static gint hf_s7commp_tagdescr_fb_sfb_relid = -1;
+static gint hf_s7commp_tagdescr_fb_sfb_info4 = -1;
+static gint hf_s7commp_tagdescr_fb_sfb_info5 = -1;
+static gint hf_s7commp_tagdescr_fb_sfb_info6 = -1;
+static gint hf_s7commp_tagdescr_fb_sfb_info7 = -1;
+static gint hf_s7commp_tagdescr_fb_sfb_retainoffset = -1;
+static gint hf_s7commp_tagdescr_fb_sfb_volatileoffset = -1;
 static gint hf_s7commp_tagdescr_fbarr_classicsize = -1;
 static gint hf_s7commp_tagdescr_fbarr_retainsize = -1;
 static gint hf_s7commp_tagdescr_fbarr_volatilesize = -1;
@@ -6112,26 +6112,26 @@ proto_register_s7commp (void)
         { &hf_s7commp_tagdescr_optimized_struct_size,
           { "Optimized structure size", "s7comm-plus.tagdescr.structsize.optimized", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_fb_pa_relid,
-          { "FB/ProgramAlarm Relation-Id", "s7comm-plus.tagdescr.fb_pa.relid", FT_UINT32, BASE_HEX, NULL, 0x0,
+        { &hf_s7commp_tagdescr_fb_sfb_relid,
+          { "FB/SFB Relation-Id", "s7comm-plus.tagdescr.fb_sfb.relid", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_fb_pa_info4,
-          { "FB/ProgramAlarm Info 4", "s7comm-plus.tagdescr.fb_pa.info4", FT_UINT32, BASE_DEC, NULL, 0x0,
+        { &hf_s7commp_tagdescr_fb_sfb_info4,
+          { "FB/SFB Info 4", "s7comm-plus.tagdescr.fb_sfb.info4", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_fb_pa_info5,
-          { "FB/ProgramAlarm Info 5", "s7comm-plus.tagdescr.fb_pa.info5", FT_UINT32, BASE_DEC, NULL, 0x0,
+        { &hf_s7commp_tagdescr_fb_sfb_info5,
+          { "FB/SFB Info 5", "s7comm-plus.tagdescr.fb_sfb.info5", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_fb_pa_info6,
-          { "FB/ProgramAlarm Info 6", "s7comm-plus.tagdescr.fb_pa.info6", FT_UINT32, BASE_DEC, NULL, 0x0,
+        { &hf_s7commp_tagdescr_fb_sfb_info6,
+          { "FB/SFB Info 6", "s7comm-plus.tagdescr.fb_sfb.info6", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_fb_pa_info7,
-          { "FB/ProgramAlarm Info 7", "s7comm-plus.tagdescr.fb_pa.info7", FT_UINT32, BASE_DEC, NULL, 0x0,
+        { &hf_s7commp_tagdescr_fb_sfb_info7,
+          { "FB/SFB Info 7", "s7comm-plus.tagdescr.fb_sfb.info7", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_fb_pa_retainoffset,
-          { "Retain Section Offset", "s7comm-plus.tagdescr.fb_pa.retainoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
+        { &hf_s7commp_tagdescr_fb_sfb_retainoffset,
+          { "Retain Section Offset", "s7comm-plus.tagdescr.fb_sfb.retainoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_tagdescr_fb_pa_volatileoffset,
-          { "Volatile Section Offset", "s7comm-plus.tagdescr.fb_pa.volatileoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
+        { &hf_s7commp_tagdescr_fb_sfb_volatileoffset,
+          { "Volatile Section Offset", "s7comm-plus.tagdescr.fb_sfb.volatileoffset", FT_UINT32, BASE_DEC, NULL, 0x0,
             NULL, HFILL }},
         { &hf_s7commp_tagdescr_fbarr_classicsize,
           { "Classic Section Size", "s7comm-plus.tagdescr.fbarr.classicsize", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -8844,23 +8844,23 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
                     break;
             }
 
-            /* sub-FB/ProgramAlarm data */
+            /* FB/SFB data */
             switch (offsetinfotype) {
                 case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FB_ARRAY:
-                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_PROGRAMALARM:
-                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_relid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                case S7COMMP_TAGDESCR_OFFSETINFOTYPE2_FBSFB:
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_sfb_relid, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info4, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_sfb_info4, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info5, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_sfb_info5, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info6, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_sfb_info6, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_info7, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_sfb_info7, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_retainoffset, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_sfb_retainoffset, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
-                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_pa_volatileoffset, tvb, offset, 4, ENC_LITTLE_ENDIAN);
+                    proto_tree_add_item(tag_tree, hf_s7commp_tagdescr_fb_sfb_volatileoffset, tvb, offset, 4, ENC_LITTLE_ENDIAN);
                     offset += 4;
                     break;
             }

@@ -5293,6 +5293,13 @@ static gint hf_s7commp_hmiinfo_syntaxid = -1;
 static gint hf_s7commp_hmiinfo_version = -1;
 static gint hf_s7commp_hmiinfo_clientalarmid = -1;
 static gint hf_s7commp_hmiinfo_priority = -1;
+static gint hf_s7commp_hmiinfo_reserved1 = -1;
+static gint hf_s7commp_hmiinfo_reserved2 = -1;
+static gint hf_s7commp_hmiinfo_reserved3 = -1;
+static gint hf_s7commp_hmiinfo_alarmclass = -1;
+static gint hf_s7commp_hmiinfo_producer = -1;
+static gint hf_s7commp_hmiinfo_groupid = -1;
+static gint hf_s7commp_hmiinfo_flags = -1;
 
 /* Ext. decoded ID values */
 static gint hf_s7commp_attrib_timestamp = -1;
@@ -6575,6 +6582,27 @@ proto_register_s7commp (void)
         { &hf_s7commp_hmiinfo_priority,
           { "Priority", "s7comm-plus.hmiinfo.priority", FT_UINT8, BASE_DEC, NULL, 0x0,
             "Priority of the alarm", HFILL }},
+        { &hf_s7commp_hmiinfo_reserved1,
+          { "Reserved 1", "s7comm-plus.hmiinfo.reserved1", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_reserved2,
+          { "Reserved 2", "s7comm-plus.hmiinfo.reserved2", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_reserved3,
+          { "Reserved 3", "s7comm-plus.hmiinfo.reserved3", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_alarmclass,
+          { "AlarmClass", "s7comm-plus.hmiinfo.alarmclass", FT_UINT16, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_producer,
+          { "Producer", "s7comm-plus.hmiinfo.producer", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_groupid,
+          { "GroupId", "s7comm-plus.hmiinfo.groupid", FT_UINT8, BASE_DEC, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_hmiinfo_flags,
+          { "Flags", "s7comm-plus.hmiinfo.flags", FT_UINT8, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
         /* Ext. decoded ID values */
         { &hf_s7commp_attrib_timestamp,
           { "Timestamp", "s7comm-plus.attrib.timestamp", FT_ABSOLUTE_TIME, ABSOLUTE_TIME_UTC, NULL, 0x0,
@@ -7293,15 +7321,19 @@ s7commp_decode_attrib_hmiinfo(tvbuff_t *tvb,
 {
     proto_item *pi = NULL;
     proto_tree *subtree = NULL;
-
-    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB || length_of_value != 9) {
-        return offset;
+    guint16 syntaxid;
+    /* For all not known types, just return the offset and do nothing */
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB || length_of_value < 9 || length_of_value > 17) {
+        return offset + length_of_value;
     }
 
-    pi = proto_tree_add_item(tree, hf_s7commp_hmiinfo, tvb, offset, 9, FALSE);
+    pi = proto_tree_add_item(tree, hf_s7commp_hmiinfo, tvb, offset, length_of_value, FALSE);
     PROTO_ITEM_SET_GENERATED(pi);
     subtree = proto_item_add_subtree(pi, ett_s7commp_attrib_general);
-
+    /* The number of fields was increased with every new syntax id 
+     * 256 = 9 Bytes, 257 = 11 Bytes, 258 = 17 Bytes
+     */
+    syntaxid = tvb_get_ntohs(tvb, offset);
     proto_tree_add_item(subtree, hf_s7commp_hmiinfo_syntaxid, tvb, offset, 2, ENC_NA);
     offset += 2;
     proto_tree_add_item(subtree, hf_s7commp_hmiinfo_version, tvb, offset, 2, ENC_NA);
@@ -7310,7 +7342,24 @@ s7commp_decode_attrib_hmiinfo(tvbuff_t *tvb,
     offset += 4;
     proto_tree_add_item(subtree, hf_s7commp_hmiinfo_priority, tvb, offset, 1, ENC_NA);
     offset += 1;
-
+    if (syntaxid >= 257) {
+        proto_tree_add_item(subtree, hf_s7commp_hmiinfo_reserved1, tvb, offset, 1, ENC_NA);
+        offset += 1;
+        proto_tree_add_item(subtree, hf_s7commp_hmiinfo_reserved2, tvb, offset, 1, ENC_NA);
+        offset += 1;
+        proto_tree_add_item(subtree, hf_s7commp_hmiinfo_reserved3, tvb, offset, 1, ENC_NA);
+        offset += 1;
+        if (syntaxid >= 258) {
+            proto_tree_add_item(subtree, hf_s7commp_hmiinfo_alarmclass, tvb, offset, 2, ENC_NA);
+            offset += 2;
+            proto_tree_add_item(subtree, hf_s7commp_hmiinfo_producer, tvb, offset, 1, ENC_NA);
+            offset += 1;
+            proto_tree_add_item(subtree, hf_s7commp_hmiinfo_groupid, tvb, offset, 1, ENC_NA);
+            offset += 1;
+            proto_tree_add_item(subtree, hf_s7commp_hmiinfo_flags, tvb, offset, 1, ENC_NA);
+            offset += 1;
+        }
+    }
     return offset;
 }
 /*******************************************************************************************************
@@ -7352,8 +7401,8 @@ s7commp_decode_attrib_multiplestais(tvbuff_t *tvb,
     hmiinfo_length = tvb_get_ntohs(tvb, offset);
     proto_tree_add_item(subtree, hf_s7commp_multiplestai_hmiinfo_length, tvb, offset, 2, ENC_NA);
     offset += 2;
-    /* Currently only the structure of Alarm AP with length = 9 is known */
-    if (messagetype == S7COMMP_MULTIPLESTAI_MESSAGETYPE_ALARMAP && hmiinfo_length == 9) {
+    /* Check for known messagetype */
+    if (messagetype >= 1 && messagetype <= 4) {
         offset = s7commp_decode_attrib_hmiinfo(tvb, subtree, offset, S7COMMP_ITEM_DATATYPE_BLOB, hmiinfo_length);
 
         lidcount = tvb_get_ntohs(tvb, offset);

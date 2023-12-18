@@ -9499,9 +9499,9 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                 value = tvb_get_varuint32(tvb, &octet_count, offset);
                 proto_tree_add_uint(tree, hf_s7commp_itemaddr_lid_value, tvb, offset, octet_count, value);
                 if (lid_cnt == lid_nest_depth) {
-                    proto_item_append_text(tree, "%u", value);
+                    proto_item_append_text(tree, "%X", value);
                 } else {
-                    proto_item_append_text(tree, "%u.", value);
+                    proto_item_append_text(tree, "%X.", value);
                 }
                 str_len += g_snprintf(&addr_filter_seq_str[str_len], sizeof(addr_filter_seq_str)-str_len, ".%X", value);
                 offset += octet_count;

@@ -5196,19 +5196,30 @@ static gint hf_s7commp_notification_timestamp = -1;
 
 /* SubscriptionReferenceList */
 static gint hf_s7commp_subscrreflist = -1;
-static gint hf_s7commp_subscrreflist_unknown1 = -1;
+static gint ett_s7commp_subscrreflist_header = -1;
+static gint hf_s7commp_subscrreflist_header = -1;
+static gint hf_s7commp_subscrreflist_header_flagnew = -1;
+static gint hf_s7commp_subscrreflist_header_subscrccnt = -1;
 static gint hf_s7commp_subscrreflist_itemcount_unsubscr = -1;
 static gint hf_s7commp_subscrreflist_itemcount_subscr = -1;
 static gint hf_s7commp_subscrreflist_unsubscr_list = -1;
 static gint hf_s7commp_subscrreflist_subscr_list = -1;
 static gint hf_s7commp_subscrreflist_item_head = -1;
 static gint ett_s7commp_subscrreflist_item_head = -1;
-static gint hf_s7commp_subscrreflist_item_head_unknown = -1;
-static gint hf_s7commp_subscrreflist_item_head_lidcnt = -1;
+static gint hf_s7commp_subscrreflist_item_head_flagunkn1 = -1;
+static gint hf_s7commp_subscrreflist_item_head_unkn2 = -1;
+static gint hf_s7commp_subscrreflist_item_head_lidcnt2 = -1;
+
+static int * const s7commp_subscrreflist_header_fields[] = {
+    &hf_s7commp_subscrreflist_header_flagnew,
+    &hf_s7commp_subscrreflist_header_subscrccnt,
+    NULL
+};
 
 static int * const s7commp_subscrreflist_item_head_fields[] = {
-    &hf_s7commp_subscrreflist_item_head_unknown,
-    &hf_s7commp_subscrreflist_item_head_lidcnt,
+    &hf_s7commp_subscrreflist_item_head_flagunkn1,
+    &hf_s7commp_subscrreflist_item_head_unkn2,
+    &hf_s7commp_subscrreflist_item_head_lidcnt2,
     NULL
 };
 static gint hf_s7commp_subscrreflist_item_unknown1 = -1;
@@ -6461,8 +6472,14 @@ proto_register_s7commp (void)
         { &hf_s7commp_subscrreflist,
           { "SubscriptionReferenceList", "s7comm-plus.subscrreflist", FT_NONE, BASE_NONE, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_subscrreflist_unknown1,
-          { "Unknown 1", "s7comm-plus.subscrreflist.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
+        { &hf_s7commp_subscrreflist_header,
+          { "Header", "s7comm-plus.subscrreflist.header", FT_UINT32, BASE_HEX, NULL, 0x0,
+            NULL, HFILL }},
+        { &hf_s7commp_subscrreflist_header_flagnew,
+          { "New subscription", "s7comm-plus.subscrreflist.header.flag_new", FT_BOOLEAN, 32, NULL, 0x80000000,
+            NULL, HFILL }},
+        { &hf_s7commp_subscrreflist_header_subscrccnt,
+          { "Subscription change counter", "s7comm-plus.subscrreflist.header.subscriptionchangecnt", FT_UINT32, BASE_DEC, NULL, 0x00ff0000,
             NULL, HFILL }},
         { &hf_s7commp_subscrreflist_itemcount_unsubscr,
           { "Number of items to unsubscribe", "s7comm-plus.subscrreflist.itemcount_unsubscr", FT_UINT32, BASE_DEC, NULL, 0x0,
@@ -6479,12 +6496,15 @@ proto_register_s7commp (void)
         { &hf_s7commp_subscrreflist_item_head,
           { "Head", "s7comm-plus.subscrreflist.item.head", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
-        { &hf_s7commp_subscrreflist_item_head_unknown,
-          { "Unknown", "s7comm-plus.subscrreflist.item.head_unkn", FT_UINT32, BASE_HEX, NULL, 0xffff0000,
-            "left word of head", HFILL }},
-        { &hf_s7commp_subscrreflist_item_head_lidcnt,
-          { "Number of following IDs", "s7comm-plus.subscrreflist.item.head_lidcnt", FT_UINT32, BASE_DEC, NULL, 0xffff,
-            "right word of head", HFILL }},
+        { &hf_s7commp_subscrreflist_item_head_flagunkn1,
+          { "UnknownFlag1", "s7comm-plus.subscrreflist.item.head_flagunkn1", FT_BOOLEAN, 32, NULL, 0x80000000,
+            NULL, HFILL }},
+        { &hf_s7commp_subscrreflist_item_head_unkn2,
+          { "Unknown value", "s7comm-plus.subscrreflist.item.head_unkn2", FT_UINT32, BASE_DEC, NULL, 0x7fff0000,
+            NULL, HFILL }},
+        { &hf_s7commp_subscrreflist_item_head_lidcnt2,
+          { "Number of fields Part 2 (IDs)", "s7comm-plus.subscrreflist.item.head_lidcnt", FT_UINT32, BASE_DEC, NULL, 0xffff,
+            NULL , HFILL }},
         { &hf_s7commp_subscrreflist_item_unknown1,
           { "Unknown 1", "s7comm-plus.subscrreflist.item.unknown1", FT_UINT32, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
@@ -6775,6 +6795,7 @@ proto_register_s7commp (void)
         &ett_s7commp_object_classflags,
         &ett_s7commp_streamdata,
         &ett_s7commp_subscrreflist,
+        &ett_s7commp_subscrreflist_header,
         &ett_s7commp_subscrreflist_item_head,
         &ett_s7commp_securitykeyencryptedkey,
         &ett_s7commp_compressedblob,
@@ -7330,7 +7351,7 @@ s7commp_decode_attrib_hmiinfo(tvbuff_t *tvb,
     pi = proto_tree_add_item(tree, hf_s7commp_hmiinfo, tvb, offset, length_of_value, FALSE);
     PROTO_ITEM_SET_GENERATED(pi);
     subtree = proto_item_add_subtree(pi, ett_s7commp_attrib_general);
-    /* The number of fields was increased with every new syntax id 
+    /* The number of fields was increased with every new syntax id
      * 256 = 9 Bytes, 257 = 11 Bytes, 258 = 17 Bytes
      */
     syntaxid = tvb_get_ntohs(tvb, offset);
@@ -9632,8 +9653,9 @@ s7commp_decode_item_address_sub(tvbuff_t *tvb,
     proto_item_append_text(adr_item_tree, " [%u]:", item_nr);
 
     /* Example: 0x80040003
-     * What the left 2 bytes (0x8004) stand for is not known,
-     * the right 2 bytes give the number of following LIDs.
+     * 0x80000000 -> possible (unknown) flag
+     * 0x7fff0000 -> number of fields before LID counting starts
+     * 0x0000ffff -> give the number of following LIDs plus 1 for SubArea
      */
     value = tvb_get_varuint32(tvb, &octet_count, offset);
     lid_nest_depth = value & 0xffff;
@@ -10133,6 +10155,7 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     proto_tree *list_item_tree = NULL;
     proto_item *sub_list_item = NULL;
     proto_tree *sub_list_item_tree = NULL;
+    proto_item *ret_item = NULL;
 
     guint8 octet_count = 0;
     guint32 item_count_unsubscr = 0;
@@ -10141,6 +10164,7 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
     guint32 array_index = 1;
     guint32 list_start_offset;
     guint32 sub_list_start_offset;
+    guint32 value = 0;
 
     /* Datatype flags: should be 0x20 for Addressarray
      * Datatype      : should be 0x04 for UDInt
@@ -10162,9 +10186,15 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
      * 1st value:
      * On Request Create Object:     0x80010000
      * On Request SetMultiVariables: 0x00020000, 0x00030000, 0x00040000, 0x00050000, 0x00060000
-     *                               Modifies the list?
+     *                               -> to modify an existing subscription
+     * Bitmask: 0x80000000 is set on creating a complete new subscription
+     * Bitmask: 0x00ff0000 seems to be the SubscriptionChangeCounter we get on the next Notification.
+     *                     Which seems to be only one byte, from what has been seen in the Notifications.
      */
-    proto_tree_add_varuint32(list_item_tree, hf_s7commp_subscrreflist_unknown1, tvb, offset, &octet_count);
+    value = tvb_get_varuint32(tvb, &octet_count, offset);
+    ret_item = proto_tree_add_bitmask_value(list_item_tree, tvb, offset, hf_s7commp_subscrreflist_header,
+        ett_s7commp_subscrreflist_header, s7commp_subscrreflist_header_fields, value);
+    proto_item_set_len(ret_item, octet_count);
     offset += octet_count;
     array_index += 1;
 

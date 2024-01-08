@@ -4963,6 +4963,7 @@ static gint ett_s7commp_packedstruct = -1;
 static gint hf_s7commp_packedstruct = -1;
 static gint hf_s7commp_packedstruct_interfacetimestamp = -1;
 static gint hf_s7commp_packedstruct_transpflags = -1;
+static gint hf_s7commp_packedstruct_transpflags_classicnonoptimized = -1;
 static gint hf_s7commp_packedstruct_transpflags_always_set = -1;
 static gint hf_s7commp_packedstruct_transpflags_count2_present = -1;
 static gint hf_s7commp_packedstruct_elementcount = -1;
@@ -4971,6 +4972,7 @@ static gint hf_s7commp_packedstruct_data = -1;
 static gint ett_s7commp_packedstruct_transpflags = -1;
 
 static int * const s7commp_packedstruct_transpflags_fields[] = {
+    &hf_s7commp_packedstruct_transpflags_classicnonoptimized,
     &hf_s7commp_packedstruct_transpflags_always_set,
     &hf_s7commp_packedstruct_transpflags_count2_present,
     NULL
@@ -5875,6 +5877,9 @@ proto_register_s7commp (void)
         { &hf_s7commp_packedstruct_transpflags,
           { "Transport Flags", "s7comm-plus.item.packedstruct.transpflags", FT_UINT16, BASE_HEX, NULL, 0x0,
             NULL, HFILL }},
+        { &hf_s7commp_packedstruct_transpflags_classicnonoptimized,
+          { "ClassicNonoptimizedOffsets", "s7comm-plus.item.packedstruct.transpflags.classicnonoptimized", FT_BOOLEAN, 16, NULL, 0x01,
+            "Use ClassicNonoptimizedOffsets to interpret the packed data", HFILL }},
         { &hf_s7commp_packedstruct_transpflags_always_set,
           { "AlwaysSet", "s7comm-plus.item.packedstruct.transpflags.always_set", FT_BOOLEAN, 16, NULL, 0x02,
             "Unknown meaning, always set?", HFILL }},

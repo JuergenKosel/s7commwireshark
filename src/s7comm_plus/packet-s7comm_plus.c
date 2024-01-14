@@ -5562,7 +5562,11 @@ s7commp_idname_fmt(gchar *result, guint32 id_number)
             g_snprintf(result, ITEM_LABEL_LENGTH, "TI_StructArrayDB.%u.%u", section, xindex);
         } else if (id_number >= 0x9eae0000 && id_number <= 0x9eaeffff) {    /* Haengt auch mit dem Alarmsystem zusammen??? TODO */
             g_snprintf(result, ITEM_LABEL_LENGTH, "?UnknownAlarms?.%u", section);
-        } else if (id_number >= 0x02000000 && id_number <= 0x02ffffff) {    /* Explore Bereich LIB */
+        } else if (id_number >= 0x020a0000 && id_number <= 0x020affff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_STRING_%u", section);  /* String with length e.g. String[10] -> TI_STRING_10, used in alarm associated values */
+        } else if (id_number >= 0x020b0000 && id_number <= 0x020bffff) {
+            g_snprintf(result, ITEM_LABEL_LENGTH, "TI_WSTRING_%u", section); /* WString with length e.g. WString[10] -> TI_WSTRING_10, used in alarm associated values */
+        } else if (id_number >= 0x02000000 && id_number <= 0x02ffffff) {     /* Explore Bereich LIB */
             str = try_val_to_str(xindex, explore_class_lib_names);
             if (str) {
                 g_snprintf(result, ITEM_LABEL_LENGTH, "TI_LIB.%s.%u", str, section);

@@ -2127,18 +2127,28 @@ static const value_string id_number_names[] = {
     { 65421,    "NativeObjects.theCPU2_IE3_Port1_Rid" },            /* V14 */
     { 65425,    "NativeObjects.theCPU2_IE4_NetworkParameters_Rid" },/* V14 */
     { 65430,    "NativeObjects.theCPU2_IE4_Rid" },                  /* V14 */
-    { 33554433, "TI_BOOL" },
-    { 33554436, "TI_WORD" },
-    { 33554437, "TI_INT8" },
-    { 33554439, "TI_INT16" },
-    { 33554440, "TI_REAL32" },
-    { 33554451, "TI_S7_STRING" },
-    { 33554480, "TI_REAL64" },
-    { 33554482, "TI_INT32" },
-    { 33554484, "TI_UINT8" },
-    { 33554485, "TI_UINT16" },
-    { 33554486, "TI_UINT32" },
-    { 33554494, "TI_S7_WSTRING" },
+    /* Type informations used for example in Alarms associated values,
+     * where only the following types are allowed:
+     * Bool, Byte, Char, DInt, DWord, Int, LReal, Real, SInt, String, UDInt, UInt, WChar, Word, WString
+     * The value is 0x2000000 plus the softdatatype constant (eg. 0x2000000 + S7COMMP_SOFTDATATYPE_BOOL)
+     */
+    { 0x2000000 + 1,    "TI_BOOL" },
+    { 0x2000000 + 2,    "TI_BYTE" },
+    { 0x2000000 + 3,    "TI_CHAR" },
+    { 0x2000000 + 4,    "TI_WORD" },
+    { 0x2000000 + 5,    "TI_INT" },
+    { 0x2000000 + 6,    "TI_DWORD" },
+    { 0x2000000 + 7,    "TI_DINT" },
+    { 0x2000000 + 8,    "TI_REAL" },
+    { 0x2000000 + 19,   "TI_STRING" },
+    { 0x2000000 + 48,   "TI_LREAL" },
+    { 0x2000000 + 52,   "TI_USINT" },
+    { 0x2000000 + 53,   "TI_UINT" },
+    { 0x2000000 + 54,   "TI_UDINT" },
+    { 0x2000000 + 55,   "TI_SINT" },
+    { 0x2000000 + 61,   "TI_WCHAR" },
+    { 0x2000000 + 62,   "TI_WSTRING" },
+
     { 2147467264, "TemporyRIDBegin" },
     { 2147483647, "TemporyRIDEnd" },
     { 0,        NULL }

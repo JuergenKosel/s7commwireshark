@@ -6993,7 +6993,6 @@ tvb_get_varuint64(tvbuff_t *tvb, uint8_t *octet_count, uint32_t offset)
     *octet_count = counter;
     if (cont) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
         octet = tvb_get_uint8(tvb, offset);
-        offset += 1;
         val <<= 8;
         val += octet;
     }
@@ -7026,7 +7025,6 @@ tvb_get_varint64(tvbuff_t *tvb, uint8_t *octet_count, uint32_t offset)
     *octet_count = counter;
     if (cont) {        /* 8*7 bit + 8 bit = 64 bit -> Sonderfall im letzten Octett! */
         octet = tvb_get_uint8(tvb, offset);
-        offset += 1;
         val <<= 8;
         val += octet;
     }
@@ -7192,7 +7190,7 @@ s7commp_decode_integrity_wid(tvbuff_t *tvb,
                              int *dlength,
                              uint32_t offset)
 {
-    uint32_t offset_save = 0;
+    uint32_t offset_save;
     uint8_t octet_count = 0;
 
     if (protocolversion == S7COMMP_PROTOCOLVERSION_3) {
@@ -8602,7 +8600,7 @@ s7commp_decode_itemnumber_errorvalue_list(tvbuff_t *tvb,
     int16_t errorcode = 0;
     bool errorextension = false;
 
-    uint32_t start_offset = offset;
+    uint32_t start_offset;
     uint32_t list_start_offset = offset;
 
     list_item = proto_tree_add_item(tree, hf_s7commp_errorvaluelist, tvb, offset, -1, ENC_NA);
@@ -9290,7 +9288,7 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
 {
     uint8_t object_id_count = 0;
     uint8_t octet_count = 0;
-    uint32_t object_id = 0;
+    uint32_t object_id;
     int i;
     uint16_t errorcode = 0;
     bool errorextension = false;
@@ -9397,8 +9395,8 @@ s7commp_decode_item_address_part1(tvbuff_t *tvb,
     uint32_t value;
     proto_item *area_item = NULL;
     proto_item *area_item_tree = NULL;
-    uint16_t var_area1 = 0;
-    uint16_t db_number = 0;
+    uint16_t var_area1;
+    uint16_t db_number;
 
     /* The first value is an ID from the ID list which can be seen as kind of base-area for the following IDs.
      * E.g. for Marker (M) area this is ID 82. For datablocks there is no fixed ID as it consists of a fixed and a
@@ -9448,8 +9446,8 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                                   uint32_t offset)
 {
     uint32_t value = 0;
-    uint32_t lid_cnt = 0;
-    uint32_t first_lid = 0;
+    uint32_t lid_cnt;
+    uint32_t first_lid;
     uint8_t octet_count = 0;
     const uint8_t *str_id_name;
     bool is_datablock_access = false;
@@ -10812,7 +10810,7 @@ s7commp_decode_request_explore(tvbuff_t *tvb,
                                uint32_t offset)
 {
     int number_of_objects = 0;
-    int number_of_ids = 0;
+    int number_of_ids;
     int i;
     uint32_t start_offset;
     uint32_t id_number = 0;
@@ -11122,10 +11120,10 @@ s7commp_decode_data(tvbuff_t *tvb,
     proto_item *item = NULL;
     proto_tree *item_tree = NULL;
 
-    uint16_t seqnum = 0;
+    uint16_t seqnum;
     uint16_t functioncode = 0;
     uint8_t opcode = 0;
-    uint32_t offset_save = 0;
+    uint32_t offset_save;
     bool has_integrity_id = true;
     bool has_objectqualifier = false;
     const uint8_t *str_opcode;
@@ -11371,13 +11369,13 @@ dissect_s7commp(tvbuff_t *tvb,
     proto_tree *s7commp_trailer_tree = NULL;
 
     uint32_t offset = 0;
-    uint32_t offset_save = 0;
+    uint32_t offset_save;
 
     uint8_t protocolversion = 0;
-    int dlength = 0;
-    uint8_t keepaliveseqnum = 0;
+    int dlength;
+    uint8_t keepaliveseqnum;
 
-    bool has_trailer = false;
+    bool has_trailer;
     bool save_fragmented;
     uint32_t frag_id;
     frame_state_t *packet_state = NULL;
@@ -11386,11 +11384,11 @@ dissect_s7commp(tvbuff_t *tvb,
     bool first_fragment = false;
     bool inner_fragment = false;
     bool last_fragment = false;
-    bool reasm_standard = false;
+    bool reasm_standard;
     tvbuff_t* next_tvb = NULL;
 
-    uint8_t reasm_opcode = 0;
-    uint16_t reasm_function = 0;
+    uint8_t reasm_opcode;
+    uint16_t reasm_function;
 
     guint packetlength;
 

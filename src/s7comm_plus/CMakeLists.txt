@@ -46,7 +46,7 @@ set_source_files_properties(
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 	${ZLIB_INCLUDE_DIR}
 	${GCRYPT_INCLUDE_DIR}
-	${GNUTLS_INCLUDE_DIR}
+	${GNUTLS_INCLUDE_DIRS}
 )
 
 register_plugin_files(plugin.c

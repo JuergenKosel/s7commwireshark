@@ -25,7 +25,7 @@ include $(top_srcdir)/plugins/epan/Makefile.am.inc
 # the name of the plugin
 PLUGIN_NAME = s7comm_plus
 
-PLUGIN_VERSION = 0.0.9
+PLUGIN_VERSION = 0.0.10
 
 BUILT_SOURCES = \
 	plugin.c

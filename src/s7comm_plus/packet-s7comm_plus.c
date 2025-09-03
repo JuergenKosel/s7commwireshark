@@ -7877,6 +7877,35 @@ DIAG_ON(cast-qual)
 }
 /*******************************************************************************************************
  *
+ * Show an uncompressed XML blob
+ *
+ *******************************************************************************************************/
+static uint32_t
+s7commp_decode_uncompressed_xml(tvbuff_t *tvb,
+                        packet_info *pinfo,
+                        proto_tree *tree,
+                        uint32_t offset,
+                        uint8_t datatype,
+                        uint32_t length_of_value)
+{
+    tvbuff_t *next_tvb;
+    bool dissected;
+    
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB) {
+        return offset;
+    }
+    
+    next_tvb = tvb_new_subset_length(tvb, offset, length_of_value);
+    dissected = call_dissector_only(xml_handle, next_tvb, pinfo, tree, NULL);
+    if (!dissected) {
+        expert_add_info(pinfo, tree, &ei_s7commp_blobdecompression_xmlsubdissector_failed);
+    }
+    offset += length_of_value;
+    
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decoding of a packed struct value
  *
  *******************************************************************************************************/
@@ -7988,6 +8017,7 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 2585:  /* FunctionalObject.NetworkTitles */
         case 2589:  /* FunctionalObject.DebugInfo */
         case 4683:  /* ConstantsGlobal.LineComments */
+        case 7564:  /* DataInterface.XrefInfo */
             /* Exception: Sparsearray elements with a Sparsearray-Key >= 0x80000000 are not compressed,
              * or at least compressed with a different method.
              */
@@ -8006,6 +8036,10 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
             break;
         case 7813:  /* DAI.HmiInfo */
             offset = s7commp_decode_attrib_hmiinfo(tvb, tree, value_start_offset, datatype, length_of_value);
+            break;
+        case 7845:  /* DataInterface.AlarmTexts */
+        case 7853:  /* DataInterface.AlarmDescription */
+            offset = s7commp_decode_uncompressed_xml(tvb, pinfo, tree, value_start_offset, datatype, length_of_value);
             break;
         case 7859:  /* MultipleSTAI.STAIs */
             offset = s7commp_decode_attrib_multiplestais(tvb, tree, value_start_offset, datatype, length_of_value);

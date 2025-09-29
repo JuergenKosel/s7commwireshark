@@ -2906,10 +2906,10 @@ static const value_string tagdescr_section_names[] = {
 #define S7COMMP_SOFTDATATYPE_AOMIDENT           128
 #define S7COMMP_SOFTDATATYPE_EVENTANY           129
 #define S7COMMP_SOFTDATATYPE_EVENTATT           130
-#define S7COMMP_SOFTDATATYPE_EVENTHWINT         131
-#define S7COMMP_SOFTDATATYPE_FOLDER             132
-#define S7COMMP_SOFTDATATYPE_AOMAID             133
-#define S7COMMP_SOFTDATATYPE_AOMLINK            134
+#define S7COMMP_SOFTDATATYPE_FOLDER             131
+#define S7COMMP_SOFTDATATYPE_AOMAID             132
+#define S7COMMP_SOFTDATATYPE_AOMLINK            133
+#define S7COMMP_SOFTDATATYPE_EVENTHWINT         134
 #define S7COMMP_SOFTDATATYPE_HWANY              144
 #define S7COMMP_SOFTDATATYPE_HWIOSYSTEM         145
 #define S7COMMP_SOFTDATATYPE_HWDPMASTER         146
@@ -3041,10 +3041,10 @@ static const value_string tagdescr_softdatatype_names[] = {
     { S7COMMP_SOFTDATATYPE_AOMIDENT,            "AOM_IDENT" },
     { S7COMMP_SOFTDATATYPE_EVENTANY,            "EVENT_ANY" },
     { S7COMMP_SOFTDATATYPE_EVENTATT,            "EVENT_ATT" },
-    { S7COMMP_SOFTDATATYPE_EVENTHWINT,          "EVENT_HWINT" },
     { S7COMMP_SOFTDATATYPE_FOLDER,              "FOLDER" },
     { S7COMMP_SOFTDATATYPE_AOMAID,              "AOM_AID" },
     { S7COMMP_SOFTDATATYPE_AOMLINK,             "AOM_LINK" },
+    { S7COMMP_SOFTDATATYPE_EVENTHWINT,          "EVENT_HWINT" },
     { S7COMMP_SOFTDATATYPE_HWANY,               "HW_ANY" },
     { S7COMMP_SOFTDATATYPE_HWIOSYSTEM,          "HW_IOSYSTEM" },
     { S7COMMP_SOFTDATATYPE_HWDPMASTER,          "HW_DPMASTER" },
@@ -7877,6 +7877,35 @@ DIAG_ON(cast-qual)
 }
 /*******************************************************************************************************
  *
+ * Show an uncompressed XML blob
+ *
+ *******************************************************************************************************/
+static uint32_t
+s7commp_decode_uncompressed_xml(tvbuff_t *tvb,
+                        packet_info *pinfo,
+                        proto_tree *tree,
+                        uint32_t offset,
+                        uint8_t datatype,
+                        uint32_t length_of_value)
+{
+    tvbuff_t *next_tvb;
+    bool dissected;
+    
+    if (datatype != S7COMMP_ITEM_DATATYPE_BLOB) {
+        return offset;
+    }
+    
+    next_tvb = tvb_new_subset_length(tvb, offset, length_of_value);
+    dissected = call_dissector_only(xml_handle, next_tvb, pinfo, tree, NULL);
+    if (!dissected) {
+        expert_add_info(pinfo, tree, &ei_s7commp_blobdecompression_xmlsubdissector_failed);
+    }
+    offset += length_of_value;
+    
+    return offset;
+}
+/*******************************************************************************************************
+ *
  * Decoding of a packed struct value
  *
  *******************************************************************************************************/
@@ -7988,6 +8017,7 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
         case 2585:  /* FunctionalObject.NetworkTitles */
         case 2589:  /* FunctionalObject.DebugInfo */
         case 4683:  /* ConstantsGlobal.LineComments */
+        case 7564:  /* DataInterface.XrefInfo */
             /* Exception: Sparsearray elements with a Sparsearray-Key >= 0x80000000 are not compressed,
              * or at least compressed with a different method.
              */
@@ -8006,6 +8036,10 @@ s7commp_decode_value_extended(tvbuff_t *tvb,
             break;
         case 7813:  /* DAI.HmiInfo */
             offset = s7commp_decode_attrib_hmiinfo(tvb, tree, value_start_offset, datatype, length_of_value);
+            break;
+        case 7845:  /* DataInterface.AlarmTexts */
+        case 7853:  /* DataInterface.AlarmDescription */
+            offset = s7commp_decode_uncompressed_xml(tvb, pinfo, tree, value_start_offset, datatype, length_of_value);
             break;
         case 7859:  /* MultipleSTAI.STAIs */
             offset = s7commp_decode_attrib_multiplestais(tvb, tree, value_start_offset, datatype, length_of_value);

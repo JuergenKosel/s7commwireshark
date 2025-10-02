@@ -7740,15 +7740,12 @@ s7commp_decompress_blob(tvbuff_t *tvb,
         uncomp_blob = (uint8_t *)wmem_alloc(pinfo->pool, BLOB_DECOMPRESS_BUFSIZE);
         blobptr = tvb_get_ptr(tvb, offset, length_comp_blob);
 
-        streamp = wmem_new0(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
-                                                  * removed wmem_packet_scope()
-                                                  */
-        WMEM_ALLOCATOR_SIMPLE
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444 removed wmem_packet_scope() */
+        streamp = wmem_new0(WMEM_ALLOCATOR_SIMPLE, z_stream);
 #else
-        wmem_packet_scope()
+		streamp = wmem_new0(wmem_packet_scope(), z_stream);        
 #endif
-        , z_stream);
+
         inflateInit(streamp);
         streamp->avail_in = length_comp_blob;
 #ifdef z_const

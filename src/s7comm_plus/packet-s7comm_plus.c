@@ -5512,7 +5512,7 @@ proto_reg_handoff_s7commp(void)
 static void
 s7commp_idname_fmt(char *result, uint32_t id_number)
 {
-    const uint8_t *str;
+    const char *str;
     uint32_t section;
     uint32_t xindex;
 
@@ -7743,7 +7743,7 @@ s7commp_decompress_blob(tvbuff_t *tvb,
 #if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444 removed wmem_packet_scope() */
         streamp = wmem_new0(WMEM_ALLOCATOR_SIMPLE, z_stream);
 #else
-		streamp = wmem_new0(wmem_packet_scope(), z_stream);        
+		streamp = wmem_new0(wmem_packet_scope(), z_stream);
 #endif
 
         inflateInit(streamp);
@@ -7847,7 +7847,7 @@ DIAG_ON(cast-qual)
                     break;
             }
             if (dict) {
-                retcode = inflateSetDictionary(streamp, dict, dict_size);
+                retcode = inflateSetDictionary(streamp, (const unsigned char*) dict, dict_size);
                 if (retcode == Z_OK) {
                     retcode = inflate(streamp, Z_FINISH);
                     /* retcode is Z_OK or Z_STREAM_END */
@@ -8882,7 +8882,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     int32_t number_of_array_dimensions;
     int32_t array_dimension;
     const uint8_t *str_name;
-    const uint8_t *str_type;
+    const char *str_type;
     int32_t mdarray_lowerbounds[6];
     int32_t mdarray_elementcount[6];
 
@@ -9039,7 +9039,7 @@ s7commp_decode_vartypelist(tvbuff_t *tvb,
     proto_item *item;
     proto_tree *tag_tree;
     int i = 1;
-    const uint8_t *str_type;
+    const char *str_type;
     uint16_t block_len;
     uint16_t attributeflags2;
     int32_t array_lowerbounds, array_elementcount;
@@ -9543,7 +9543,7 @@ s7commp_decode_response_createobject(tvbuff_t *tvb,
     uint8_t octet_count = 0;
     uint32_t object_id;
     int i;
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -9605,7 +9605,7 @@ s7commp_decode_response_deleteobject(tvbuff_t *tvb,
                                      bool *has_integrity_id)
 {
     uint32_t object_id;
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -9644,7 +9644,7 @@ s7commp_decode_item_address_part1(tvbuff_t *tvb,
                                   uint32_t offset)
 {
     uint8_t octet_count = 0;
-    const uint8_t *str_id_name;
+    const char *str_id_name;
     uint32_t value;
     proto_item *area_item = NULL;
     proto_item *area_item_tree = NULL;
@@ -9707,7 +9707,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
     uint32_t lid_cnt;
     uint32_t first_lid;
     uint8_t octet_count = 0;
-    const uint8_t *str_id_name;
+    const char *str_id_name;
     bool is_datablock_access = false;
     bool is_iqmct_access = false;
     bool is_classicblob_access = false;
@@ -10170,7 +10170,7 @@ s7commp_decode_response_getmultivar(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     uint32_t offset)
 {
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -10190,7 +10190,7 @@ s7commp_decode_response_setmultivar(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     uint32_t offset)
 {
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
     /* In difference to a read-response we go immediately into the error-area when the first byte != 0.
      * A successful write-request seems not generate a explicit return-value.
@@ -10636,7 +10636,7 @@ s7commp_decode_response_setvariable(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     uint32_t offset)
 {
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
 
     return s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -10697,7 +10697,7 @@ s7commp_decode_response_getvariable(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     uint32_t start_offset;
     int struct_level = 0;
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -10764,7 +10764,7 @@ s7commp_decode_response_getvarsubstr(tvbuff_t *tvb,
     proto_tree *data_item_tree = NULL;
     int struct_level = 0;
     uint32_t start_offset;
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -10811,7 +10811,7 @@ s7commp_decode_response_setvarsubstr(tvbuff_t *tvb,
                                      proto_tree *tree,
                                      uint32_t offset)
 {
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -10935,7 +10935,7 @@ s7commp_decode_response_getlink(tvbuff_t *tvb,
                                 proto_tree *tree,
                                 uint32_t offset)
 {
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
     uint8_t number_of_items;
     uint32_t linkid;
@@ -11018,7 +11018,7 @@ s7commp_decode_response_beginsequence(tvbuff_t *tvb,
                                       uint32_t offset,
                                       uint8_t protocolversion)
 {
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -11057,7 +11057,7 @@ s7commp_decode_response_endsequence(tvbuff_t *tvb,
                                     proto_tree *tree,
                                     uint32_t offset)
 {
-    uint16_t errorcode = 0;
+    int16_t errorcode = 0;
     bool errorextension = false;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -11095,7 +11095,7 @@ s7commp_decode_response_invoke(tvbuff_t *tvb,
                                proto_tree *tree,
                                uint32_t offset)
 {
-    uint16_t errorcode;
+    int16_t errorcode;
     bool errorextension = false;
 
     offset = s7commp_decode_returnvalue(tvb, pinfo, tree, offset, false, &errorcode, &errorextension);
@@ -11449,7 +11449,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     uint32_t offset_save;
     bool has_integrity_id = true;
     bool has_objectqualifier = false;
-    const uint8_t *str_opcode;
+    const char *str_opcode;
 
     opcode = tvb_get_uint8(tvb, offset);
     /* 1: Opcode */

@@ -53,7 +53,7 @@ void proto_register_s7commp(void);
 
 static uint32_t s7commp_decode_id_value_list(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, uint32_t offset, uint32_t relid, bool recursive, bool disable_vlq);
 static uint32_t s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb, proto_tree *tree, uint32_t offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                           ,
                                           packet_info *pinfo
 #endif
@@ -6919,7 +6919,7 @@ s7commp_proto_item_append_idname(proto_tree *tree, uint32_t id_number, char *str
     char *result;
 
     result = (char *)wmem_alloc(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
         WMEM_ALLOCATOR_SIMPLE
@@ -6945,7 +6945,7 @@ s7commp_pinfo_append_idname(packet_info *pinfo, uint32_t id_number, char *str_pr
     char *result;
 
     result = (char *)wmem_alloc(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
         WMEM_ALLOCATOR_SIMPLE
@@ -7740,7 +7740,7 @@ s7commp_decompress_blob(tvbuff_t *tvb,
         uncomp_blob = (uint8_t *)wmem_alloc(pinfo->pool, BLOB_DECOMPRESS_BUFSIZE);
         blobptr = tvb_get_ptr(tvb, offset, length_comp_blob);
 
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444 removed wmem_packet_scope() */
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444 removed wmem_packet_scope() */
         streamp = wmem_new0(WMEM_ALLOCATOR_SIMPLE, z_stream);
 #else
 		streamp = wmem_new0(wmem_packet_scope(), z_stream);        
@@ -8135,7 +8135,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     uint32_t struct_value = 0;
 
     str_val = (char *)wmem_alloc(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
         WMEM_ALLOCATOR_SIMPLE
@@ -8145,7 +8145,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         , S7COMMP_ITEMVAL_STR_VAL_MAX);
     str_val[0] = '\0';
     str_arrval = (char *)wmem_alloc(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
         WMEM_ALLOCATOR_SIMPLE
@@ -8377,7 +8377,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 value_start_offset = offset;
                 struct_value = tvb_get_ntohl(tvb, offset);
                 struct_resultstring = (char *)wmem_alloc(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
                     WMEM_ALLOCATOR_SIMPLE
@@ -8426,7 +8426,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 tmptime.nsecs = uint64val % 1000000000;
                 pi = proto_tree_add_time(current_tree, hf_s7commp_itemval_timestamp, tvb, offset, length_of_value, &tmptime);
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s", proto_item_get_display_repr(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
                                WMEM_ALLOCATOR_SIMPLE
@@ -8467,7 +8467,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                 value_start_offset = offset;
                 g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "%s",
                        tvb_get_string_enc(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
                            WMEM_ALLOCATOR_SIMPLE
@@ -8511,7 +8511,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                         if (length_of_value > 0) {
                             g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s",
                                        tvb_bytes_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
                                            WMEM_ALLOCATOR_SIMPLE
@@ -8537,7 +8537,7 @@ s7commp_decode_value(tvbuff_t *tvb,
                     if (length_of_value > 0) {
                         g_snprintf(str_val, S7COMMP_ITEMVAL_STR_VAL_MAX, "0x%s",
                                    tvb_bytes_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
                                        WMEM_ALLOCATOR_SIMPLE
@@ -8599,7 +8599,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         proto_item_set_len(array_item_tree, offset - start_offset);
         proto_item_append_text(data_item_tree, " (%s) %s[%u] = %s",
                                val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                    pinfo->pool,
@@ -8610,7 +8610,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         proto_item_set_len(array_item_tree, offset - start_offset);
         proto_item_append_text(data_item_tree, " (%s) %s = %s",
                                val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                    pinfo->pool,
@@ -8621,7 +8621,7 @@ s7commp_decode_value(tvbuff_t *tvb,
         offset += octet_count;
         proto_item_append_text(data_item_tree, " (Addressarray %s) = %s",
                                val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                    pinfo->pool,
@@ -8643,7 +8643,7 @@ s7commp_decode_value(tvbuff_t *tvb,
     } else { /* not an array or address array */
         proto_item_append_text(data_item_tree, " (%s) = %s",
                                val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                    pinfo->pool,
@@ -8709,7 +8709,7 @@ s7commp_decode_id_value_list(tvbuff_t *tvb,
             switch (id_number) {
                 case 1048:  /* 1048 = SubscriptionReferenceList. Done at this location because it's an array of integers. */
                     s7commp_decode_attrib_subscriptionreflist(tvb, tree, start_offset + octet_count
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                                               ,
                                                               pinfo
 #endif
@@ -8894,7 +8894,7 @@ s7commp_decode_tagdescription(tvbuff_t *tvb,
     offset += octet_count;
 
     proto_tree_add_item_ret_string(tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA,
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
                                    WMEM_ALLOCATOR_SIMPLE
@@ -9338,7 +9338,7 @@ s7commp_decode_varnamelist(tvbuff_t *tvb,
             proto_tree_add_uint(tag_tree, hf_s7commp_tagdescr_namelength, tvb, offset, 1, length_of_value);
             offset += 1;
             proto_tree_add_item_ret_string(tag_tree, hf_s7commp_tagdescr_name, tvb, offset, length_of_value, ENC_UTF_8|ENC_NA,
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
                                            WMEM_ALLOCATOR_SIMPLE
@@ -9697,7 +9697,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                                   uint32_t crc,
                                   uint32_t lid_nest_depth,
                                   uint32_t offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                   ,
                                   packet_info *pinfo
 #endif
@@ -9758,7 +9758,7 @@ s7commp_decode_item_address_part2(tvbuff_t *tvb,
                 proto_tree_add_uint(tree, hf_s7commp_itemaddr_lid_accessaid, tvb, offset, octet_count, first_lid);
                 proto_item_append_text(tree, ", %s (%u)",
                                        val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                            pinfo->pool,
@@ -9844,7 +9844,7 @@ s7commp_decode_item_address(tvbuff_t *tvb,
                             uint32_t *number_of_fields,
                             uint32_t item_nr,
                             uint32_t offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                   ,
                             packet_info *pinfo
 #endif
@@ -9903,7 +9903,7 @@ s7commp_decode_item_address(tvbuff_t *tvb,
     *number_of_fields += 1;
 
     offset = s7commp_decode_item_address_part2(tvb, adr_item_tree, number_of_fields, id_value, crc, lid_nest_depth, offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                                ,
                                                pinfo
 #endif
@@ -9928,7 +9928,7 @@ s7commp_decode_item_address_sub(tvbuff_t *tvb,
                                 uint32_t *number_of_fields,
                                 uint32_t item_nr,
                                 uint32_t offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                 ,
                                 packet_info *pinfo
 #endif
@@ -9978,7 +9978,7 @@ s7commp_decode_item_address_sub(tvbuff_t *tvb,
     *number_of_fields += 1;
 
     offset = s7commp_decode_item_address_part2(tvb, adr_item_tree, number_of_fields, id_value, crc, lid_nest_depth, offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                                ,
                                                pinfo
 #endif
@@ -10034,7 +10034,7 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
         for (i = 1; i <= item_count; i++) {
             offset = s7commp_decode_item_address(tvb, list_item_tree, &number_of_fields, i, offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                                  ,
                                                  pinfo
 #endif
@@ -10080,7 +10080,7 @@ s7commp_decode_request_setmultivar(tvbuff_t *tvb,
             if (id_number == 1048) {
                 tvb_get_varuint32(tvb, &octet_count, offset); /* get length of the item-number element */
                 s7commp_decode_attrib_subscriptionreflist(tvb, list_item_tree, offset_save + octet_count
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                                           ,
                                                           pinfo
 #endif
@@ -10103,7 +10103,7 @@ static uint32_t
 s7commp_decode_request_getmultivar(tvbuff_t *tvb,
                                    proto_tree *tree,
                                    uint32_t offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                    ,
                                    packet_info *pinfo
 #endif
@@ -10137,7 +10137,7 @@ s7commp_decode_request_getmultivar(tvbuff_t *tvb,
         list_item_tree = proto_item_add_subtree(list_item, ett_s7commp_addresslist);
         for (i = 1; i <= item_count; i++) {
             offset = s7commp_decode_item_address(tvb, list_item_tree, &number_of_fields, i, offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                                  ,
                                                  pinfo
 #endif
@@ -10472,7 +10472,7 @@ static uint32_t
 s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
                                           proto_tree *tree,
                                           uint32_t offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                           ,
                                           packet_info *pinfo
 #endif
@@ -10552,7 +10552,7 @@ s7commp_decode_attrib_subscriptionreflist(tvbuff_t *tvb,
         sub_list_item_tree = proto_item_add_subtree(sub_list_item, ett_s7commp_subscrreflist);
         for (i = 1; i <= item_count_subscr; i++) {
             offset = s7commp_decode_item_address_sub(tvb, sub_list_item_tree, &array_index, i, offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                                      ,
                                                      pinfo
 #endif
@@ -11413,7 +11413,7 @@ s7commp_decode_sys_event(tvbuff_t *tvb,
     } else if (str_len > 0) {
         /* maybe ASCII text */
         proto_tree_add_item_ret_string(data_item_tree, hf_s7commp_sysevent_message, tvb, offset, str_len, ENC_ASCII|ENC_NA,
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/5ca5c9ca372e06881b23ba9f4fdcb6b479886444
                                                   * removed wmem_packet_scope()
                                                   */
                                        WMEM_ALLOCATOR_SIMPLE
@@ -11458,7 +11458,7 @@ s7commp_decode_data(tvbuff_t *tvb,
     if (str_opcode) {
         proto_item_append_text(tree, ": %s",
                                val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                    pinfo->pool,
@@ -11476,7 +11476,7 @@ s7commp_decode_data(tvbuff_t *tvb,
         if (opcode == S7COMMP_OPCODE_NOTIFICATION) {
             col_append_fstr(pinfo->cinfo, COL_INFO, " [%s]",
                             val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                 pinfo->pool,
@@ -11515,21 +11515,21 @@ s7commp_decode_data(tvbuff_t *tvb,
             col_append_fstr(pinfo->cinfo, COL_INFO, " Seq=%u [%s %s]",
                 seqnum,
                 val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                     pinfo->pool,
 #endif
                     opcode, opcode_names_short, "Unknown Opcode: 0x%02x"),
                 val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                     pinfo->pool,
 #endif
                     functioncode, data_functioncode_names, "?"));
             proto_item_append_text(tree, " %s", val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                        pinfo->pool,
@@ -11553,7 +11553,7 @@ s7commp_decode_data(tvbuff_t *tvb,
                 switch (functioncode) {
                     case S7COMMP_FUNCTIONCODE_GETMULTIVAR:
                         offset = s7commp_decode_request_getmultivar(tvb, item_tree, offset
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7)
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6)
                                                                     ,
                                                                     pinfo
 #endif
@@ -11773,7 +11773,7 @@ dissect_s7commp(tvbuff_t *tvb,
     if (pinfo->srcport == 102) {
         col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Ver:[%s]", UTF8_RIGHTWARDS_ARROW, pinfo->destport,
                         val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                             pinfo->pool,
@@ -11782,7 +11782,7 @@ dissect_s7commp(tvbuff_t *tvb,
     } else {
         col_append_fstr(pinfo->cinfo, COL_INFO, "%s%u Ver:[%s]", UTF8_LEFTWARDS_ARROW, pinfo->srcport,
                         val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                             pinfo->pool,
@@ -11799,7 +11799,7 @@ dissect_s7commp(tvbuff_t *tvb,
     s7commp_header_tree = proto_item_add_subtree(s7commp_sub_item, ett_s7commp_header);
     proto_item_append_text(s7commp_header_tree, ": Protocol version=%s",
                            val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                pinfo->pool,
@@ -12049,7 +12049,7 @@ dissect_s7commp(tvbuff_t *tvb,
             proto_tree_add_item(s7commp_trailer_tree, hf_s7commp_trailer_protocolversion, next_tvb, offset, 1, ENC_BIG_ENDIAN);
             proto_item_append_text(s7commp_trailer_tree, ": Protocol version=%s",
                                    val_to_str(
-#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 7) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
+#if (VERSION_MAJOR >= 4) && (VERSION_MINOR >= 6) /* commit https://gitlab.com/wireshark/wireshark/-/commit/84799be215313e61b83a3eaf074f89d6ee349b8c
                                                   * replaces val_to_str() with val_to_str_wmem()
                                                   */
                                        pinfo->pool,

@@ -12115,11 +12115,12 @@ dissect_s7commp_ssl(tvbuff_t *tvb,
             packet_state->ssl_start_frame = ssl_conversation_state->start_frame;
             if (ssl_conversation_state->reasm_state == SSL_CONV_STATE_FRAG) {
                 if (ssl_conversation_state->remaining_len != DESEGMENT_ONE_MORE_SEGMENT) {
-                    if (tvb_reported_length_remaining(tvb, 0) >= ssl_conversation_state->remaining_len) {
+                    int rlength = tvb_reported_length_remaining(tvb, 0);
+                    if ( rlength >= ssl_conversation_state->remaining_len) {
                         packet_state->ssl_reasm_state = SSL_CONV_STATE_LASTFRAG;
                     } else {
                         packet_state->ssl_reasm_state = ssl_conversation_state->reasm_state;
-                        ssl_conversation_state->remaining_len -= tvb_reported_length_remaining(tvb, 0);
+                        ssl_conversation_state->remaining_len -= rlength;
                     }
                 } else {
                     packet_state->ssl_reasm_state = ssl_conversation_state->reasm_state;
